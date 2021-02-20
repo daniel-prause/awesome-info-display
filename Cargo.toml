@@ -1,0 +1,13 @@
+[package]
+authors = ["dada"]
+edition = "2018"
+name = "awesome_display_info"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = "0.4"
+iced = {version = "0.2", features = ["canvas", "tokio", "debug"]}
+image = "0.23.13"
+imageproc = "0.22.0"
