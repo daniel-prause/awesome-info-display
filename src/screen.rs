@@ -25,7 +25,7 @@ pub struct Screen {
 
 impl Screen {
     pub fn new(description: String, path: String) -> Self {
-        let mut image = DynamicImage::new_rgb8(256, 64);
+        let mut image = RgbImage::new(256, 64);
         let mut bytes = Vec::new();
 
         let font = Vec::from(include_bytes!("DejaVuSans.ttf") as &[u8]);
@@ -36,9 +36,8 @@ impl Screen {
             y: height,
         };
         let text = "CPU: 33% / Hallo Chris =)";
-        let mut imm = image.to_rgb8();
         draw_text_mut(
-            &mut imm,
+            &mut image,
             Rgb([255u8, 255u8, 255u8]),
             0,
             0,
@@ -46,7 +45,7 @@ impl Screen {
             &font,
             text,
         );
-        let _ = DynamicImage::ImageRgb8(imm).write_to(&mut bytes, image::ImageOutputFormat::Bmp);
+        let _ = DynamicImage::ImageRgb8(image).write_to(&mut bytes, image::ImageOutputFormat::Bmp);
         Screen {
             description,
             current_image: RgbImage::new(256, 64),
