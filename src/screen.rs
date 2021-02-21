@@ -1,7 +1,15 @@
 use image::io::Reader as ImageReader;
+use image::DynamicImage;
 use image::ImageBuffer;
 use image::Rgb;
 use image::RgbImage;
+use image::Rgba;
+use imageproc::drawing;
+use imageproc::drawing::draw_text_mut;
+use rusttype::{Font, Scale};
+use std::env;
+use std::io::Cursor;
+use std::path::Path;
 
 #[derive(Debug)]
 struct Error1;
@@ -17,10 +25,28 @@ pub struct Screen {
 
 impl Screen {
     pub fn new(description: String, path: String) -> Self {
-        //let img = image::open(path).unwrap();
-        let img = ImageReader::open(path).unwrap().decode().unwrap();
+        let mut image = DynamicImage::new_rgb8(256, 64);
         let mut bytes = Vec::new();
-        let _ = img.write_to(&mut bytes, image::ImageOutputFormat::Bmp);
+
+        let font = Vec::from(include_bytes!("DejaVuSans.ttf") as &[u8]);
+        let font = Font::try_from_vec(font).unwrap();
+        let height = 16.0;
+        let scale = Scale {
+            x: height,
+            y: height,
+        };
+        let text = "CPU: 33% / Hallo Chris =)";
+        let mut imm = image.to_rgb8();
+        draw_text_mut(
+            &mut imm,
+            Rgb([255u8, 255u8, 255u8]),
+            0,
+            0,
+            scale,
+            &font,
+            text,
+        );
+        let _ = DynamicImage::ImageRgb8(imm).write_to(&mut bytes, image::ImageOutputFormat::Bmp);
         Screen {
             description,
             current_image: RgbImage::new(256, 64),
