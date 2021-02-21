@@ -16,7 +16,7 @@ impl ScreenManager {
         if self.screens.get(self.current).is_none() {
             None.unwrap()
         } else {
-            return self.screens.get(self.current).unwrap();
+            self.screens.get(self.current).unwrap()
         }
     }
 

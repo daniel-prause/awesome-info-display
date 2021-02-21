@@ -8,6 +8,6 @@ version = "0.1.0"
 
 [dependencies]
 chrono = "0.4"
-iced = {version = "0.2", features = ["canvas", "tokio", "debug"]}
+iced = {version = "0.2", features = ["canvas", "tokio", "debug", "image", "debug"]}
 image = "0.23.13"
 imageproc = "0.22.0"

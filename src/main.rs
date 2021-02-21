@@ -1,11 +1,11 @@
 #![windows_subsystem = "windows"]
 use iced::{
-    button, executor, Align, Application, Button, Column, Command, Container, Element,
-    HorizontalAlignment, Length, Row, Settings, Text,
+    button, executor, image, time, Align, Application, Button, Column, Command, Container, Element,
+    HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
 };
 mod screen;
 mod screen_manager;
-
+use std::io::{self, Write};
 mod style;
 pub fn main() -> iced::Result {
     AwesomeDisplay::run(Settings::default())
@@ -21,8 +21,9 @@ struct AwesomeDisplay {
 
 #[derive(Debug, Clone, Copy)]
 enum Message {
-    IncrementPressed,
-    DecrementPressed,
+    NextScreen,
+    PreviousScreen,
+    UpdateCurrentScreen,
 }
 
 impl Application for AwesomeDisplay {
@@ -30,19 +31,20 @@ impl Application for AwesomeDisplay {
     type Message = Message;
     type Flags = ();
     fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
-        //let mut vec = Vec::new();
-        //vec.push(screen::Screen::new(String::from("Screen 1")));
-
         (
             AwesomeDisplay {
                 increment_button: button::State::new(),
                 decrement_button: button::State::new(),
                 theme: style::Theme::Dark,
                 screens: screen_manager::ScreenManager::new(vec![
-                    screen::Screen::new(String::from("Screen 1")),
-                    screen::Screen::new(String::from("Screen 2")),
-                    screen::Screen::new(String::from("Screen 3")),
-                    screen::Screen::new(String::from("Screen 4")),
+                    screen::Screen::new(
+                        String::from("Screen 1"),
+                        String::from("D:/Pictures/snow.png"),
+                    ),
+                    screen::Screen::new(
+                        String::from("Screen 2"),
+                        String::from("D:/Pictures/windmill.png"),
+                    ),
                 ]),
             },
             Command::none(),
@@ -53,25 +55,32 @@ impl Application for AwesomeDisplay {
         String::from("AwesomeInfoDisplay")
     }
 
+    fn subscription(&self) -> Subscription<Message> {
+        time::every(std::time::Duration::from_millis(5000)).map(|_| Message::UpdateCurrentScreen)
+    }
+
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::IncrementPressed => {
+            Message::NextScreen => {
                 self.screens.next_screen();
-                // self.current_screen
-                //     .update(screen::ScreenMessage::UpdateScreen);
             }
-            Message::DecrementPressed => {
+            Message::PreviousScreen => {
                 self.screens.previous_screen();
-                //self.current_screen = getCurrentScreen();
-                // self.current_screen
-                //     .update(screen::ScreenMessage::UpdateScreen);
+            }
+            Message::UpdateCurrentScreen => {
+                self.screens.next_screen();
             }
         }
-
         Command::none()
     }
 
     fn view(&mut self) -> Element<Message> {
+        io::stdout().flush().unwrap();
+
+        let image = Image::new(iced::image::Handle::from_memory(
+            self.screens.current_screen().current_image(),
+        ));
+
         let col1 = Column::new()
             .padding(20)
             .align_items(Align::Center)
@@ -83,7 +92,7 @@ impl Application for AwesomeDisplay {
                 )
                 .style(self.theme)
                 .width(Length::Units(200))
-                .on_press(Message::IncrementPressed),
+                .on_press(Message::NextScreen),
             )
             .push(
                 Button::new(
@@ -92,7 +101,7 @@ impl Application for AwesomeDisplay {
                 )
                 .style(self.theme)
                 .width(Length::Units(200))
-                .on_press(Message::DecrementPressed),
+                .on_press(Message::PreviousScreen),
             );
 
         let col2 = Column::new()
@@ -100,7 +109,10 @@ impl Application for AwesomeDisplay {
             .align_items(Align::Center)
             .width(Length::Fill)
             .push(Text::new("Current screen").size(50))
-            .push(Text::new(self.screens.current_screen().description()).size(50));
+            .push(Text::new(self.screens.current_screen().description()).size(50))
+            .push(image.width(Length::Units(256)).height(Length::Units(64)));
+
+        //.push(self.screens.current_screen().current_image());
 
         Container::new(Row::new().push(col1).push(col2))
             .width(Length::Fill)
