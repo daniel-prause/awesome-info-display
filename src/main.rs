@@ -1,9 +1,9 @@
-#![windows_subsystem = "windows"]
+//#![windows_subsystem = "windows"]
 use iced::{
     button, executor, time, Align, Application, Button, Column, Command, Container, Element,
     HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
 };
-//use std::io::{self, Write};
+use std::io::{self, Write};
 mod screen;
 mod screen_manager;
 mod style;
@@ -37,8 +37,8 @@ impl Application for AwesomeDisplay {
                 decrement_button: button::State::new(),
                 theme: style::Theme::Dark,
                 screens: screen_manager::ScreenManager::new(vec![
-                    screen::Screen::new(String::from("Screen 1")),
-                    screen::Screen::new(String::from("Screen 2")),
+                    screen::Screen::new(String::from("System Stats")),
+                    screen::Screen::new(String::from("Media Info Display")),
                 ]),
             },
             Command::none(),
@@ -71,7 +71,7 @@ impl Application for AwesomeDisplay {
     }
 
     fn view(&mut self) -> Element<Message> {
-        //io::stdout().flush().unwrap();
+        io::stdout().flush().unwrap();
         self.screens.update_current_screen();
 
         let image = Image::new(iced::image::Handle::from_memory(
