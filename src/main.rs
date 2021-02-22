@@ -1,11 +1,10 @@
 #![windows_subsystem = "windows"]
 use iced::{
-    button, executor, image, time, Align, Application, Button, Column, Command, Container, Element,
+    button, executor, time, Align, Application, Button, Column, Command, Container, Element,
     HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
 };
 mod screen;
 mod screen_manager;
-use std::io::{self, Write};
 mod style;
 pub fn main() -> iced::Result {
     AwesomeDisplay::run(Settings::default())
@@ -37,14 +36,8 @@ impl Application for AwesomeDisplay {
                 decrement_button: button::State::new(),
                 theme: style::Theme::Dark,
                 screens: screen_manager::ScreenManager::new(vec![
-                    screen::Screen::new(
-                        String::from("Screen 1"),
-                        String::from("D:/Pictures/snow.png"),
-                    ),
-                    screen::Screen::new(
-                        String::from("Screen 2"),
-                        String::from("D:/Pictures/windmill.png"),
-                    ),
+                    screen::Screen::new(String::from("Screen 1")),
+                    screen::Screen::new(String::from("Screen 2")),
                 ]),
             },
             Command::none(),
@@ -56,26 +49,30 @@ impl Application for AwesomeDisplay {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        time::every(std::time::Duration::from_millis(5000)).map(|_| Message::UpdateCurrentScreen)
+        time::every(std::time::Duration::from_millis(1000 / 10))
+            .map(|_| Message::UpdateCurrentScreen)
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::NextScreen => {
+                self.screens.update_current_screen();
                 self.screens.next_screen();
             }
             Message::PreviousScreen => {
+                self.screens.update_current_screen();
                 self.screens.previous_screen();
             }
             Message::UpdateCurrentScreen => {
-                self.screens.next_screen();
+                self.screens.update_current_screen();
             }
         }
         Command::none()
     }
 
     fn view(&mut self) -> Element<Message> {
-        io::stdout().flush().unwrap();
+        //io::stdout().flush().unwrap();
+        self.screens.update_current_screen();
 
         let image = Image::new(iced::image::Handle::from_memory(
             self.screens.current_screen().current_image(),

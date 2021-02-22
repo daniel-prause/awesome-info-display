@@ -12,11 +12,11 @@ impl ScreenManager {
         }
     }
 
-    pub fn current_screen(&mut self) -> &super::screen::Screen {
+    pub fn current_screen(&mut self) -> &mut super::screen::Screen {
         if self.screens.get(self.current).is_none() {
             None.unwrap()
         } else {
-            self.screens.get(self.current).unwrap()
+            &mut self.screens[self.current]
         }
     }
 
@@ -34,5 +34,9 @@ impl ScreenManager {
         } else {
             self.current -= 1
         }
+    }
+
+    pub fn update_current_screen(&mut self) {
+        self.current_screen().update();
     }
 }
