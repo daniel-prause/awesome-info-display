@@ -14,21 +14,17 @@ struct Error2;
 #[derive(Debug, Clone, Default)]
 pub struct Screen {
     description: String,
-    current_image: ImageBuffer<Rgb<u8>, Vec<u8>>,
     bytes: Vec<u8>,
     font: Option<Font<'static>>,
 }
 
 impl Screen {
     pub fn new(description: String) -> Self {
-        let image = RgbImage::new(256, 64);
         let bytes = Vec::new();
         let font = Vec::from(include_bytes!("DejaVuSans.ttf") as &[u8]);
         let font = Font::try_from_vec(font);
-
         Screen {
             description,
-            current_image: image,
             bytes: bytes,
             font: font,
         }
@@ -48,9 +44,6 @@ impl Screen {
             x: height,
             y: height,
         };
-        //let text = Template::new("CPU: {{cpu}}% / Hallo Chris =)");
-        //let mut args = HashMap::new();
-        //args.insert("cpu", load_avg.one.to_string());
         let refresh_kind = RefreshKind::new();
         let refresh_kind = refresh_kind.with_cpu();
         let refresh_kind = refresh_kind.with_memory();
@@ -66,6 +59,7 @@ impl Screen {
             memory = (100.0 - (free_memory / total_memory) * 100.0).floor()
         )
         .to_string();
+
         let font = self.font.as_ref().unwrap();
         draw_text_mut(
             &mut image,

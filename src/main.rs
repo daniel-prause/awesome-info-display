@@ -3,6 +3,7 @@ use iced::{
     button, executor, time, Align, Application, Button, Column, Command, Container, Element,
     HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
 };
+//use std::io::{self, Write};
 mod screen;
 mod screen_manager;
 mod style;
@@ -49,8 +50,7 @@ impl Application for AwesomeDisplay {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        time::every(std::time::Duration::from_millis(1000 / 10))
-            .map(|_| Message::UpdateCurrentScreen)
+        time::every(std::time::Duration::from_millis(500)).map(|_| Message::UpdateCurrentScreen)
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
