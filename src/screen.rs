@@ -1,21 +1,18 @@
 use image::DynamicImage;
-use image::ImageBuffer;
+
 use image::Rgb;
 use image::RgbImage;
 use imageproc::drawing::draw_text_mut;
 use rusttype::{Font, Scale};
 use std::thread;
-//use sysinfo::RefreshKind;
-//use sysinfo::{System, SystemExt};
-use cpu_monitor::CpuInstant;
+
 use imageproc::drawing::draw_filled_rect_mut;
 use imageproc::drawing::draw_hollow_rect_mut;
 use imageproc::rect::Rect;
-use std::io;
-use std::sync::atomic::{AtomicUsize, Ordering};
+
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time;
+
 use std::time::Duration;
 use systemstat::{saturating_sub_bytes, Platform, System};
 #[derive(Debug)]
