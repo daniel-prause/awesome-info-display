@@ -7,6 +7,7 @@ use std::io::{self, Write};
 mod screen;
 mod screen_manager;
 mod style;
+mod system_info_screen;
 pub fn main() -> iced::Result {
     AwesomeDisplay::run(Settings::default())
 }
@@ -37,8 +38,12 @@ impl Application for AwesomeDisplay {
                 decrement_button: button::State::new(),
                 theme: style::Theme::Dark,
                 screens: screen_manager::ScreenManager::new(vec![
-                    screen::Screen::new(String::from("System Stats")),
-                    screen::Screen::new(String::from("Media Info Display")),
+                    Box::new(system_info_screen::SystemInfoScreen::new(String::from(
+                        "System Stats",
+                    ))),
+                    Box::new(system_info_screen::SystemInfoScreen::new(String::from(
+                        "Media Stats",
+                    ))),
                 ]),
             },
             Command::none(),

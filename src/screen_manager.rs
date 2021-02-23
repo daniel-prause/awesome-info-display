@@ -1,18 +1,18 @@
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct ScreenManager {
-    screens: Vec<super::screen::Screen>,
+    screens: Vec<Box<dyn super::screen::SpecificScreen>>,
     current: usize,
 }
 
 impl ScreenManager {
-    pub fn new(screens: Vec<super::screen::Screen>) -> Self {
+    pub fn new(screens: Vec<Box<dyn super::screen::SpecificScreen>>) -> Self {
         ScreenManager {
             screens: screens,
             current: 0,
         }
     }
 
-    pub fn current_screen(&mut self) -> &mut super::screen::Screen {
+    pub fn current_screen(&mut self) -> &mut Box<dyn super::screen::SpecificScreen> {
         if self.screens.get(self.current).is_none() {
             None.unwrap()
         } else {
