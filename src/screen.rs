@@ -1,20 +1,5 @@
-
-
-
-
-
-use rusttype::{Font};
-
-
-
-
-
-
+use rusttype::Font;
 use std::fmt::Debug;
-
-
-
-use systemstat::{saturating_sub_bytes, Platform, System};
 
 #[derive(Debug, Clone)]
 pub struct Screen {
@@ -35,13 +20,12 @@ impl Default for Screen {
 
 impl std::fmt::Debug for dyn SpecificScreen {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Hi")
+        write!(f, "{}", self.description())
     }
 }
 
 pub trait SpecificScreen {
     fn update(&mut self) -> ();
-    //fn new(&self, description: String) -> Self;
     fn description(&self) -> &String;
     fn current_image(&self) -> Vec<u8>;
 }

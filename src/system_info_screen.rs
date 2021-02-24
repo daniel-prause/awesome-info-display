@@ -1,25 +1,20 @@
-use image::DynamicImage;
-use image::Rgb;
-use image::RgbImage;
-use imageproc::drawing::draw_text_mut;
-use rusttype::Scale;
-//mod screen;
 use crate::screen::Screen;
 use crate::screen::SpecificScreen;
-use imageproc::drawing::draw_filled_rect_mut;
-use imageproc::drawing::draw_hollow_rect_mut;
-use imageproc::rect::Rect;
-use std::thread;
 
+use image::{DynamicImage, ImageBuffer, Rgb, RgbImage};
+use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_mut};
+use imageproc::rect::Rect;
+use rusttype::Scale;
 use std::fmt::Debug;
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Duration;
 use systemstat::{saturating_sub_bytes, Platform, System};
+
 #[derive(Debug, Clone)]
 pub struct SystemInfoScreen {
     screen: Screen,
-    cpu_usage: Arc<Mutex<f32>>,
+    cpu_usage: Arc<Mutex<f64>>,
     ram_usage: Arc<Mutex<f64>>,
 }
 
@@ -31,92 +26,91 @@ impl SpecificScreen for SystemInfoScreen {
     fn current_image(&self) -> Vec<u8> {
         self.screen.bytes.clone()
     }
+
     fn update(&mut self) {
-        //let mut image = RgbImage::new(256, 64);
-        let mut image = RgbImage::new(256, 64);
-        let height = 16.0;
-        let scale = Scale {
-            x: height,
-            y: height,
-        };
+        SystemInfoScreen::update(self);
+    }
+}
 
-        let cpu_text = format!("{: >3}%", cpu = self.cpu_usage.lock().unwrap(),).to_string();
-        let memory_text = format!("{: >3}%", memory = self.ram_usage.lock().unwrap()).to_string();
-
-        let font = self.screen.font.as_ref().unwrap();
-
-        // DRAW CPU
+impl SystemInfoScreen {
+    pub fn draw_cpu(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
+        let cpu_text = format!("{: >3}%", self.cpu_usage.lock().unwrap(),).to_string();
         draw_text_mut(
-            &mut image,
+            image,
             Rgb([255u8, 255u8, 255u8]),
             0,
             0,
             scale,
-            &font,
+            self.screen.font.as_ref().unwrap(),
             "CPU",
         );
         draw_text_mut(
-            &mut image,
+            image,
             Rgb([255u8, 255u8, 255u8]),
             222,
             0,
             scale,
-            &font,
+            self.screen.font.as_ref().unwrap(),
             &cpu_text,
         );
         draw_hollow_rect_mut(
-            &mut image,
+            image,
             Rect::at(0, 16).of_size(256, 10),
             Rgb([255u8, 255u8, 255u8]),
         );
 
         let cpu_filled = ((*self.cpu_usage.lock().unwrap() * 2.56) + 1.0).floor() as u32;
         draw_filled_rect_mut(
-            &mut image,
+            image,
             Rect::at(0, 16).of_size(cpu_filled, 10),
             Rgb([255u8, 255u8, 255u8]),
         );
-
-        // DRAW MEMORY
+    }
+    pub fn draw_memory(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
+        let memory_text = format!("{: >3}%", self.ram_usage.lock().unwrap()).to_string();
         draw_text_mut(
-            &mut image,
+            image,
             Rgb([255u8, 255u8, 255u8]),
             0,
             30,
             scale,
-            &font,
+            self.screen.font.as_ref().unwrap(),
             "RAM",
         );
         draw_text_mut(
-            &mut image,
+            image,
             Rgb([255u8, 255u8, 255u8]),
             222,
             30,
             scale,
-            &font,
+            self.screen.font.as_ref().unwrap(),
             &memory_text,
         );
-
         draw_hollow_rect_mut(
-            &mut image,
+            image,
             Rect::at(0, 48).of_size(256, 10),
             Rgb([255u8, 255u8, 255u8]),
         );
 
         let memory_filled = ((*self.ram_usage.lock().unwrap() * 2.56) + 1.0).floor() as u32;
         draw_filled_rect_mut(
-            &mut image,
+            image,
             Rect::at(0, 48).of_size(memory_filled, 10),
             Rgb([255u8, 255u8, 255u8]),
         );
+    }
 
+    fn update(&mut self) {
+        let mut image = RgbImage::new(256, 64);
+        let scale = Scale { x: 16.0, y: 16.0 };
+
+        self.draw_cpu(&mut image, scale);
+        self.draw_memory(&mut image, scale);
         self.screen.bytes.clear();
         let _ = DynamicImage::ImageRgb8(image)
             .write_to(&mut self.screen.bytes, image::ImageOutputFormat::Bmp);
     }
-}
 
-impl SystemInfoScreen {
     pub fn new(description: String) -> Self {
         let this = SystemInfoScreen {
             screen: Screen {
@@ -136,10 +130,10 @@ impl SystemInfoScreen {
                 move || loop {
                     match sys.cpu_load_aggregate() {
                         Ok(cpu) => {
-                            thread::sleep(Duration::from_secs(1));
+                            thread::sleep(Duration::from_millis(1000));
                             let mut value = this.cpu_usage.lock().unwrap();
                             let cpu = cpu.done().unwrap();
-                            *value = (cpu.user * 100.0).floor();
+                            *value = ((cpu.user + cpu.nice + cpu.system) * 100.0).floor().into();
                         }
                         Err(x) => println!("\nCPU load: error: {}", x),
                     }
