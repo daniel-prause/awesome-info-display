@@ -6,7 +6,7 @@ use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_m
 use imageproc::rect::Rect;
 use rusttype::Scale;
 use std::fmt::Debug;
-use std::sync::{Arc, Mutex};
+use std::sync::{atomic::Ordering, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use systemstat::{saturating_sub_bytes, Platform, System};
@@ -29,6 +29,24 @@ impl SpecificScreen for SystemInfoScreen {
 
     fn update(&mut self) {
         SystemInfoScreen::update(self);
+    }
+
+    fn start(&self) {
+        self.screen.active.store(true, Ordering::Release);
+        if !self.screen.handle.lock().unwrap().is_none() {
+            self.screen
+                .handle
+                .lock()
+                .as_ref()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .thread()
+                .unpark();
+        }
+    }
+    fn stop(&self) {
+        self.screen.active.store(false, Ordering::Release);
     }
 }
 
@@ -124,31 +142,38 @@ impl SystemInfoScreen {
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
         let sys = System::new();
 
-        builder
-            .spawn({
-                let this = this.clone();
-                move || loop {
-                    match sys.cpu_load_aggregate() {
-                        Ok(cpu) => {
-                            thread::sleep(Duration::from_millis(1000));
-                            let mut value = this.cpu_usage.lock().unwrap();
-                            let cpu = cpu.done().unwrap();
-                            *value = ((cpu.user + cpu.nice + cpu.system) * 100.0).floor().into();
+        *this.screen.handle.lock().unwrap() = Some(
+            builder
+                .spawn({
+                    let this = this.clone();
+                    move || loop {
+                        while !this.screen.active.load(Ordering::Acquire) {
+                            thread::park();
                         }
-                        Err(x) => println!("\nCPU load: error: {}", x),
-                    }
-                    match sys.memory() {
-                        Ok(mem) => {
-                            let mut value = this.ram_usage.lock().unwrap();
-                            let memory_used =
-                                saturating_sub_bytes(mem.total, mem.free).as_u64() as f64;
-                            *value = ((memory_used / mem.total.as_u64() as f64) * 100.0).floor();
+                        match sys.cpu_load_aggregate() {
+                            Ok(cpu) => {
+                                thread::sleep(Duration::from_millis(1000));
+                                let mut value = this.cpu_usage.lock().unwrap();
+                                let cpu = cpu.done().unwrap();
+                                *value =
+                                    ((cpu.user + cpu.nice + cpu.system) * 100.0).floor().into();
+                            }
+                            Err(x) => println!("\nCPU load: error: {}", x),
                         }
-                        Err(x) => println!("\nMemory: error: {}", x),
+                        match sys.memory() {
+                            Ok(mem) => {
+                                let mut value = this.ram_usage.lock().unwrap();
+                                let memory_used =
+                                    saturating_sub_bytes(mem.total, mem.free).as_u64() as f64;
+                                *value =
+                                    ((memory_used / mem.total.as_u64() as f64) * 100.0).floor();
+                            }
+                            Err(x) => println!("\nMemory: error: {}", x),
+                        }
                     }
-                }
-            })
-            .expect("Cannot create JOB_EXECUTOR thread");
+                })
+                .expect("Cannot create JOB_EXECUTOR thread"),
+        );
         this
     }
 }
