@@ -4,6 +4,7 @@ use crate::screen::SpecificScreen;
 use image::{DynamicImage, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
+use rusttype::Font;
 use rusttype::Scale;
 use std::fmt::Debug;
 use std::sync::{atomic::Ordering, Arc, Mutex};
@@ -129,10 +130,11 @@ impl SystemInfoScreen {
             .write_to(&mut self.screen.bytes, image::ImageOutputFormat::Bmp);
     }
 
-    pub fn new(description: String) -> Self {
+    pub fn new(description: String, font: Option<Font<'static>>) -> Self {
         let this = SystemInfoScreen {
             screen: Screen {
                 description,
+                font,
                 ..Default::default()
             },
             cpu_usage: Arc::new(Mutex::new(0.0)),

@@ -8,6 +8,7 @@ mod screen;
 mod screen_manager;
 mod style;
 mod system_info_screen;
+use rusttype::Font;
 pub fn main() -> iced::Result {
     AwesomeDisplay::run(Settings::default())
 }
@@ -32,18 +33,22 @@ impl Application for AwesomeDisplay {
     type Message = Message;
     type Flags = ();
     fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
+        let font = Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8]));
+
         (
             AwesomeDisplay {
                 increment_button: button::State::new(),
                 decrement_button: button::State::new(),
                 theme: style::Theme::Dark,
                 screens: screen_manager::ScreenManager::new(vec![
-                    Box::new(system_info_screen::SystemInfoScreen::new(String::from(
-                        "System Stats",
-                    ))),
-                    Box::new(system_info_screen::SystemInfoScreen::new(String::from(
-                        "Media Stats",
-                    ))),
+                    Box::new(system_info_screen::SystemInfoScreen::new(
+                        String::from("System Stats"),
+                        font.clone(),
+                    )),
+                    Box::new(system_info_screen::SystemInfoScreen::new(
+                        String::from("Media Stats"),
+                        font.clone(),
+                    )),
                 ]),
             },
             Command::none(),
