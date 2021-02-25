@@ -4,6 +4,7 @@ use iced::{
     HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
 };
 use std::io::{self, Write};
+mod media_info_screen;
 mod screen;
 mod screen_manager;
 mod style;
@@ -45,7 +46,7 @@ impl Application for AwesomeDisplay {
                         String::from("System Stats"),
                         font.clone(),
                     )),
-                    Box::new(system_info_screen::SystemInfoScreen::new(
+                    Box::new(media_info_screen::MediaInfoScreen::new(
                         String::from("Media Stats"),
                         font.clone(),
                     )),
