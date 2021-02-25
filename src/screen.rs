@@ -1,6 +1,6 @@
 use rusttype::Font;
 use std::fmt::Debug;
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex};
+use std::sync::{atomic::AtomicBool, Arc, Mutex};
 use std::thread::JoinHandle;
 
 #[derive(Debug, Clone)]
