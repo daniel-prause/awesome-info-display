@@ -98,12 +98,9 @@ impl MediaInfoScreen {
     }
     pub fn draw_artist(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
         let artist = self.artist.lock().unwrap();
-        let mut position_artist = 0;
-
-        if (artist.len() * 16 > 464) {
+        let mut position_artist = (256 - (artist.len() * 16) / 2) / 2;
+        if artist.len() * 16 > 480 {
             position_artist = 0;
-        } else {
-            position_artist = (256 - (artist.len() * 16) / 2) / 2;
         }
 
         draw_text_mut(
@@ -121,7 +118,7 @@ impl MediaInfoScreen {
         let title = self.title.lock().unwrap();
         let mut position_title = 0;
 
-        if (title.len() * 16 > 464) {
+        if title.len() * 16 > 480 {
             position_title = 0;
         } else {
             position_title = (256 - (title.len() * 16) / 2) / 2;
