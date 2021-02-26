@@ -99,6 +99,7 @@ dependencies = [
  "regex",
  "rusttype",
  "systemstat",
+ "unicode-segmentation",
  "winapi 0.3.9",
 ]
 
