@@ -8,11 +8,13 @@ version = "0.1.0"
 
 [dependencies]
 chrono = "0.4"
+compound_duration = "1.2"
 cpu-monitor = "0.1.1"
 iced = {version = "0.2", features = ["canvas", "tokio", "debug", "image", "debug"]}
 image = {version = "0.23.6", default-features = false}
 imageproc = "0.22.0"
+regex = "1.4"
 rusttype = "0.9.2"
-string_template = "0.2.1"
-sysinfo = "0.16.4"
 systemstat = "0.1.7"
+[target.'cfg(windows)'.dependencies]
+winapi = {version = "0.3", features = ["winuser"]}
