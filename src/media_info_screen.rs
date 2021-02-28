@@ -313,8 +313,10 @@ impl MediaInfoScreen {
                                     .unwrap()
                                     .captures(&artist_and_title)
                                     .unwrap();
-                                let artist =
-                                    artist_and_title_caps.get(1).map_or("", |m| m.as_str());
+                                let artist = artist_and_title_caps
+                                    .get(1)
+                                    .map_or("", |m| m.as_str())
+                                    .trim();
 
                                 let title = artist_and_title_caps
                                     .get(2)
