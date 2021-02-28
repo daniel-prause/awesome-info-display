@@ -8,7 +8,7 @@
             "name": "(Windows) Starten",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/target/debug/awesome_display_info.exe",
+            "program": "${workspaceFolder}/target/debug/awesome_info_display.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
