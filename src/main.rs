@@ -118,7 +118,7 @@ impl Application for AwesomeDisplay {
             .align_items(Align::Center)
             .width(Length::Fill)
             .push(Text::new("Current screen").size(50))
-            .push(Text::new(self.screens.current_screen().description()).size(50))
+            .push(Text::new(self.screens.current_screen().description()).size(25))
             .push(image.width(Length::Units(256)).height(Length::Units(64)));
 
         Container::new(Row::new().push(col1).push(col2))
