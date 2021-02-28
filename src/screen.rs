@@ -9,6 +9,7 @@ pub struct Screen {
     pub bytes: Vec<u8>,
     pub font: Option<Font<'static>>,
     pub active: Arc<AtomicBool>,
+    pub initial_update_called: Arc<AtomicBool>,
     pub handle: Arc<Mutex<Option<JoinHandle<()>>>>,
 }
 
@@ -19,6 +20,7 @@ impl Default for Screen {
             bytes: Vec::new(),
             font: Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8])),
             active: Arc::new(AtomicBool::new(false)),
+            initial_update_called: Arc::new(AtomicBool::new(false)),
             handle: Arc::new(Mutex::new(None)),
         }
     }
@@ -34,6 +36,7 @@ pub trait SpecificScreen {
     fn update(&mut self) -> ();
     fn description(&self) -> &String;
     fn current_image(&self) -> Vec<u8>;
+    fn initial_update_called(&mut self) -> bool;
     fn start(&self) -> ();
     fn stop(&self) -> ();
 }

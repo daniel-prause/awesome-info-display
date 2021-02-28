@@ -83,8 +83,9 @@ impl Application for AwesomeDisplay {
 
     fn view(&mut self) -> Element<Message> {
         io::stdout().flush().unwrap();
-        self.screens.update_current_screen();
-
+        if !self.screens.current_screen().initial_update_called() {
+            self.screens.update_current_screen();
+        }
         let image = Image::new(iced::image::Handle::from_memory(
             self.screens.current_screen().current_image(),
         ));

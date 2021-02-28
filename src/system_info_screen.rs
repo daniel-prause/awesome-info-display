@@ -49,6 +49,16 @@ impl SpecificScreen for SystemInfoScreen {
     fn stop(&self) {
         self.screen.active.store(false, Ordering::Release);
     }
+
+    fn initial_update_called(&mut self) -> bool {
+        if !self.screen.initial_update_called.load(Ordering::Acquire) {
+            self.screen
+                .initial_update_called
+                .store(true, Ordering::Release);
+            return false;
+        }
+        true
+    }
 }
 
 impl SystemInfoScreen {

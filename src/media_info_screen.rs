@@ -32,7 +32,7 @@ pub struct MediaInfoScreen {
     regex_first: Arc<Mutex<regex::Regex>>,
     regex_second: Arc<Mutex<regex::Regex>>,
     title_x: Arc<Mutex<u32>>,
-    scroll_title_x_left: Arc<Mutex<bool>>,
+    artist_x: Arc<Mutex<u32>>,
 }
 
 impl SpecificScreen for MediaInfoScreen {
@@ -65,6 +65,16 @@ impl SpecificScreen for MediaInfoScreen {
     fn stop(&self) {
         self.screen.active.store(false, Ordering::Release);
     }
+
+    fn initial_update_called(&mut self) -> bool {
+        if !self.screen.initial_update_called.load(Ordering::Acquire) {
+            self.screen
+                .initial_update_called
+                .store(true, Ordering::Release);
+            return false;
+        }
+        true
+    }
 }
 
 #[cfg(windows)]
@@ -93,8 +103,17 @@ impl MediaInfoScreen {
         let artist = self.artist.lock().unwrap();
         let mut position_artist = 0;
         let artist_len = artist.graphemes(true).count();
+        let mut start = 0;
         if artist_len * 17 < 480 {
             position_artist = (1 + ((256 - (artist_len as u32 * 17) / 2) / 2)) - 2;
+        } else {
+            start = *self.artist_x.lock().unwrap() as usize;
+
+            if *self.artist_x.lock().unwrap() == artist_len as u32 + 2 as u32 {
+                *self.artist_x.lock().unwrap() = 0;
+            } else {
+                *self.artist_x.lock().unwrap() += 1;
+            }
         }
 
         draw_text_mut(
@@ -104,7 +123,11 @@ impl MediaInfoScreen {
             0,
             scale,
             self.screen.font.as_ref().unwrap(),
-            &artist,
+            &rotate(
+                &[&artist.clone(), "   "].join("").to_string(),
+                Direction::Left,
+                start,
+            ),
         );
     }
 
@@ -118,18 +141,10 @@ impl MediaInfoScreen {
         } else {
             start = *self.title_x.lock().unwrap() as usize;
 
-            if *self.scroll_title_x_left.lock().unwrap() {
-                if title_len as u32 - *self.title_x.lock().unwrap() > 30 {
-                    *self.title_x.lock().unwrap() += 1;
-                } else {
-                    *self.scroll_title_x_left.lock().unwrap() = false;
-                }
+            if *self.title_x.lock().unwrap() == title_len as u32 + 2 as u32 {
+                *self.title_x.lock().unwrap() = 0;
             } else {
-                if *self.title_x.lock().unwrap() > 0 {
-                    *self.title_x.lock().unwrap() -= 1;
-                } else {
-                    *self.scroll_title_x_left.lock().unwrap() = true;
-                }
+                *self.title_x.lock().unwrap() += 1;
             }
         }
 
@@ -140,7 +155,11 @@ impl MediaInfoScreen {
             16,
             scale,
             self.screen.font.as_ref().unwrap(),
-            &title[start..],
+            &rotate(
+                &[&title.clone(), "   "].join("").to_string(),
+                Direction::Left,
+                start,
+            ),
         );
     }
 
@@ -257,8 +276,8 @@ impl MediaInfoScreen {
             track_length: Arc::new(Mutex::new(0)),
             title: Arc::new(Mutex::new(String::new())),
             title_x: Arc::new(Mutex::new(0)),
-            scroll_title_x_left: Arc::new(Mutex::new(false)),
             artist: Arc::new(Mutex::new(String::new())),
+            artist_x: Arc::new(Mutex::new(0)),
             editor_active: Arc::new(Mutex::new(false)),
             regex_first: Arc::new(Mutex::new(regex::Regex::new(r"\s(.*)-").unwrap())),
             regex_second: Arc::new(Mutex::new(regex::Regex::new(r"(.*) - (.*)").unwrap())),
@@ -347,8 +366,11 @@ impl MediaInfoScreen {
                                 if (*this.artist.lock().unwrap() != artist)
                                     || (*this.title.lock().unwrap() != title)
                                 {
-                                    *this.scroll_title_x_left.lock().unwrap() = false;
                                     *this.title_x.lock().unwrap() = 0;
+                                }
+
+                                if *this.artist.lock().unwrap() != artist {
+                                    *this.artist_x.lock().unwrap() = 0;
                                 }
                                 *this.artist.lock().unwrap() = artist.to_string();
                                 *this.title.lock().unwrap() = title.to_string();
@@ -364,4 +386,18 @@ impl MediaInfoScreen {
         );
         this
     }
+}
+
+pub enum Direction {
+    Left,
+    //Right,
+}
+
+pub fn rotate(str: &str, direction: Direction, count: usize) -> String {
+    let mut str_vec: Vec<char> = str.chars().collect();
+    match direction {
+        Direction::Left => str_vec.rotate_left(count),
+        //Direction::Right => str_vec.rotate_right(count),
+    }
+    str_vec.iter().collect()
 }
