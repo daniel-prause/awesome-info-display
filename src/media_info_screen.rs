@@ -31,6 +31,8 @@ pub struct MediaInfoScreen {
     editor_active: Arc<Mutex<bool>>,
     regex_first: Arc<Mutex<regex::Regex>>,
     regex_second: Arc<Mutex<regex::Regex>>,
+    title_x: Arc<Mutex<u32>>,
+    scroll_title_x_left: Arc<Mutex<bool>>,
 }
 
 impl SpecificScreen for MediaInfoScreen {
@@ -110,8 +112,25 @@ impl MediaInfoScreen {
         let title = self.title.lock().unwrap();
         let title_len = title.graphemes(true).count();
         let mut position_title = 0;
+        let mut start = 0;
         if title_len * 17 < 480 {
             position_title = (1 + ((256 - (title_len as u32 * 17) / 2) / 2)) - 2;
+        } else {
+            start = *self.title_x.lock().unwrap() as usize;
+
+            if *self.scroll_title_x_left.lock().unwrap() {
+                if title_len as u32 - *self.title_x.lock().unwrap() > 30 {
+                    *self.title_x.lock().unwrap() += 1;
+                } else {
+                    *self.scroll_title_x_left.lock().unwrap() = false;
+                }
+            } else {
+                if *self.title_x.lock().unwrap() > 0 {
+                    *self.title_x.lock().unwrap() -= 1;
+                } else {
+                    *self.scroll_title_x_left.lock().unwrap() = true;
+                }
+            }
         }
 
         draw_text_mut(
@@ -121,7 +140,7 @@ impl MediaInfoScreen {
             16,
             scale,
             self.screen.font.as_ref().unwrap(),
-            &title,
+            &title[start..],
         );
     }
 
@@ -237,6 +256,8 @@ impl MediaInfoScreen {
             track_current_position: Arc::new(Mutex::new(0)),
             track_length: Arc::new(Mutex::new(0)),
             title: Arc::new(Mutex::new(String::new())),
+            title_x: Arc::new(Mutex::new(0)),
+            scroll_title_x_left: Arc::new(Mutex::new(false)),
             artist: Arc::new(Mutex::new(String::new())),
             editor_active: Arc::new(Mutex::new(false)),
             regex_first: Arc::new(Mutex::new(regex::Regex::new(r"\s(.*)-").unwrap())),
@@ -323,6 +344,12 @@ impl MediaInfoScreen {
                                     .map_or("", |m| m.as_str())
                                     .trim();
 
+                                if (*this.artist.lock().unwrap() != artist)
+                                    || (*this.title.lock().unwrap() != title)
+                                {
+                                    *this.scroll_title_x_left.lock().unwrap() = false;
+                                    *this.title_x.lock().unwrap() = 0;
+                                }
                                 *this.artist.lock().unwrap() = artist.to_string();
                                 *this.title.lock().unwrap() = title.to_string();
                             }
