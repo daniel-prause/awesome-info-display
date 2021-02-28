@@ -71,7 +71,7 @@ impl MediaInfoScreen {
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
-            72,
+            77,
             4,
             scale,
             self.screen.font.as_ref().unwrap(),
@@ -80,7 +80,7 @@ impl MediaInfoScreen {
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
-            62,
+            65,
             32,
             scale,
             self.screen.font.as_ref().unwrap(),
@@ -91,8 +91,8 @@ impl MediaInfoScreen {
         let artist = self.artist.lock().unwrap();
         let mut position_artist = 0;
         let artist_len = artist.graphemes(true).count();
-        if artist_len * 16 < 480 {
-            position_artist = (1 + ((256 - (artist_len as u32 * 16) / 2) / 2)) - 2;
+        if artist_len * 17 < 480 {
+            position_artist = (1 + ((256 - (artist_len as u32 * 17) / 2) / 2)) - 2;
         }
 
         draw_text_mut(
@@ -110,8 +110,8 @@ impl MediaInfoScreen {
         let title = self.title.lock().unwrap();
         let title_len = title.graphemes(true).count();
         let mut position_title = 0;
-        if title_len * 16 < 480 {
-            position_title = (1 + ((256 - (title_len as u32 * 16) / 2) / 2)) - 2;
+        if title_len * 17 < 480 {
+            position_title = (1 + ((256 - (title_len as u32 * 17) / 2) / 2)) - 2;
         }
 
         draw_text_mut(
@@ -305,8 +305,7 @@ impl MediaInfoScreen {
 
                                 let caps =
                                     this.regex_first.lock().unwrap().captures(&data).unwrap();
-                                let artist_and_title =
-                                    caps.get(1).map_or("", |m| m.as_str().trim());
+                                let artist_and_title = caps.get(1).map_or("", |m| m.as_str());
 
                                 let artist_and_title_caps = this
                                     .regex_second
@@ -314,17 +313,16 @@ impl MediaInfoScreen {
                                     .unwrap()
                                     .captures(&artist_and_title)
                                     .unwrap();
-                                let artist = artist_and_title_caps
-                                    .get(1)
-                                    .map_or("", |m| m.as_str().trim());
+                                let artist =
+                                    artist_and_title_caps.get(1).map_or("", |m| m.as_str());
 
                                 let title = artist_and_title_caps
                                     .get(2)
-                                    .map_or("", |m| m.as_str().trim())
+                                    .map_or("", |m| m.as_str())
                                     .trim();
 
-                                *this.artist.lock().unwrap() = artist.trim().to_string();
-                                *this.title.lock().unwrap() = title.trim().to_string();
+                                *this.artist.lock().unwrap() = artist.to_string();
+                                *this.title.lock().unwrap() = title.to_string();
                             }
                         } else {
                             *this.editor_active.lock().unwrap() = false;
