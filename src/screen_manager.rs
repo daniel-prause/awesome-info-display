@@ -1,7 +1,12 @@
+use std::time::Instant;
+use std::time::{Duration, SystemTime};
+
 #[derive(Debug, Default)]
 pub struct ScreenManager {
     screens: Vec<Box<dyn super::screen::SpecificScreen>>,
     current: usize,
+    timeout: Option<std::time::Instant>,
+    last_screen: usize,
 }
 
 impl ScreenManager {
@@ -9,6 +14,8 @@ impl ScreenManager {
         let this = ScreenManager {
             screens: screens,
             current: 0,
+            timeout: Some(Instant::now()),
+            last_screen: 0,
         };
         this.screens[this.current].start();
         this
@@ -18,6 +25,10 @@ impl ScreenManager {
         if self.screens.get(self.current).is_none() {
             None.unwrap()
         } else {
+            let five = Duration::from_secs(5);
+            if self.timeout.unwrap().elapsed() >= five {
+                self.current = self.last_screen;
+            }
             self.screens[self.current].start();
             &mut self.screens[self.current]
         }
@@ -45,5 +56,10 @@ impl ScreenManager {
 
     pub fn update_current_screen(&mut self) {
         self.current_screen().update();
+    }
+
+    pub fn set_screen_for_short(&mut self, screen: usize) {
+        self.timeout = Some(Instant::now());
+        self.current = screen;
     }
 }
