@@ -11,6 +11,7 @@ pub struct Screen {
     pub active: Arc<AtomicBool>,
     pub initial_update_called: Arc<AtomicBool>,
     pub handle: Arc<Mutex<Option<JoinHandle<()>>>>,
+    pub mode: Arc<Mutex<u32>>,
 }
 
 impl Default for Screen {
@@ -22,6 +23,7 @@ impl Default for Screen {
             active: Arc::new(AtomicBool::new(false)),
             initial_update_called: Arc::new(AtomicBool::new(false)),
             handle: Arc::new(Mutex::new(None)),
+            mode: Arc::new(Mutex::new(0)),
         }
     }
 }
@@ -39,6 +41,7 @@ pub trait SpecificScreen {
     fn initial_update_called(&mut self) -> bool;
     fn start(&self) -> ();
     fn stop(&self) -> ();
+    fn set_mode(&mut self, _mode: u32) {}
     fn convert_to_gray_scale(&self, bytes: &Vec<u8>) -> Vec<u8> {
         let mut buffer = Vec::new();
         for chunk in bytes.chunks(6) {

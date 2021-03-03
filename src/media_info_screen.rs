@@ -17,8 +17,10 @@ use std::thread;
 use std::time::Duration;
 use unicode_segmentation::UnicodeSegmentation;
 use winapi::shared::minwindef::LPARAM;
+use winapi::um::mmdeviceapi::*;
 use winapi::um::winuser::FindWindowW;
 use winapi::um::winuser::*;
+use winapi::Interface;
 #[derive(Debug, Clone)]
 pub struct MediaInfoScreen {
     screen: Screen,
@@ -33,6 +35,8 @@ pub struct MediaInfoScreen {
     regex_second: Arc<Mutex<regex::Regex>>,
     title_x: Arc<Mutex<u32>>,
     artist_x: Arc<Mutex<u32>>,
+    system_volume: Arc<Mutex<f32>>,
+    mute: Arc<Mutex<i32>>,
 }
 
 impl SpecificScreen for MediaInfoScreen {
@@ -46,6 +50,10 @@ impl SpecificScreen for MediaInfoScreen {
 
     fn update(&mut self) {
         MediaInfoScreen::update(self);
+    }
+
+    fn set_mode(&mut self, mode: u32) {
+        MediaInfoScreen::set_mode(self, mode);
     }
 
     fn start(&self) {
@@ -79,7 +87,7 @@ impl SpecificScreen for MediaInfoScreen {
 
 #[cfg(windows)]
 impl MediaInfoScreen {
-    pub fn draw_intro(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
+    fn draw_intro(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
@@ -99,7 +107,7 @@ impl MediaInfoScreen {
             "Winamp inactive",
         );
     }
-    pub fn draw_artist(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
+    fn draw_artist(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
         let artist = self.artist.lock().unwrap();
         let mut position_artist = 0;
         let artist_len = artist.graphemes(true).count();
@@ -131,7 +139,7 @@ impl MediaInfoScreen {
         );
     }
 
-    pub fn draw_title(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
+    fn draw_title(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
         let title = self.title.lock().unwrap();
         let title_len = title.graphemes(true).count();
         let mut position_title = 0;
@@ -163,7 +171,7 @@ impl MediaInfoScreen {
         );
     }
 
-    pub fn draw_play_button(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
+    fn draw_play_button(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
         let play_button = &String::from("\u{f04B}");
         let pause_button = &String::from("\u{f04C}");
         let stop_button = &String::from("\u{f04D}");
@@ -187,7 +195,7 @@ impl MediaInfoScreen {
         );
     }
 
-    pub fn draw_elapsed(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
+    fn draw_elapsed(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
         let original = *self.track_current_position.lock().unwrap() / 1000;
         let seconds = original % 60;
         let minutes = (original / 60) % 60;
@@ -205,7 +213,7 @@ impl MediaInfoScreen {
         );
     }
 
-    pub fn draw_total(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
+    fn draw_total(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
         let original = *self.track_length.lock().unwrap();
         let seconds = original % 60;
         let minutes = (original / 60) % 60;
@@ -223,7 +231,7 @@ impl MediaInfoScreen {
         );
     }
 
-    pub fn draw_elapsed_bar(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
+    fn draw_elapsed_bar(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
         let indicator_position_x_min = 16.0;
         let indicator_position_x_max = 232.0;
 
@@ -243,6 +251,53 @@ impl MediaInfoScreen {
         );
     }
 
+    fn draw_volume_bar(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
+        let progress = (1.0 + (238.0 * *self.system_volume.lock().unwrap())) as u32;
+
+        draw_hollow_rect_mut(
+            image,
+            Rect::at(16, 50).of_size(238, 6),
+            Rgb([255u8, 255u8, 255u8]),
+        );
+        let small_speaker = &String::from("\u{f027}");
+        let big_speaker = &String::from("\u{f028}");
+        let mute_speaker = &String::from("\u{f6a9}");
+
+        draw_text_mut(
+            image,
+            Rgb([255u8, 255u8, 255u8]),
+            16,
+            38,
+            Scale { x: 10.0, y: 10.0 },
+            self.symbols.as_ref().unwrap(),
+            small_speaker,
+        );
+        if *self.mute.lock().unwrap() == 1 {
+            draw_text_mut(
+                image,
+                Rgb([255u8, 255u8, 255u8]),
+                118,
+                38,
+                Scale { x: 10.0, y: 10.0 },
+                self.symbols.as_ref().unwrap(),
+                mute_speaker,
+            );
+        }
+        draw_text_mut(
+            image,
+            Rgb([255u8, 255u8, 255u8]),
+            240,
+            37,
+            Scale { x: 10.0, y: 10.0 },
+            self.symbols.as_ref().unwrap(),
+            big_speaker,
+        );
+        draw_filled_rect_mut(
+            image,
+            Rect::at(16, 50).of_size(progress, 6),
+            Rgb([255u8, 255u8, 255u8]),
+        );
+    }
     fn update(&mut self) {
         let mut image = RgbImage::new(256, 64);
         let scale = Scale { x: 16.0, y: 16.0 };
@@ -250,10 +305,15 @@ impl MediaInfoScreen {
         if *self.editor_active.lock().unwrap() {
             self.draw_artist(&mut image, scale);
             self.draw_title(&mut image, scale);
-            self.draw_play_button(&mut image, scale);
-            self.draw_elapsed(&mut image, scale);
-            self.draw_total(&mut image, scale);
-            self.draw_elapsed_bar(&mut image, scale);
+            if *self.screen.mode.lock().unwrap() == 0 {
+                self.draw_play_button(&mut image, scale);
+                self.draw_elapsed(&mut image, scale);
+                self.draw_total(&mut image, scale);
+                self.draw_elapsed_bar(&mut image, scale);
+            } else {
+                // DRAW VOLUME BAR
+                self.draw_volume_bar(&mut image, scale);
+            }
         } else {
             self.draw_intro(&mut image, scale);
         }
@@ -261,6 +321,10 @@ impl MediaInfoScreen {
         let _ = DynamicImage::ImageRgb8(image)
             .write_to(&mut self.screen.bytes, image::ImageOutputFormat::Bmp);
         // let converted = self.convert_to_gray_scale(&self.screen.bytes);
+    }
+
+    fn set_mode(&mut self, mode: u32) {
+        *self.screen.mode.lock().unwrap() = mode;
     }
 
     #[cfg(windows)]
@@ -279,6 +343,8 @@ impl MediaInfoScreen {
             title_x: Arc::new(Mutex::new(0)),
             artist: Arc::new(Mutex::new(String::new())),
             artist_x: Arc::new(Mutex::new(0)),
+            system_volume: Arc::new(Mutex::new(get_master_volume().0)),
+            mute: Arc::new(Mutex::new(get_master_volume().1)),
             editor_active: Arc::new(Mutex::new(false)),
             regex_first: Arc::new(Mutex::new(regex::Regex::new(r"\s(.*)-").unwrap())),
             regex_second: Arc::new(Mutex::new(regex::Regex::new(r"(.*) - (.*)").unwrap())),
@@ -327,6 +393,9 @@ impl MediaInfoScreen {
                                     current_index as usize,
                                     3034,
                                 );
+
+                                // WINAMP VOLUME. NOT USED RIGHT NOW.
+                                // let mut volume = SendMessageW(hwnd, WM_USER, -666i32 as usize, 122);
                                 title_length += 1;
 
                                 let mut buffer = Vec::<u16>::with_capacity(title_length as usize);
@@ -380,7 +449,11 @@ impl MediaInfoScreen {
                             *this.editor_active.lock().unwrap() = false;
                         }
 
-                        thread::sleep(Duration::from_secs(1));
+                        // TODO: only if audio mode is active!
+                        let volume_data = get_master_volume();
+                        *this.system_volume.lock().unwrap() = volume_data.0;
+                        *this.mute.lock().unwrap() = volume_data.1;
+                        thread::sleep(Duration::from_millis(500));
                     }
                 })
                 .expect("Cannot create JOB_EXECUTOR thread"),
@@ -388,7 +461,7 @@ impl MediaInfoScreen {
         this
     }
 }
-
+// MOVE EVERYTHING BELOW SOMEWHERE ELSE, TO SOME MODULE ETC.
 pub enum Direction {
     Left,
     //Right,
@@ -401,4 +474,51 @@ pub fn rotate(str: &str, direction: Direction, count: usize) -> String {
         //Direction::Right => str_vec.rotate_right(count),
     }
     str_vec.iter().collect()
+}
+
+// TODO: disable for non-windows OS and find another way.
+pub fn get_master_volume() -> (f32, i32) {
+    let mut current_volume = 0.0 as f32;
+    let mut mute = 0;
+    unsafe {
+        winapi::um::objbase::CoInitialize(std::ptr::null_mut());
+        let mut device_enumerator: *mut winapi::um::mmdeviceapi::IMMDeviceEnumerator =
+            std::ptr::null_mut();
+        // let mut hresult = winapi::um::combaseapi::CoCreateInstance(
+        winapi::um::combaseapi::CoCreateInstance(
+            &winapi::um::mmdeviceapi::CLSID_MMDeviceEnumerator,
+            std::ptr::null_mut(),
+            winapi::um::combaseapi::CLSCTX_ALL,
+            &IMMDeviceEnumerator::uuidof(),
+            &mut device_enumerator as *mut *mut winapi::um::mmdeviceapi::IMMDeviceEnumerator
+                as *mut _,
+        );
+        let mut default_device: *mut winapi::um::mmdeviceapi::IMMDevice = std::mem::zeroed();
+        (*device_enumerator).GetDefaultAudioEndpoint(
+            winapi::um::mmdeviceapi::eRender,
+            winapi::um::mmdeviceapi::eConsole,
+            &mut default_device,
+        );
+        if default_device == std::ptr::null_mut() {
+            return (0.0, 0);
+        }
+
+        (*device_enumerator).Release();
+        //device_enumerator = std::mem::zeroed();
+        let mut endpoint_volume: *mut winapi::um::endpointvolume::IAudioEndpointVolume =
+            std::mem::zeroed();
+
+        (*default_device).Activate(
+            &winapi::um::endpointvolume::IAudioEndpointVolume::uuidof(),
+            winapi::shared::wtypesbase::CLSCTX_INPROC_SERVER,
+            std::ptr::null_mut(),
+            &mut endpoint_volume as *mut *mut winapi::um::endpointvolume::IAudioEndpointVolume
+                as *mut _,
+        );
+
+        (*default_device).Release();
+        (*endpoint_volume).GetMasterVolumeLevelScalar(&mut current_volume as *mut f32);
+        (*endpoint_volume).GetMute(&mut mute as *mut i32);
+    }
+    (current_volume, mute)
 }

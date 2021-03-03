@@ -15,7 +15,9 @@ use rusttype::Font;
 use std::sync::Mutex;
 use std::thread;
 lazy_static! {
+    // TODO: show for a short amount of time the volume bar
     static ref LAST_KEY: Mutex<bool> = Mutex::new(false);
+    static ref LAST_KEY_VALUE: Mutex<u32> = Mutex::new(0);
 }
 pub fn main() -> iced::Result {
     AwesomeDisplay::run(Settings::default())
@@ -34,7 +36,7 @@ enum Message {
     NextScreen,
     PreviousScreen,
     UpdateCurrentScreen,
-    EventOccurred(iced::keyboard::KeyCode),
+    EventOccurred(iced::keyboard::KeyCode, u32),
 }
 
 impl Application for AwesomeDisplay {
@@ -89,30 +91,32 @@ impl Application for AwesomeDisplay {
                             key_code,
                         }) => match key_code {
                             iced::keyboard::KeyCode::PlayPause => {
-                                Some(Message::EventOccurred(key_code))
+                                Some(Message::EventOccurred(key_code, 179))
                             }
                             iced::keyboard::KeyCode::MediaStop => {
-                                Some(Message::EventOccurred(key_code))
+                                Some(Message::EventOccurred(key_code, 178))
                             }
                             iced::keyboard::KeyCode::PrevTrack => {
-                                Some(Message::EventOccurred(key_code))
+                                Some(Message::EventOccurred(key_code, 177))
                             }
                             iced::keyboard::KeyCode::NextTrack => {
-                                Some(Message::EventOccurred(key_code))
+                                Some(Message::EventOccurred(key_code, 176))
                             }
                             iced::keyboard::KeyCode::VolumeDown => {
-                                Some(Message::EventOccurred(key_code))
+                                Some(Message::EventOccurred(key_code, 174))
                             }
                             iced::keyboard::KeyCode::VolumeUp => {
-                                Some(Message::EventOccurred(key_code))
+                                Some(Message::EventOccurred(key_code, 175))
                             }
-                            iced::keyboard::KeyCode::Mute => Some(Message::EventOccurred(key_code)),
+                            iced::keyboard::KeyCode::Mute => {
+                                Some(Message::EventOccurred(key_code, 173))
+                            }
                             _ => None,
                         },
                         _ => None,
                     }
                 }),
-                time::every(std::time::Duration::from_millis(500))
+                time::every(std::time::Duration::from_millis(250))
                     .map(|_| Message::UpdateCurrentScreen),
             ]
             .into_iter(),
@@ -132,13 +136,20 @@ impl Application for AwesomeDisplay {
             Message::UpdateCurrentScreen => {
                 if *LAST_KEY.lock().unwrap() {
                     *LAST_KEY.lock().unwrap() = false;
-                    self.screens.set_screen_for_short(1); // 1 is media screen right now
+                    let val = *LAST_KEY_VALUE.lock().unwrap();
+                    if val > 172 && val < 176 {
+                        self.screens.set_screen_for_short(1, 1); // 1 is media screen right now, 1 is "volume mode"
+                    } else {
+                        self.screens.set_screen_for_short(1, 0); // 1 is media screen right now, 0 is "normal mode"
+                    }
+                    *LAST_KEY_VALUE.lock().unwrap() = 0;
                 }
                 self.screens.update_current_screen();
             }
-            Message::EventOccurred(_event) => {
+            Message::EventOccurred(_event, key_code) => {
                 // switch to media screen for a few seconds
                 *LAST_KEY.lock().unwrap() = true;
+                *LAST_KEY_VALUE.lock().unwrap() = key_code;
             }
         }
         Command::none()
@@ -197,30 +208,37 @@ fn callback(event: Event) -> Option<Event> {
     match event.event_type {
         EventType::KeyPress(Key::Unknown(178)) => {
             *LAST_KEY.lock().unwrap() = true;
+            *LAST_KEY_VALUE.lock().unwrap() = 178;
             Some(event)
         }
         EventType::KeyPress(Key::Unknown(177)) => {
             *LAST_KEY.lock().unwrap() = true;
+            *LAST_KEY_VALUE.lock().unwrap() = 177;
             Some(event)
         }
         EventType::KeyPress(Key::Unknown(176)) => {
             *LAST_KEY.lock().unwrap() = true;
+            *LAST_KEY_VALUE.lock().unwrap() = 176;
             Some(event)
         }
         EventType::KeyPress(Key::Unknown(175)) => {
             *LAST_KEY.lock().unwrap() = true;
+            *LAST_KEY_VALUE.lock().unwrap() = 175;
             Some(event)
         }
         EventType::KeyPress(Key::Unknown(174)) => {
             *LAST_KEY.lock().unwrap() = true;
+            *LAST_KEY_VALUE.lock().unwrap() = 174;
             Some(event)
         }
         EventType::KeyPress(Key::Unknown(173)) => {
             *LAST_KEY.lock().unwrap() = true;
+            *LAST_KEY_VALUE.lock().unwrap() = 173;
             Some(event)
         }
         EventType::KeyPress(Key::Unknown(179)) => {
             *LAST_KEY.lock().unwrap() = true;
+            *LAST_KEY_VALUE.lock().unwrap() = 179;
             Some(event)
         }
         _ => Some(event),

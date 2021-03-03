@@ -1,5 +1,5 @@
 use std::time::Instant;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration};
 
 #[derive(Debug, Default)]
 pub struct ScreenManager {
@@ -7,6 +7,7 @@ pub struct ScreenManager {
     current: usize,
     timeout: Option<std::time::Instant>,
     last_screen: usize,
+    switch_in_progress: bool,
 }
 
 impl ScreenManager {
@@ -16,6 +17,7 @@ impl ScreenManager {
             current: 0,
             timeout: Some(Instant::now()),
             last_screen: 0,
+            switch_in_progress: false,
         };
         this.screens[this.current].start();
         this
@@ -26,8 +28,11 @@ impl ScreenManager {
             None.unwrap()
         } else {
             let five = Duration::from_secs(5);
-            if self.timeout.unwrap().elapsed() >= five {
+            if self.switch_in_progress && self.timeout.unwrap().elapsed() >= five {
+                self.screens[self.current].set_mode(0); // TODO: set to last mode
+                self.screens[self.current].update();
                 self.current = self.last_screen;
+                self.switch_in_progress = false;
             }
             self.screens[self.current].start();
             &mut self.screens[self.current]
@@ -58,8 +63,11 @@ impl ScreenManager {
         self.current_screen().update();
     }
 
-    pub fn set_screen_for_short(&mut self, screen: usize) {
+    pub fn set_screen_for_short(&mut self, screen: usize, mode: u32) {
         self.timeout = Some(Instant::now());
+        self.last_screen = self.current;
         self.current = screen;
+        self.current_screen().set_mode(mode); // right now, volume mode for 5 seconds for media screen
+        self.switch_in_progress = true;
     }
 }
