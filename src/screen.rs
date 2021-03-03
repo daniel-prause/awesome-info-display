@@ -45,13 +45,14 @@ pub trait SpecificScreen {
     fn start(&self) -> ();
     fn stop(&self) -> ();
     fn set_mode_for_short(&mut self, _mode: u32) {}
-    fn convert_to_gray_scale(&self, bytes: &Vec<u8>) -> Vec<u8> {
-        let mut buffer = Vec::new();
-        for chunk in bytes.chunks(6) {
-            let gray = 0.299 * chunk[0] as f32 + 0.587 * chunk[1] as f32 + 0.114 * chunk[2] as f32;
-            let gray2 = 0.299 * chunk[3] as f32 + 0.587 * chunk[4] as f32 + 0.114 * chunk[5] as f32;
-            buffer.push(((gray / 16.0) as u8) << 4 | ((gray2 / 16.0) as u8));
-        }
-        buffer
+}
+
+pub fn convert_to_gray_scale(bytes: &Vec<u8>) -> Vec<u8> {
+    let mut buffer = Vec::new();
+    for chunk in bytes.chunks(6) {
+        let gray = 0.299 * chunk[0] as f32 + 0.587 * chunk[1] as f32 + 0.114 * chunk[2] as f32;
+        let gray2 = 0.299 * chunk[3] as f32 + 0.587 * chunk[4] as f32 + 0.114 * chunk[5] as f32;
+        buffer.push(((gray / 16.0) as u8) << 4 | ((gray2 / 16.0) as u8));
     }
+    buffer
 }

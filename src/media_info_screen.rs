@@ -324,7 +324,6 @@ impl MediaInfoScreen {
         self.screen.bytes.clear();
         let _ = DynamicImage::ImageRgb8(image)
             .write_to(&mut self.screen.bytes, image::ImageOutputFormat::Bmp);
-        // let converted = self.convert_to_gray_scale(&self.screen.bytes);
     }
 
     fn set_mode(&mut self, mode: u32) {

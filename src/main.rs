@@ -163,7 +163,8 @@ impl Application for AwesomeDisplay {
         let image = Image::new(iced::image::Handle::from_memory(
             self.screens.current_screen().current_image(),
         ));
-
+        // SEND THIS VIA USB, MAYBE EVEN IN ANOTHER THREAD
+        // screen::convert_to_gray_scale(&self.screens.current_screen().current_image());
         let col1 = Column::new()
             .padding(20)
             .align_items(Align::Center)

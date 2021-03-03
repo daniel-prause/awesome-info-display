@@ -138,7 +138,6 @@ impl SystemInfoScreen {
         self.screen.bytes.clear();
         let _ = DynamicImage::ImageRgb8(image)
             .write_to(&mut self.screen.bytes, image::ImageOutputFormat::Bmp);
-        // let converted = self.convert_to_gray_scale(&self.screen.bytes);
     }
 
     pub fn new(description: String, font: Option<Font<'static>>) -> Self {
