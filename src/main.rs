@@ -137,7 +137,7 @@ impl Application for AwesomeDisplay {
                 if *LAST_KEY.lock().unwrap() {
                     *LAST_KEY.lock().unwrap() = false;
                     let val = *LAST_KEY_VALUE.lock().unwrap();
-                    if val > 172 && val < 176 {
+                    if val > 173 && val < 176 {
                         self.screens.set_screen_for_short(1, 1); // 1 is media screen right now, 1 is "volume mode"
                     } else {
                         self.screens.set_screen_for_short(1, 0); // 1 is media screen right now, 0 is "normal mode"
@@ -150,6 +150,7 @@ impl Application for AwesomeDisplay {
                 // switch to media screen for a few seconds
                 *LAST_KEY.lock().unwrap() = true;
                 *LAST_KEY_VALUE.lock().unwrap() = key_code;
+                self.screens.update_current_screen();
             }
         }
         Command::none()
