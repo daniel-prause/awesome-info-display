@@ -2,6 +2,7 @@ use rusttype::Font;
 use std::fmt::Debug;
 use std::sync::{atomic::AtomicBool, Arc, Mutex};
 use std::thread::JoinHandle;
+use std::time::Instant;
 
 #[derive(Debug, Clone)]
 pub struct Screen {
@@ -12,6 +13,7 @@ pub struct Screen {
     pub initial_update_called: Arc<AtomicBool>,
     pub handle: Arc<Mutex<Option<JoinHandle<()>>>>,
     pub mode: Arc<Mutex<u32>>,
+    pub mode_timeout: Arc<Mutex<Option<Instant>>>,
 }
 
 impl Default for Screen {
@@ -24,6 +26,7 @@ impl Default for Screen {
             initial_update_called: Arc::new(AtomicBool::new(false)),
             handle: Arc::new(Mutex::new(None)),
             mode: Arc::new(Mutex::new(0)),
+            mode_timeout: Arc::new(Mutex::new(Some(Instant::now()))),
         }
     }
 }
@@ -41,7 +44,7 @@ pub trait SpecificScreen {
     fn initial_update_called(&mut self) -> bool;
     fn start(&self) -> ();
     fn stop(&self) -> ();
-    fn set_mode(&mut self, _mode: u32) {}
+    fn set_mode_for_short(&mut self, _mode: u32) {}
     fn convert_to_gray_scale(&self, bytes: &Vec<u8>) -> Vec<u8> {
         let mut buffer = Vec::new();
         for chunk in bytes.chunks(6) {

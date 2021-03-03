@@ -1,5 +1,5 @@
+use std::time::Duration;
 use std::time::Instant;
-use std::time::{Duration};
 
 #[derive(Debug, Default)]
 pub struct ScreenManager {
@@ -29,7 +29,6 @@ impl ScreenManager {
         } else {
             let five = Duration::from_secs(5);
             if self.switch_in_progress && self.timeout.unwrap().elapsed() >= five {
-                self.screens[self.current].set_mode(0); // TODO: set to last mode
                 self.screens[self.current].update();
                 self.current = self.last_screen;
                 self.switch_in_progress = false;
@@ -41,6 +40,7 @@ impl ScreenManager {
 
     pub fn next_screen(&mut self) {
         self.current_screen().stop();
+        self.switch_in_progress = false;
         if self.current == self.screens.len() - 1 {
             self.current = 0;
         } else {
@@ -51,6 +51,7 @@ impl ScreenManager {
 
     pub fn previous_screen(&mut self) {
         self.current_screen().stop();
+        self.switch_in_progress = false;
         if self.current == 0 {
             self.current = self.screens.len() - 1;
         } else {
@@ -67,7 +68,7 @@ impl ScreenManager {
         self.timeout = Some(Instant::now());
         self.last_screen = self.current;
         self.current = screen;
-        self.current_screen().set_mode(mode); // right now, volume mode for 5 seconds for media screen
+        self.current_screen().set_mode_for_short(mode); // right now, volume mode for 5 seconds for media screen
         self.switch_in_progress = true;
     }
 }

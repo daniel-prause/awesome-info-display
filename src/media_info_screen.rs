@@ -15,6 +15,7 @@ use std::ptr::null_mut;
 use std::sync::{atomic::Ordering, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use std::time::Instant;
 use unicode_segmentation::UnicodeSegmentation;
 use winapi::shared::minwindef::LPARAM;
 use winapi::um::mmdeviceapi::*;
@@ -52,7 +53,7 @@ impl SpecificScreen for MediaInfoScreen {
         MediaInfoScreen::update(self);
     }
 
-    fn set_mode(&mut self, mode: u32) {
+    fn set_mode_for_short(&mut self, mode: u32) {
         MediaInfoScreen::set_mode(self, mode);
     }
 
@@ -301,7 +302,10 @@ impl MediaInfoScreen {
     fn update(&mut self) {
         let mut image = RgbImage::new(256, 64);
         let scale = Scale { x: 16.0, y: 16.0 };
-
+        let five = Duration::from_secs(5);
+        if self.screen.mode_timeout.lock().unwrap().unwrap().elapsed() >= five {
+            *self.screen.mode.lock().unwrap() = 0;
+        }
         if *self.editor_active.lock().unwrap() {
             self.draw_artist(&mut image, scale);
             self.draw_title(&mut image, scale);
@@ -324,6 +328,7 @@ impl MediaInfoScreen {
     }
 
     fn set_mode(&mut self, mode: u32) {
+        *self.screen.mode_timeout.lock().unwrap() = Some(Instant::now());
         *self.screen.mode.lock().unwrap() = mode;
     }
 
