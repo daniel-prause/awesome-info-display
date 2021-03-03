@@ -27,8 +27,8 @@ impl ScreenManager {
         if self.screens.get(self.current).is_none() {
             None.unwrap()
         } else {
-            let five = Duration::from_secs(5);
-            if self.switch_in_progress && self.timeout.unwrap().elapsed() >= five {
+            let seconds = Duration::from_secs(3);
+            if self.switch_in_progress && self.timeout.unwrap().elapsed() >= seconds {
                 self.screens[self.current].update();
                 self.current = self.last_screen;
                 self.switch_in_progress = false;
@@ -68,7 +68,7 @@ impl ScreenManager {
         self.timeout = Some(Instant::now());
         self.last_screen = self.current;
         self.current = screen;
-        self.current_screen().set_mode_for_short(mode); // right now, volume mode for 5 seconds for media screen
+        self.current_screen().set_mode_for_short(mode); // right now, volume mode for 3 seconds for media screen
         self.switch_in_progress = true;
     }
 }

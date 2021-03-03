@@ -302,8 +302,8 @@ impl MediaInfoScreen {
     fn update(&mut self) {
         let mut image = RgbImage::new(256, 64);
         let scale = Scale { x: 16.0, y: 16.0 };
-        let five = Duration::from_secs(5);
-        if self.screen.mode_timeout.lock().unwrap().unwrap().elapsed() >= five {
+        let seconds = Duration::from_secs(3);
+        if self.screen.mode_timeout.lock().unwrap().unwrap().elapsed() >= seconds {
             *self.screen.mode.lock().unwrap() = 0;
         }
         if *self.editor_active.lock().unwrap() {
@@ -412,7 +412,7 @@ impl MediaInfoScreen {
                                     || !this.regex_first.lock().unwrap().is_match(&data)
                                 {
                                     *this.editor_active.lock().unwrap() = false;
-                                    thread::sleep(Duration::from_secs(1));
+                                    thread::sleep(Duration::from_secs(1000));
                                     continue;
                                 } else {
                                     *this.editor_active.lock().unwrap() = true;
@@ -458,7 +458,7 @@ impl MediaInfoScreen {
                         let volume_data = get_master_volume();
                         *this.system_volume.lock().unwrap() = volume_data.0;
                         *this.mute.lock().unwrap() = volume_data.1;
-                        thread::sleep(Duration::from_millis(500));
+                        thread::sleep(Duration::from_millis(1000));
                     }
                 })
                 .expect("Cannot create JOB_EXECUTOR thread"),

@@ -8,7 +8,6 @@ version = "0.1.0"
 
 [dependencies]
 chrono = "0.4"
-compound_duration = "1.2"
 cpu-monitor = "0.1.1"
 iced = {version = "0.2", features = ["canvas", "tokio", "debug", "image", "debug"]}
 iced_futures = ""
