@@ -252,27 +252,8 @@ impl MediaInfoScreen {
         );
     }
 
-    fn draw_volume_bar(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
-        let progress = (1.0 + (238.0 * *self.system_volume.lock().unwrap())) as u32;
-
-        draw_hollow_rect_mut(
-            image,
-            Rect::at(16, 50).of_size(238, 6),
-            Rgb([255u8, 255u8, 255u8]),
-        );
-        let small_speaker = &String::from("\u{f027}");
-        let big_speaker = &String::from("\u{f028}");
+    fn draw_mute_speaker(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
         let mute_speaker = &String::from("\u{f6a9}");
-
-        draw_text_mut(
-            image,
-            Rgb([255u8, 255u8, 255u8]),
-            16,
-            38,
-            Scale { x: 10.0, y: 10.0 },
-            self.symbols.as_ref().unwrap(),
-            small_speaker,
-        );
         if *self.mute.lock().unwrap() == 1 {
             draw_text_mut(
                 image,
@@ -284,6 +265,28 @@ impl MediaInfoScreen {
                 mute_speaker,
             );
         }
+    }
+    fn draw_volume_bar(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
+        let progress = (1.0 + (238.0 * *self.system_volume.lock().unwrap())) as u32;
+
+        draw_hollow_rect_mut(
+            image,
+            Rect::at(16, 50).of_size(238, 6),
+            Rgb([255u8, 255u8, 255u8]),
+        );
+        let small_speaker = &String::from("\u{f027}");
+        let big_speaker = &String::from("\u{f028}");
+
+        draw_text_mut(
+            image,
+            Rgb([255u8, 255u8, 255u8]),
+            16,
+            38,
+            Scale { x: 10.0, y: 10.0 },
+            self.symbols.as_ref().unwrap(),
+            small_speaker,
+        );
+
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
@@ -309,6 +312,8 @@ impl MediaInfoScreen {
         if *self.editor_active.lock().unwrap() {
             self.draw_artist(&mut image, scale);
             self.draw_title(&mut image, scale);
+            self.draw_mute_speaker(&mut image, scale);
+
             if *self.screen.mode.lock().unwrap() == 0 {
                 self.draw_play_button(&mut image, scale);
                 self.draw_elapsed(&mut image, scale);
