@@ -416,7 +416,7 @@ impl MediaInfoScreen {
                                     || !this.regex_first.lock().unwrap().is_match(&data)
                                 {
                                     *this.editor_active.lock().unwrap() = false;
-                                    thread::sleep(Duration::from_secs(1000));
+                                    thread::sleep(Duration::from_millis(200));
                                     continue;
                                 } else {
                                     *this.editor_active.lock().unwrap() = true;
@@ -462,7 +462,7 @@ impl MediaInfoScreen {
                         let volume_data = get_master_volume();
                         *this.system_volume.lock().unwrap() = volume_data.0;
                         *this.mute.lock().unwrap() = volume_data.1;
-                        thread::sleep(Duration::from_millis(1000));
+                        thread::sleep(Duration::from_millis(200));
                     }
                 })
                 .expect("Cannot create JOB_EXECUTOR thread"),
