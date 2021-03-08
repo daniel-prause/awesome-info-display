@@ -12,15 +12,65 @@ mod system_info_screen;
 use lazy_static::lazy_static;
 use rdev::{grab, Event, EventType, Key};
 use rusttype::Font;
+use std::ffi::CString;
 use std::sync::Mutex;
 use std::thread;
+
+use std::error::Error;
+use std::fmt;
+
+#[derive(Debug)]
+struct SuperError {
+    side: SuperErrorSideKick,
+}
+
+impl fmt::Display for SuperError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "SuperError is here!")
+    }
+}
+
+impl Error for SuperError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.side)
+    }
+}
+
+#[derive(Debug)]
+struct SuperErrorSideKick;
+
+impl fmt::Display for SuperErrorSideKick {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "App already opened!")
+    }
+}
+
+impl Error for SuperErrorSideKick {}
+
+fn get_super_error() -> SuperError {
+    SuperError {
+        side: SuperErrorSideKick,
+    }
+}
+
 lazy_static! {
-    // TODO: show for a short amount of time the volume bar
     static ref LAST_KEY: Mutex<bool> = Mutex::new(false);
     static ref LAST_KEY_VALUE: Mutex<u32> = Mutex::new(0);
 }
 pub fn main() -> iced::Result {
-    AwesomeDisplay::run(Settings::default())
+    unsafe {
+        let lp_text = CString::new("AwesomeInfoDisplay").unwrap();
+        winapi::um::synchapi::CreateMutexA(std::ptr::null_mut(), 1, lp_text.as_ptr());
+        if winapi::um::errhandlingapi::GetLastError()
+            == winapi::shared::winerror::ERROR_ALREADY_EXISTS
+        {
+            Err(iced::Error::WindowCreationFailed(Box::new(
+                get_super_error(),
+            )))
+        } else {
+            AwesomeDisplay::run(Settings::default())
+        }
+    }
 }
 
 #[derive(Default)]
