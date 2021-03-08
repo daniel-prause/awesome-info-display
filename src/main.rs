@@ -1,7 +1,7 @@
 #![windows_subsystem = "windows"]
 use iced::{
-    button, executor, time, Align, Application, Button, Column, Command, Container, Element,
-    HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
+    button, executor, time, window, Align, Application, Button, Column, Command, Container,
+    Element, HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
 };
 use std::io::{self, Write};
 mod media_info_screen;
@@ -59,6 +59,7 @@ lazy_static! {
 }
 pub fn main() -> iced::Result {
     unsafe {
+        let app_image = ::image::load_from_memory(include_bytes!("../icon.ico") as &[u8]);
         let lp_text = CString::new("AwesomeInfoDisplay").unwrap();
         winapi::um::synchapi::CreateMutexA(std::ptr::null_mut(), 1, lp_text.as_ptr());
         if winapi::um::errhandlingapi::GetLastError()
@@ -68,7 +69,23 @@ pub fn main() -> iced::Result {
                 get_super_error(),
             )))
         } else {
-            AwesomeDisplay::run(Settings::default())
+            let settings = Settings {
+                window: window::Settings {
+                    resizable: false,
+                    decorations: true,
+                    icon: Some(
+                        iced::window::icon::Icon::from_rgba(
+                            app_image.unwrap().to_rgba8().to_vec(),
+                            153,
+                            153,
+                        )
+                        .unwrap(),
+                    ),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            AwesomeDisplay::run(settings)
         }
     }
 }
