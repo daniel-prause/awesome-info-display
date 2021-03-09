@@ -76,8 +76,8 @@ pub fn main() -> iced::Result {
                     icon: Some(
                         iced::window::icon::Icon::from_rgba(
                             app_image.unwrap().to_rgba8().to_vec(),
-                            153,
-                            153,
+                            256,
+                            256,
                         )
                         .unwrap(),
                     ),
