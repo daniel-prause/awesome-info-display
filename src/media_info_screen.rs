@@ -326,9 +326,7 @@ impl MediaInfoScreen {
         } else {
             self.draw_intro(&mut image, scale);
         }
-        self.screen.bytes.clear();
-        let _ = DynamicImage::ImageRgb8(image)
-            .write_to(&mut self.screen.bytes, image::ImageOutputFormat::Bmp);
+        self.screen.bytes = image.into_vec();
     }
 
     fn set_mode(&mut self, mode: u32) {

@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+// #![windows_subsystem = "windows"]
 use iced::{
     button, executor, time, Align, Application, Button, Column, Command, Container, Element,
     HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
@@ -9,12 +9,14 @@ mod screen;
 mod screen_manager;
 mod style;
 mod system_info_screen;
+mod display_serial_com;
 use lazy_static::lazy_static;
 use rdev::{grab, Event, EventType, Key};
 use rusttype::Font;
 use std::ffi::CString;
 use std::sync::Mutex;
 use std::thread;
+use crate::display_serial_com::{convert_to_gray_scale, write_screen_buffer};
 
 use std::error::Error;
 use std::fmt;
@@ -73,7 +75,6 @@ pub fn main() -> iced::Result {
     }
 }
 
-#[derive(Default)]
 struct AwesomeDisplay {
     theme: style::Theme,
     increment_button: button::State,
@@ -211,11 +212,23 @@ impl Application for AwesomeDisplay {
         if !self.screens.current_screen().initial_update_called() {
             self.screens.update_current_screen();
         }
-        let image = Image::new(iced::image::Handle::from_memory(
-            self.screens.current_screen().current_image(),
-        ));
-        // SEND THIS VIA USB, MAYBE EVEN IN ANOTHER THREAD
-        // screen::convert_to_gray_scale(&self.screens.current_screen().current_image());
+        
+        // RENDER IN APP
+        let screen_buffer = self.screens.current_screen().current_image();
+        let mut converted_sb = Vec::new();
+        for chunk in screen_buffer.chunks(3) {
+            converted_sb.push(chunk[2]);
+            converted_sb.push(chunk[1]);
+            converted_sb.push(chunk[0]);
+            converted_sb.push(255);
+        }
+        let image = Image::new(iced::image::Handle::from_pixels(256, 64, converted_sb));
+
+        // SEND TO DISPLAY
+        let bytes = &self.screens.current_screen().current_image();
+        let bytes = convert_to_gray_scale(bytes);
+        write_screen_buffer(&mut self.screens.serial, &bytes);
+
         let col1 = Column::new()
             .padding(20)
             .align_items(Align::Center)
