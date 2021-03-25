@@ -1,23 +1,27 @@
 use std::time::Duration;
 use std::time::Instant;
+use crate::display_serial_com::init_serial;
 
-#[derive(Debug, Default)]
+// #[derive(Debug, Default)]
 pub struct ScreenManager {
     screens: Vec<Box<dyn super::screen::SpecificScreen>>,
     current: usize,
     timeout: Option<std::time::Instant>,
     last_screen: usize,
     switch_in_progress: bool,
+    pub serial: Box<dyn serialport::SerialPort>,
 }
 
 impl ScreenManager {
     pub fn new(screens: Vec<Box<dyn super::screen::SpecificScreen>>) -> Self {
+        let port = init_serial();
         let this = ScreenManager {
             screens: screens,
             current: 0,
             timeout: Some(Instant::now()),
             last_screen: 0,
             switch_in_progress: false,
+            serial: port,
         };
         this.screens[this.current].start();
         this
