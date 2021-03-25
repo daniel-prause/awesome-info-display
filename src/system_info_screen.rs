@@ -1,7 +1,7 @@
 use crate::screen::Screen;
 use crate::screen::SpecificScreen;
 
-use image::{DynamicImage, ImageBuffer, Rgb, RgbImage};
+use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
 use rusttype::Font;
