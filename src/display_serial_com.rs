@@ -8,22 +8,23 @@ use std::time::Duration;
 
 pub fn init_serial() -> std::boxed::Box<dyn serialport::SerialPort> {
     let ports = serialport::available_ports().expect("No ports found!");
-    for p in ports {
-        // debug!("Port found: {}", p.port_name);
-    }
-
+    println!("Available ports {:?}", ports);
     loop {
         thread::sleep(Duration::from_millis(1000));
         // info!("Try to open port");
-        let mut port = match serialport::new("COM3", 4608000)
-            .timeout(Duration::new(0, 500000))
-            .open()
-        {
-            Ok(port) => port,
-            Err(_) => continue,
-        };
-        port.flush().unwrap();
-        return port;
+        
+        for p in ports.clone() {
+            println!("Try opening port {}", p.port_name);
+            let mut port = match serialport::new(p.port_name, 4608000)
+                .timeout(Duration::new(0, 500000))
+                .open()
+            {
+                Ok(port) => port,
+                Err(_) => continue,
+            };
+            port.flush().unwrap();
+            return port;
+        }
     }
 }
 

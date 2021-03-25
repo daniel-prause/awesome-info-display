@@ -1,4 +1,4 @@
-// #![windows_subsystem = "windows"]
+#![windows_subsystem = "windows"]
 use iced::{
     button, executor, time, Align, Application, Button, Column, Command, Container, Element,
     HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
