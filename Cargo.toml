@@ -1,5 +1,6 @@
 [package]
 authors = ["dada"]
+build = "build.rs"
 edition = "2018"
 name = "awesome_info_display"
 version = "0.1.0"
@@ -24,3 +25,5 @@ systemstat = "0.1"
 unicode-segmentation = "1.7"
 [target.'cfg(windows)'.dependencies]
 winapi = {version = "0.3", features = ["winuser", "mmdeviceapi", "combaseapi", "objbase", "endpointvolume"]}
+[build-dependencies]
+winres = "0.1"
