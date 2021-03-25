@@ -4,19 +4,19 @@ use iced::{
     Element, HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
 };
 use std::io::{self, Write};
+mod display_serial_com;
 mod media_info_screen;
 mod screen;
 mod screen_manager;
 mod style;
 mod system_info_screen;
-mod display_serial_com;
+use crate::display_serial_com::{convert_to_gray_scale, init_serial, write_screen_buffer};
 use lazy_static::lazy_static;
 use rdev::{grab, Event, EventType, Key};
 use rusttype::Font;
 use std::ffi::CString;
 use std::sync::Mutex;
 use std::thread;
-use crate::display_serial_com::{convert_to_gray_scale, write_screen_buffer};
 
 use std::error::Error;
 use std::fmt;
@@ -58,6 +58,7 @@ fn get_super_error() -> SuperError {
 lazy_static! {
     static ref LAST_KEY: Mutex<bool> = Mutex::new(false);
     static ref LAST_KEY_VALUE: Mutex<u32> = Mutex::new(0);
+    static ref SERIAL_PORT: Mutex<Option<Box<dyn serialport::SerialPort>>> = Mutex::new(None);
 }
 pub fn main() -> iced::Result {
     unsafe {
@@ -114,7 +115,6 @@ impl Application for AwesomeDisplay {
     fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
         let font = Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8]));
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
-
         let this = AwesomeDisplay {
             increment_button: button::State::new(),
             decrement_button: button::State::new(),
@@ -139,6 +139,18 @@ impl Application for AwesomeDisplay {
                 }
             })
             .expect("Cannot create JOB_EXECUTOR thread");
+
+        thread::spawn(move || loop {
+            let initialized = SERIAL_PORT.lock().unwrap().is_some();
+            if !initialized {
+                let port = init_serial();
+                if port.is_some() {
+                    *SERIAL_PORT.lock().unwrap() = port;
+                }
+            } else {
+                thread::sleep(std::time::Duration::from_millis(1000));
+            }
+        });
         (this, Command::none())
     }
     fn title(&self) -> String {
@@ -229,7 +241,6 @@ impl Application for AwesomeDisplay {
         if !self.screens.current_screen().initial_update_called() {
             self.screens.update_current_screen();
         }
-        
         // RENDER IN APP
         let screen_buffer = self.screens.current_screen().current_image();
         let mut converted_sb = Vec::new();
@@ -244,7 +255,9 @@ impl Application for AwesomeDisplay {
         // SEND TO DISPLAY
         let bytes = &self.screens.current_screen().current_image();
         let bytes = convert_to_gray_scale(bytes);
-        write_screen_buffer(&mut self.screens.serial, &bytes);
+        if !write_screen_buffer(&mut *SERIAL_PORT.lock().unwrap(), &bytes) {
+            *SERIAL_PORT.lock().unwrap() = None;
+        }
 
         let col1 = Column::new()
             .padding(20)

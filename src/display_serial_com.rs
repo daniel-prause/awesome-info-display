@@ -1,31 +1,29 @@
 use hex_literal::hex;
-// use log::{debug, error, info, warn};
 use serialport;
 use std::cmp;
 use std::io::Write;
 use std::thread;
 use std::time::Duration;
 
-pub fn init_serial() -> std::boxed::Box<dyn serialport::SerialPort> {
+pub fn init_serial() -> Option<std::boxed::Box<dyn serialport::SerialPort>> {
     let ports = serialport::available_ports().expect("No ports found!");
-    println!("Available ports {:?}", ports);
-    loop {
-        thread::sleep(Duration::from_millis(1000));
-        // info!("Try to open port");
-        
-        for p in ports.clone() {
-            println!("Try opening port {}", p.port_name);
-            let mut port = match serialport::new(p.port_name, 4608000)
-                .timeout(Duration::new(0, 500000))
-                .open()
-            {
-                Ok(port) => port,
-                Err(_) => continue,
-            };
-            port.flush().unwrap();
-            return port;
-        }
+    thread::sleep(Duration::from_millis(1000));
+
+    if ports.len() == 0 {
+        return None;
     }
+    for p in ports.clone() {
+        let mut port = match serialport::new(p.port_name, 4608000)
+            .timeout(Duration::new(0, 500000))
+            .open()
+        {
+            Ok(port) => port,
+            Err(_) => continue,
+        };
+        port.flush().unwrap();
+        return Some(port);
+    }
+    return None;
 }
 
 pub fn convert_to_gray_scale(bytes: &Vec<u8>) -> Vec<u8> {
@@ -45,15 +43,23 @@ pub fn convert_to_gray_scale(bytes: &Vec<u8>) -> Vec<u8> {
 }
 
 pub fn write_screen_buffer(
-    port: &mut std::boxed::Box<dyn serialport::SerialPort>,
+    port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
     screen_buf: &[u8],
-) {
-    port.write(&hex!("e4")).unwrap();
+) -> bool {
+    if port.is_none() {
+        return false;
+    }
+    port.as_deref_mut().unwrap().write(&hex!("e4")).unwrap();
     // send buffer
     let mut bytes_send = 0;
     while bytes_send < screen_buf.len() {
         let slice = &screen_buf[bytes_send..cmp::min(bytes_send + 64, screen_buf.len())];
         bytes_send += slice.len();
-        let _wr = port.write(&slice).expect("Write failed!");
+        let _wr = port.as_deref_mut().unwrap().write(&slice);
+
+        if _wr.is_err() {
+            return false;
+        }
     }
+    return true;
 }
