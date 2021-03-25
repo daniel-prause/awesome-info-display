@@ -65,7 +65,9 @@ impl ScreenManager {
 
     pub fn set_screen_for_short(&mut self, screen: usize, mode: u32) {
         self.timeout = Some(Instant::now());
-        self.last_screen = self.current;
+        if !self.switch_in_progress {
+            self.last_screen = self.current;
+        }
         self.current = screen;
         self.current_screen().set_mode_for_short(mode); // right now, volume mode for 3 seconds for media screen
         self.switch_in_progress = true;
