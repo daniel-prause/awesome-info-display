@@ -11,10 +11,10 @@ version = "0.1.0"
 chrono = "0.4"
 cpu-monitor = "0.1"
 hex-literal = "0.3"
-iced = {version = "0.2", features = ["canvas", "tokio", "debug", "image", "debug"]}
+iced = {version = "0.3", features = ["canvas", "tokio", "debug", "image", "debug"]}
 iced_futures = ""
 iced_native = ""
-image = {version = "0.23", default-features = false}
+image = {version = "0.23", default-features = false, features = ["ico"]}
 imageproc = "0.22"
 lazy_static = "1.4"
 rdev = {version = "", features = ["unstable_grab"]}

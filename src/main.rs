@@ -63,6 +63,7 @@ lazy_static! {
 pub fn main() -> iced::Result {
     unsafe {
         let app_image = ::image::load_from_memory(include_bytes!("../icon.ico") as &[u8]);
+
         let lp_text = CString::new("AwesomeInfoDisplay").unwrap();
         winapi::um::synchapi::CreateMutexA(std::ptr::null_mut(), 1, lp_text.as_ptr());
         if winapi::um::errhandlingapi::GetLastError()
@@ -203,7 +204,7 @@ impl Application for AwesomeDisplay {
         )
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: Message, _clipboard: &mut iced::Clipboard) -> Command<Message> {
         match message {
             Message::NextScreen => {
                 self.screens.update_current_screen();
