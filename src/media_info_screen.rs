@@ -255,15 +255,16 @@ impl MediaInfoScreen {
 
         let start = 16;
         let end = position as i32;
-        let line_length = (end - start) + 6;
-        let segments = line_length / 6;
+        let segment_length = 6;
+        let line_length = (end - start) + segment_length;
+        let segments = line_length / segment_length;
 
         for n in 0..segments {
-            let formula = 16.0 + (n as f32 * 6 as f32);
+            let formula = start as f32 + (n as f32 * segment_length as f32);
             draw_line_segment_mut(
                 image,
                 (formula, 53.0),
-                (formula + 3.0, 53.0),
+                (formula + (segment_length / 2) as f32, 53.0),
                 Rgb([255u8, 255u8, 255u8]),
             );
         }
