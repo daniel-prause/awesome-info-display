@@ -319,6 +319,8 @@ impl MediaInfoScreen {
             Rect::at(16, 50).of_size(progress, 6),
             Rgb([255u8, 255u8, 255u8]),
         );
+
+        self.draw_play_button(image, Scale { x: 16.0, y: 16.0 });
     }
     fn update(&mut self) {
         let mut image = RgbImage::new(256, 64);
