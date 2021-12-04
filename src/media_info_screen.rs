@@ -2,7 +2,9 @@ extern crate winapi;
 use crate::screen::Screen;
 use crate::screen::SpecificScreen;
 use image::{ImageBuffer, Rgb, RgbImage};
-use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_mut};
+use imageproc::drawing::{
+    draw_filled_rect_mut, draw_hollow_rect_mut, draw_line_segment_mut, draw_text_mut,
+};
 use imageproc::rect::Rect;
 use regex;
 use rusttype::Font;
@@ -241,15 +243,30 @@ impl MediaInfoScreen {
         let position = indicator_position_x_min + (progress * indicator_position_x_max);
         draw_hollow_rect_mut(
             image,
-            Rect::at(16, 50).of_size(238, 6),
+            Rect::at(16, 50).of_size(238, 7),
             Rgb([255u8, 255u8, 255u8]),
         );
 
         draw_filled_rect_mut(
             image,
-            Rect::at(position as i32, 50).of_size(6, 6),
+            Rect::at(position as i32, 50).of_size(6, 7),
             Rgb([255u8, 255u8, 255u8]),
         );
+
+        let start = 16;
+        let end = position as i32;
+        let line_length = (end - start) + 6;
+        let segments = line_length / 6;
+
+        for n in 0..segments {
+            let formula = 16.0 + (n as f32 * 6 as f32);
+            draw_line_segment_mut(
+                image,
+                (formula, 53.0),
+                (formula + 3.0, 53.0),
+                Rgb([255u8, 255u8, 255u8]),
+            );
+        }
     }
 
     fn draw_mute_speaker(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
