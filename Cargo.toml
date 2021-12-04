@@ -12,15 +12,15 @@ chrono = "0.4"
 cpu-monitor = "0.1"
 hex-literal = "0.3"
 iced = {version = "0.3", features = ["canvas", "tokio", "debug", "image", "debug"]}
-iced_futures = ""
-iced_native = ""
+iced_futures = "0.3"
+iced_native = "0.4"
 image = {version = "0.23", default-features = false, features = ["ico"]}
 imageproc = "0.22"
 lazy_static = "1.4"
-rdev = {version = "", features = ["unstable_grab"]}
+rdev = {version = "0.5", features = ["unstable_grab"]}
 regex = "1.4"
 rusttype = "0.9"
-serialport = {git = "https://github.com/Susurrus/serialport-rs.git"}
+serialport = {git = "https://gitlab.com/susurrus/serialport-rs"}
 systemstat = "0.1"
 unicode-segmentation = "1.7"
 [target.'cfg(windows)'.dependencies]
