@@ -4,6 +4,8 @@ use iced::{
     Element, HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
 };
 use std::io::{self, Write};
+mod awesome_display_config;
+mod bitpanda_screen;
 mod display_serial_com;
 mod media_info_screen;
 mod screen;
@@ -116,6 +118,7 @@ impl Application for AwesomeDisplay {
     fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
         let font = Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8]));
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
+        let config = awesome_display_config::AwesomeDisplayConfig::new("./settings.json");
         let this = AwesomeDisplay {
             increment_button: button::State::new(),
             decrement_button: button::State::new(),
@@ -128,6 +131,11 @@ impl Application for AwesomeDisplay {
                 Box::new(media_info_screen::MediaInfoScreen::new(
                     String::from("Media Stats"),
                     font.clone(),
+                )),
+                Box::new(bitpanda_screen::BitpandaScreen::new(
+                    String::from("Bitpanda Info"),
+                    font.clone(),
+                    config.bitpanda_api_key.to_string(),
                 )),
             ]),
         };
@@ -300,7 +308,6 @@ impl Application for AwesomeDisplay {
 }
 
 fn callback(event: Event) -> Option<Event> {
-    //*this.lock().unwrap() = true;
     match event.event_type {
         EventType::KeyPress(Key::Unknown(178)) => {
             *LAST_KEY.lock().unwrap() = true;
