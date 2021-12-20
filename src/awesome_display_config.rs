@@ -25,7 +25,7 @@ impl AwesomeDisplayConfig {
         println!("The current directory is {}", path.display());
         match contents {
             Ok(config) => {
-                this = serde_json::from_str(&config).unwrap();
+                this = serde_json::from_str(&config).unwrap_or(this);
             }
             Err(e) => {
                 println!("Error: {:?}", e);
