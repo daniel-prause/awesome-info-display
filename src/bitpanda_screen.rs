@@ -142,7 +142,6 @@ impl BitpandaScreen {
                                     match body {
                                         Ok(text) => match text.text() {
                                             Ok(asset_values) => {
-                                                //println!("{}", asset_values);
                                                 // 2. get wallet values
                                                 let client = reqwest::blocking::Client::new();
                                                 let wallet_values = client

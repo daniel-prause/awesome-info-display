@@ -1,7 +1,7 @@
 #![windows_subsystem = "windows"]
 use iced::{
-    button, executor, time, window, Align, Application, Button, Column, Command, Container,
-    Element, HorizontalAlignment, Image, Length, Row, Settings, Subscription, Text,
+    button, executor, slider, time, window, Align, Application, Button, Column, Command, Container,
+    Element, HorizontalAlignment, Image, Length, Row, Settings, Slider, Subscription, Text,
 };
 use std::io::{self, Write};
 mod awesome_display_config;
@@ -100,7 +100,10 @@ struct AwesomeDisplay {
     theme: style::Theme,
     increment_button: button::State,
     decrement_button: button::State,
+    save_config_button: button::State,
     screens: screen_manager::ScreenManager,
+    config: awesome_display_config::AwesomeDisplayConfig,
+    slider: slider::State,
 }
 
 #[derive(Debug, Clone)]
@@ -108,6 +111,8 @@ enum Message {
     NextScreen,
     PreviousScreen,
     UpdateCurrentScreen,
+    SaveConfig,
+    SliderChanged(f32),
     EventOccurred(iced::keyboard::KeyCode, u32),
 }
 
@@ -119,25 +124,36 @@ impl Application for AwesomeDisplay {
         let font = Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8]));
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
         let config = awesome_display_config::AwesomeDisplayConfig::new("./settings.json");
+        let mut screens: Vec<Box<dyn screen::SpecificScreen>> = Vec::new();
+
+        if config.system_info_screen_active {
+            screens.push(Box::new(system_info_screen::SystemInfoScreen::new(
+                String::from("System Stats"),
+                font.clone(),
+            )));
+        }
+        if config.media_screen_active {
+            screens.push(Box::new(media_info_screen::MediaInfoScreen::new(
+                String::from("Media Stats"),
+                font.clone(),
+            )));
+        }
+        if config.bitpanda_screen_active {
+            screens.push(Box::new(bitpanda_screen::BitpandaScreen::new(
+                String::from("Bitpanda Info"),
+                font.clone(),
+                config.bitpanda_api_key.to_string(),
+            )));
+        }
+
         let this = AwesomeDisplay {
             increment_button: button::State::new(),
             decrement_button: button::State::new(),
+            save_config_button: button::State::new(),
             theme: style::Theme::Dark,
-            screens: screen_manager::ScreenManager::new(vec![
-                Box::new(system_info_screen::SystemInfoScreen::new(
-                    String::from("System Stats"),
-                    font.clone(),
-                )),
-                Box::new(media_info_screen::MediaInfoScreen::new(
-                    String::from("Media Stats"),
-                    font.clone(),
-                )),
-                Box::new(bitpanda_screen::BitpandaScreen::new(
-                    String::from("Bitpanda Info"),
-                    font.clone(),
-                    config.bitpanda_api_key.to_string(),
-                )),
-            ]),
+            screens: screen_manager::ScreenManager::new(screens),
+            config: config,
+            slider: slider::State::new(),
         };
         builder
             .spawn({
@@ -214,6 +230,9 @@ impl Application for AwesomeDisplay {
 
     fn update(&mut self, message: Message, _clipboard: &mut iced::Clipboard) -> Command<Message> {
         match message {
+            Message::SaveConfig => {
+                self.config.save("./settings.json");
+            }
             Message::NextScreen => {
                 self.screens.update_current_screen();
                 self.screens.next_screen();
@@ -223,6 +242,8 @@ impl Application for AwesomeDisplay {
                 self.screens.previous_screen();
             }
             Message::UpdateCurrentScreen => {
+                println!("TEST");
+                io::stdout().flush().unwrap();
                 if *LAST_KEY.lock().unwrap() {
                     *LAST_KEY.lock().unwrap() = false;
                     let val = *LAST_KEY_VALUE.lock().unwrap();
@@ -241,6 +262,10 @@ impl Application for AwesomeDisplay {
                 *LAST_KEY_VALUE.lock().unwrap() = key_code;
                 self.screens.update_current_screen();
             }
+            Message::SliderChanged(slider_value) => {
+                self.config.brightness = slider_value as u16;
+                self.screens.update_current_screen();
+            }
         }
         Command::none()
     }
@@ -254,9 +279,9 @@ impl Application for AwesomeDisplay {
         let screen_buffer = self.screens.current_screen().current_image();
         let mut converted_sb = Vec::new();
         for chunk in screen_buffer.chunks(3) {
-            converted_sb.push(chunk[2]);
-            converted_sb.push(chunk[1]);
-            converted_sb.push(chunk[0]);
+            converted_sb.push((chunk[2] as f32 * self.config.brightness as f32 / 100.0) as u8);
+            converted_sb.push((chunk[1] as f32 * self.config.brightness as f32 / 100.0) as u8);
+            converted_sb.push((chunk[0] as f32 * self.config.brightness as f32 / 100.0) as u8);
             converted_sb.push(255);
         }
         let image = Image::new(iced::image::Handle::from_pixels(256, 64, converted_sb));
@@ -289,6 +314,29 @@ impl Application for AwesomeDisplay {
                 .style(self.theme)
                 .width(Length::Units(200))
                 .on_press(Message::PreviousScreen),
+            )
+            .push(Text::new(format!(
+                "Brightness: {:.2}",
+                self.config.brightness
+            )))
+            .push(
+                Slider::new(
+                    &mut self.slider,
+                    0.0..=100.0,
+                    self.config.brightness as f32,
+                    Message::SliderChanged,
+                )
+                .width(Length::Units(200))
+                .step(0.1),
+            )
+            .push(
+                Button::new(
+                    &mut self.save_config_button,
+                    Text::new("Save config").horizontal_alignment(HorizontalAlignment::Center),
+                )
+                .style(self.theme)
+                .width(Length::Units(200))
+                .on_press(Message::SaveConfig),
             );
 
         let col2 = Column::new()
