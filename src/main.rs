@@ -242,8 +242,6 @@ impl Application for AwesomeDisplay {
                 self.screens.previous_screen();
             }
             Message::UpdateCurrentScreen => {
-                println!("TEST");
-                io::stdout().flush().unwrap();
                 if *LAST_KEY.lock().unwrap() {
                     *LAST_KEY.lock().unwrap() = false;
                     let val = *LAST_KEY_VALUE.lock().unwrap();
@@ -264,7 +262,6 @@ impl Application for AwesomeDisplay {
             }
             Message::SliderChanged(slider_value) => {
                 self.config.brightness = slider_value as u16;
-                self.screens.update_current_screen();
             }
         }
         Command::none()
