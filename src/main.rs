@@ -1,7 +1,8 @@
 #![windows_subsystem = "windows"]
 use iced::{
-    button, executor, slider, time, window, Align, Application, Button, Column, Command, Container,
-    Element, HorizontalAlignment, Image, Length, Row, Settings, Slider, Subscription, Text,
+    button, executor, slider, time, window, Align, Application, Button, Checkbox, Column, Command,
+    Container, Element, HorizontalAlignment, Image, Length, Row, Settings, Slider, Subscription,
+    Text,
 };
 use std::io::{self, Write};
 mod awesome_display_config;
@@ -113,6 +114,9 @@ enum Message {
     UpdateCurrentScreen,
     SaveConfig,
     SliderChanged(f32),
+    SystemInfoScreenStatusChanged(bool),
+    MediaScreenStatusChanged(bool),
+    BitpandaInfoStatusChanged(bool),
     EventOccurred(iced::keyboard::KeyCode, u32),
 }
 
@@ -263,6 +267,21 @@ impl Application for AwesomeDisplay {
             Message::SliderChanged(slider_value) => {
                 self.config.brightness = slider_value as u16;
             }
+            Message::SystemInfoScreenStatusChanged(status) => {
+                if self.config.media_screen_active || self.config.bitpanda_screen_active {
+                    self.config.system_info_screen_active = status;
+                }
+            }
+            Message::MediaScreenStatusChanged(status) => {
+                if self.config.system_info_screen_active || self.config.bitpanda_screen_active {
+                    self.config.media_screen_active = status;
+                }
+            }
+            Message::BitpandaInfoStatusChanged(status) => {
+                if self.config.system_info_screen_active || self.config.media_screen_active {
+                    self.config.bitpanda_screen_active = status;
+                }
+            }
         }
         Command::none()
     }
@@ -325,6 +344,30 @@ impl Application for AwesomeDisplay {
                 )
                 .width(Length::Units(200))
                 .step(0.1),
+            )
+            .push(
+                Checkbox::new(
+                    self.config.system_info_screen_active,
+                    "System Stats",
+                    Message::SystemInfoScreenStatusChanged,
+                )
+                .width(Length::Units(200)),
+            )
+            .push(
+                Checkbox::new(
+                    self.config.media_screen_active,
+                    "Media Stats",
+                    Message::MediaScreenStatusChanged,
+                )
+                .width(Length::Units(200)),
+            )
+            .push(
+                Checkbox::new(
+                    self.config.bitpanda_screen_active,
+                    "Bitpanda Info",
+                    Message::BitpandaInfoStatusChanged,
+                )
+                .width(Length::Units(200)),
             )
             .push(
                 Button::new(
