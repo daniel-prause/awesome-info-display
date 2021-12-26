@@ -14,6 +14,7 @@ pub struct Screen {
     pub handle: Arc<Mutex<Option<JoinHandle<()>>>>,
     pub mode: Arc<Mutex<u32>>,
     pub mode_timeout: Arc<Mutex<Option<Instant>>>,
+    pub enabled: Arc<AtomicBool>,
 }
 
 impl Default for Screen {
@@ -27,6 +28,7 @@ impl Default for Screen {
             handle: Arc::new(Mutex::new(None)),
             mode: Arc::new(Mutex::new(0)),
             mode_timeout: Arc::new(Mutex::new(Some(Instant::now()))),
+            enabled: Arc::new(AtomicBool::new(true)),
         }
     }
 }
@@ -45,4 +47,6 @@ pub trait SpecificScreen {
     fn start(&self) -> ();
     fn stop(&self) -> ();
     fn set_mode_for_short(&mut self, _mode: u32) {}
+    fn enabled(&self) -> bool;
+    fn set_status(&self, status: bool) -> ();
 }

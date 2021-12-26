@@ -73,6 +73,7 @@ impl SpecificScreen for MediaInfoScreen {
                 .unpark();
         }
     }
+
     fn stop(&self) {
         self.screen.active.store(false, Ordering::Release);
     }
@@ -85,6 +86,14 @@ impl SpecificScreen for MediaInfoScreen {
             return false;
         }
         true
+    }
+
+    fn enabled(&self) -> bool {
+        return self.screen.enabled.load(Ordering::Acquire);
+    }
+
+    fn set_status(&self, status: bool) {
+        self.screen.enabled.store(status, Ordering::Release);
     }
 }
 
@@ -355,11 +364,16 @@ impl MediaInfoScreen {
     }
 
     #[cfg(windows)]
-    pub fn new(description: String, font: Option<Font<'static>>) -> Self {
+    pub fn new(
+        description: String,
+        font: Option<Font<'static>>,
+        enabled: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    ) -> Self {
         let this = MediaInfoScreen {
             screen: Screen {
                 description,
                 font,
+                enabled,
                 ..Default::default()
             },
             symbols: Font::try_from_vec(Vec::from(include_bytes!("symbols.otf") as &[u8])),

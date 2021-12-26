@@ -59,6 +59,14 @@ impl SpecificScreen for SystemInfoScreen {
         }
         true
     }
+
+    fn enabled(&self) -> bool {
+        return self.screen.enabled.load(Ordering::Acquire);
+    }
+
+    fn set_status(&self, status: bool) {
+        self.screen.enabled.store(status, Ordering::Release);
+    }
 }
 
 impl SystemInfoScreen {
@@ -138,11 +146,16 @@ impl SystemInfoScreen {
         self.screen.bytes = image.into_vec();
     }
 
-    pub fn new(description: String, font: Option<Font<'static>>) -> Self {
+    pub fn new(
+        description: String,
+        font: Option<Font<'static>>,
+        enabled: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    ) -> Self {
         let this = SystemInfoScreen {
             screen: Screen {
                 description,
                 font,
+                enabled,
                 ..Default::default()
             },
             cpu_usage: Arc::new(Mutex::new(0.0)),

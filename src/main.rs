@@ -130,25 +130,28 @@ impl Application for AwesomeDisplay {
         let config = awesome_display_config::AwesomeDisplayConfig::new("./settings.json");
         let mut screens: Vec<Box<dyn screen::SpecificScreen>> = Vec::new();
 
-        if config.system_info_screen_active {
-            screens.push(Box::new(system_info_screen::SystemInfoScreen::new(
-                String::from("System Stats"),
-                font.clone(),
-            )));
-        }
-        if config.media_screen_active {
-            screens.push(Box::new(media_info_screen::MediaInfoScreen::new(
-                String::from("Media Stats"),
-                font.clone(),
-            )));
-        }
-        if config.bitpanda_screen_active {
-            screens.push(Box::new(bitpanda_screen::BitpandaScreen::new(
-                String::from("Bitpanda Info"),
-                font.clone(),
-                config.bitpanda_api_key.to_string(),
-            )));
-        }
+        screens.push(Box::new(system_info_screen::SystemInfoScreen::new(
+            String::from("System Stats"),
+            font.clone(),
+            std::sync::Arc::new(std::sync::atomic::AtomicBool::new(
+                config.system_info_screen_active,
+            )),
+        )));
+        screens.push(Box::new(media_info_screen::MediaInfoScreen::new(
+            String::from("Media Stats"),
+            font.clone(),
+            std::sync::Arc::new(std::sync::atomic::AtomicBool::new(
+                config.media_screen_active,
+            )),
+        )));
+        screens.push(Box::new(bitpanda_screen::BitpandaScreen::new(
+            String::from("Bitpanda Info"),
+            font.clone(),
+            config.bitpanda_api_key.to_string(),
+            std::sync::Arc::new(std::sync::atomic::AtomicBool::new(
+                config.bitpanda_screen_active,
+            )),
+        )));
 
         let this = AwesomeDisplay {
             increment_button: button::State::new(),
@@ -270,16 +273,19 @@ impl Application for AwesomeDisplay {
             Message::SystemInfoScreenStatusChanged(status) => {
                 if self.config.media_screen_active || self.config.bitpanda_screen_active {
                     self.config.system_info_screen_active = status;
+                    self.screens.set_status_for_screen(0, status);
                 }
             }
             Message::MediaScreenStatusChanged(status) => {
                 if self.config.system_info_screen_active || self.config.bitpanda_screen_active {
                     self.config.media_screen_active = status;
+                    self.screens.set_status_for_screen(1, status);
                 }
             }
             Message::BitpandaInfoStatusChanged(status) => {
                 if self.config.system_info_screen_active || self.config.media_screen_active {
                     self.config.bitpanda_screen_active = status;
+                    self.screens.set_status_for_screen(2, status);
                 }
             }
         }

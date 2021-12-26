@@ -57,6 +57,7 @@ impl SpecificScreen for BitpandaScreen {
                 .unpark();
         }
     }
+
     fn stop(&self) {
         self.screen.active.store(false, Ordering::Release);
     }
@@ -69,6 +70,14 @@ impl SpecificScreen for BitpandaScreen {
             return false;
         }
         true
+    }
+
+    fn enabled(&self) -> bool {
+        return self.screen.enabled.load(Ordering::Acquire);
+    }
+
+    fn set_status(&self, status: bool) {
+        self.screen.enabled.store(status, Ordering::Release);
     }
 }
 
@@ -127,11 +136,17 @@ impl BitpandaScreen {
         self.screen.bytes = image.into_vec();
     }
 
-    pub fn new(description: String, font: Option<Font<'static>>, api_key: String) -> Self {
+    pub fn new(
+        description: String,
+        font: Option<Font<'static>>,
+        api_key: String,
+        enabled: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    ) -> Self {
         let this = BitpandaScreen {
             screen: Screen {
                 description,
                 font,
+                enabled,
                 ..Default::default()
             },
             wallet_value: Arc::new(Mutex::new(0.0)),
