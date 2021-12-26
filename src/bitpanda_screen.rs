@@ -1,6 +1,8 @@
 use crate::screen::Screen;
 use crate::screen::SpecificScreen;
 
+use chrono::{DateTime, Local}; // 0.4.15
+use error_chain::error_chain;
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use rusttype::Font;
@@ -11,8 +13,6 @@ use std::sync::{atomic::Ordering, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use std::time::SystemTime;
-
-use error_chain::error_chain;
 
 use serde_json::Value;
 
@@ -95,11 +95,35 @@ impl BitpandaScreen {
         );
     }
 
+    pub fn draw_updated_at(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
+        let date_value: DateTime<Local> = self.last_update.lock().unwrap().clone().into();
+        draw_text_mut(
+            image,
+            Rgb([255u8, 255u8, 255u8]),
+            84,
+            20,
+            scale,
+            self.screen.font.as_ref().unwrap(),
+            "Last update",
+        );
+
+        draw_text_mut(
+            image,
+            Rgb([255u8, 255u8, 255u8]),
+            52,
+            40,
+            scale,
+            self.screen.font.as_ref().unwrap(),
+            &date_value.format("%d.%m.%Y %T").to_string(),
+        );
+    }
+
     fn update(&mut self) {
         let mut image = RgbImage::new(256, 64);
         let scale = Scale { x: 16.0, y: 16.0 };
 
         self.draw_wallet_value(&mut image, scale);
+        self.draw_updated_at(&mut image, scale);
         self.screen.bytes = image.into_vec();
     }
 
