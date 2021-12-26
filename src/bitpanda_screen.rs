@@ -281,7 +281,7 @@ impl BitpandaScreen {
                             }
                         }
 
-                        io::Write::flush(&mut io::stdout()).expect("flush failed!");
+                        //io::Write::flush(&mut io::stdout()).expect("flush failed!");
                     }
                 })
                 .expect("Cannot create JOB_EXECUTOR thread"),

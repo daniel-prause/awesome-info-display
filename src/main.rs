@@ -243,10 +243,12 @@ impl Application for AwesomeDisplay {
             Message::NextScreen => {
                 self.screens.update_current_screen();
                 self.screens.next_screen();
+                self.screens.update_current_screen();
             }
             Message::PreviousScreen => {
                 self.screens.update_current_screen();
                 self.screens.previous_screen();
+                self.screens.update_current_screen();
             }
             Message::UpdateCurrentScreen => {
                 if *LAST_KEY.lock().unwrap() {
@@ -293,7 +295,7 @@ impl Application for AwesomeDisplay {
     }
 
     fn view(&mut self) -> Element<Message> {
-        io::stdout().flush().unwrap();
+        //io::stdout().flush().unwrap();
         if !self.screens.current_screen().initial_update_called() {
             self.screens.update_current_screen();
         }
