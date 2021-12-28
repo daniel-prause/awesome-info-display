@@ -1,12 +1,13 @@
 #![windows_subsystem = "windows"]
+use iced::text_input::{self, TextInput};
 use iced::{
     button, executor, slider, time, window, Align, Application, Button, Checkbox, Column, Command,
     Container, Element, HorizontalAlignment, Image, Length, Row, Settings, Slider, Subscription,
     Text,
 };
-use std::io::{self, Write};
-mod awesome_display_config;
 mod bitpanda_screen;
+mod config;
+mod config_manager;
 mod display_serial_com;
 mod media_info_screen;
 mod screen;
@@ -104,8 +105,9 @@ struct AwesomeDisplay {
     decrement_button: button::State,
     save_config_button: button::State,
     screens: screen_manager::ScreenManager,
-    config: awesome_display_config::AwesomeDisplayConfig,
+    config_manager: config_manager::ConfigManager,
     should_exit: bool,
+    bitpanda_api_key_input: text_input::State,
     slider: slider::State,
 }
 
@@ -121,6 +123,7 @@ enum Message {
     BitpandaInfoStatusChanged(bool),
     KeyboardEventOccurred(iced::keyboard::KeyCode, u32),
     WindowEventOccurred(iced_native::Event),
+    BitpandaApiKeyChanged(String),
 }
 
 impl Application for AwesomeDisplay {
@@ -130,29 +133,29 @@ impl Application for AwesomeDisplay {
     fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
         let font = Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8]));
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
-        let config = awesome_display_config::AwesomeDisplayConfig::new("./settings.json");
+        let config_manager = config_manager::ConfigManager::new(None);
         let mut screens: Vec<Box<dyn screen::SpecificScreen>> = Vec::new();
 
         screens.push(Box::new(system_info_screen::SystemInfoScreen::new(
             String::from("System Stats"),
             font.clone(),
             std::sync::Arc::new(std::sync::atomic::AtomicBool::new(
-                config.system_info_screen_active,
+                config_manager.config.system_info_screen_active,
             )),
         )));
         screens.push(Box::new(media_info_screen::MediaInfoScreen::new(
             String::from("Media Stats"),
             font.clone(),
             std::sync::Arc::new(std::sync::atomic::AtomicBool::new(
-                config.media_screen_active,
+                config_manager.config.media_screen_active,
             )),
         )));
         screens.push(Box::new(bitpanda_screen::BitpandaScreen::new(
             String::from("Bitpanda Info"),
             font.clone(),
-            config.bitpanda_api_key.to_string(),
+            config_manager.config.bitpanda_api_key.to_string(),
             std::sync::Arc::new(std::sync::atomic::AtomicBool::new(
-                config.bitpanda_screen_active,
+                config_manager.config.bitpanda_screen_active,
             )),
         )));
 
@@ -162,8 +165,9 @@ impl Application for AwesomeDisplay {
             save_config_button: button::State::new(),
             theme: style::Theme::Dark,
             screens: screen_manager::ScreenManager::new(screens),
-            config: config,
+            config_manager: config_manager,
             should_exit: false,
+            bitpanda_api_key_input: text_input::State::new(),
             slider: slider::State::new(),
         };
         builder
@@ -247,7 +251,7 @@ impl Application for AwesomeDisplay {
     fn update(&mut self, message: Message, _clipboard: &mut iced::Clipboard) -> Command<Message> {
         match message {
             Message::SaveConfig => {
-                self.config.save("./settings.json");
+                self.config_manager.save();
             }
             Message::NextScreen => {
                 self.screens.update_current_screen();
@@ -282,30 +286,39 @@ impl Application for AwesomeDisplay {
                 if let iced_native::Event::Window(iced_native::window::Event::CloseRequested) =
                     event
                 {
-                    self.config.save("./settings.json");
+                    self.config_manager.save();
                     self.should_exit = true;
                 }
             }
             Message::SliderChanged(slider_value) => {
-                self.config.brightness = slider_value as u16;
+                self.config_manager.config.brightness = slider_value as u16;
             }
             Message::SystemInfoScreenStatusChanged(status) => {
-                if self.config.media_screen_active || self.config.bitpanda_screen_active {
-                    self.config.system_info_screen_active = status;
+                if self.config_manager.config.media_screen_active
+                    || self.config_manager.config.bitpanda_screen_active
+                {
+                    self.config_manager.config.system_info_screen_active = status;
                     self.screens.set_status_for_screen(0, status);
                 }
             }
             Message::MediaScreenStatusChanged(status) => {
-                if self.config.system_info_screen_active || self.config.bitpanda_screen_active {
-                    self.config.media_screen_active = status;
+                if self.config_manager.config.system_info_screen_active
+                    || self.config_manager.config.bitpanda_screen_active
+                {
+                    self.config_manager.config.media_screen_active = status;
                     self.screens.set_status_for_screen(1, status);
                 }
             }
             Message::BitpandaInfoStatusChanged(status) => {
-                if self.config.system_info_screen_active || self.config.media_screen_active {
-                    self.config.bitpanda_screen_active = status;
+                if self.config_manager.config.system_info_screen_active
+                    || self.config_manager.config.media_screen_active
+                {
+                    self.config_manager.config.bitpanda_screen_active = status;
                     self.screens.set_status_for_screen(2, status);
                 }
+            }
+            Message::BitpandaApiKeyChanged(message) => {
+                self.config_manager.config.bitpanda_api_key = message;
             }
         }
         Command::none()
@@ -320,9 +333,15 @@ impl Application for AwesomeDisplay {
         let screen_buffer = self.screens.current_screen().current_image();
         let mut converted_sb = Vec::new();
         for chunk in screen_buffer.chunks(3) {
-            converted_sb.push((chunk[2] as f32 * self.config.brightness as f32 / 100.0) as u8);
-            converted_sb.push((chunk[1] as f32 * self.config.brightness as f32 / 100.0) as u8);
-            converted_sb.push((chunk[0] as f32 * self.config.brightness as f32 / 100.0) as u8);
+            converted_sb.push(
+                (chunk[2] as f32 * self.config_manager.config.brightness as f32 / 100.0) as u8,
+            );
+            converted_sb.push(
+                (chunk[1] as f32 * self.config_manager.config.brightness as f32 / 100.0) as u8,
+            );
+            converted_sb.push(
+                (chunk[0] as f32 * self.config_manager.config.brightness as f32 / 100.0) as u8,
+            );
             converted_sb.push(255);
         }
         let image = Image::new(iced::image::Handle::from_pixels(256, 64, converted_sb));
@@ -358,13 +377,13 @@ impl Application for AwesomeDisplay {
             )
             .push(Text::new(format!(
                 "Brightness: {:.2}",
-                self.config.brightness
+                self.config_manager.config.brightness
             )))
             .push(
                 Slider::new(
                     &mut self.slider,
                     0.0..=100.0,
-                    self.config.brightness as f32,
+                    self.config_manager.config.brightness as f32,
                     Message::SliderChanged,
                 )
                 .width(Length::Units(200))
@@ -372,7 +391,7 @@ impl Application for AwesomeDisplay {
             )
             .push(
                 Checkbox::new(
-                    self.config.system_info_screen_active,
+                    self.config_manager.config.system_info_screen_active,
                     "System Stats",
                     Message::SystemInfoScreenStatusChanged,
                 )
@@ -380,7 +399,7 @@ impl Application for AwesomeDisplay {
             )
             .push(
                 Checkbox::new(
-                    self.config.media_screen_active,
+                    self.config_manager.config.media_screen_active,
                     "Media Stats",
                     Message::MediaScreenStatusChanged,
                 )
@@ -388,10 +407,20 @@ impl Application for AwesomeDisplay {
             )
             .push(
                 Checkbox::new(
-                    self.config.bitpanda_screen_active,
+                    self.config_manager.config.bitpanda_screen_active,
                     "Bitpanda Info",
                     Message::BitpandaInfoStatusChanged,
                 )
+                .width(Length::Units(200)),
+            )
+            .push(
+                TextInput::new(
+                    &mut self.bitpanda_api_key_input,
+                    "Bitpanda Api Key",
+                    &self.config_manager.config.bitpanda_api_key,
+                    Message::BitpandaApiKeyChanged,
+                )
+                .password()
                 .width(Length::Units(200)),
             )
             .push(

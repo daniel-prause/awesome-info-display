@@ -8,7 +8,7 @@ use imageproc::drawing::draw_text_mut;
 use rusttype::Font;
 use rusttype::Scale;
 use std::fmt::Debug;
-use std::io;
+
 use std::sync::{atomic::Ordering, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -169,8 +169,9 @@ impl BitpandaScreen {
                         let mut elapsed = this.last_update.lock().unwrap();
                         match elapsed.elapsed() {
                             Ok(duration) => {
-                                if duration.as_secs() > 60
-                                    || duration.as_secs() < 60 && *value == 0.0
+                                if (duration.as_secs() > 60
+                                    || duration.as_secs() < 60 && *value == 0.0)
+                                    && this.api_key.lock().unwrap().clone() != ""
                                 {
                                     // unlock value mutex until request is done
                                     drop(value);
