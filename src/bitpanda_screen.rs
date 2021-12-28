@@ -1,3 +1,4 @@
+use crate::config_manager::ConfigManager;
 use crate::screen::Screen;
 use crate::screen::SpecificScreen;
 
@@ -9,7 +10,7 @@ use rusttype::Font;
 use rusttype::Scale;
 use std::fmt::Debug;
 
-use std::sync::{atomic::Ordering, Arc, Mutex};
+use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 use std::time::SystemTime;
@@ -27,7 +28,7 @@ pub struct BitpandaScreen {
     screen: Screen,
     wallet_value: Arc<Mutex<f64>>,
     last_update: Arc<Mutex<SystemTime>>,
-    api_key: Arc<Mutex<String>>,
+    config: Arc<RwLock<ConfigManager>>,
 }
 
 impl SpecificScreen for BitpandaScreen {
@@ -139,8 +140,8 @@ impl BitpandaScreen {
     pub fn new(
         description: String,
         font: Option<Font<'static>>,
-        api_key: String,
         enabled: std::sync::Arc<std::sync::atomic::AtomicBool>,
+        config: Arc<RwLock<ConfigManager>>,
     ) -> Self {
         let this = BitpandaScreen {
             screen: Screen {
@@ -151,7 +152,7 @@ impl BitpandaScreen {
             },
             wallet_value: Arc::new(Mutex::new(0.0)),
             last_update: Arc::new(Mutex::new(SystemTime::now())),
-            api_key: Arc::new(Mutex::new(api_key)),
+            config: config,
         };
 
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
@@ -171,7 +172,8 @@ impl BitpandaScreen {
                             Ok(duration) => {
                                 if (duration.as_secs() > 60
                                     || duration.as_secs() < 60 && *value == 0.0)
-                                    && this.api_key.lock().unwrap().clone() != ""
+                                    && this.config.read().unwrap().config.bitpanda_api_key.clone()
+                                        != ""
                                 {
                                     // unlock value mutex until request is done
                                     drop(value);
@@ -188,7 +190,12 @@ impl BitpandaScreen {
                                                     .get("https://api.bitpanda.com/v1/wallets")
                                                     .header(
                                                         "X-API-KEY",
-                                                        this.api_key.lock().unwrap().clone(),
+                                                        this.config
+                                                            .read()
+                                                            .unwrap()
+                                                            .config
+                                                            .bitpanda_api_key
+                                                            .clone(),
                                                     )
                                                     .send();
                                                 match wallet_values {
