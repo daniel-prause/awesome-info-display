@@ -8,7 +8,6 @@ pub struct AwesomeDisplayConfig {
     pub media_screen_active: bool,
     pub system_info_screen_active: bool,
     pub brightness: u16,
-    // TODO: enable activation/deactivation of screens
 }
 
 impl AwesomeDisplayConfig {

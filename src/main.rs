@@ -77,6 +77,7 @@ pub fn main() -> iced::Result {
             )))
         } else {
             let settings = Settings {
+                exit_on_close_request: false,
                 window: window::Settings {
                     resizable: false,
                     decorations: true,
@@ -104,6 +105,7 @@ struct AwesomeDisplay {
     save_config_button: button::State,
     screens: screen_manager::ScreenManager,
     config: awesome_display_config::AwesomeDisplayConfig,
+    should_exit: bool,
     slider: slider::State,
 }
 
@@ -117,7 +119,8 @@ enum Message {
     SystemInfoScreenStatusChanged(bool),
     MediaScreenStatusChanged(bool),
     BitpandaInfoStatusChanged(bool),
-    EventOccurred(iced::keyboard::KeyCode, u32),
+    KeyboardEventOccurred(iced::keyboard::KeyCode, u32),
+    WindowEventOccurred(iced_native::Event),
 }
 
 impl Application for AwesomeDisplay {
@@ -160,6 +163,7 @@ impl Application for AwesomeDisplay {
             theme: style::Theme::Dark,
             screens: screen_manager::ScreenManager::new(screens),
             config: config,
+            should_exit: false,
             slider: slider::State::new(),
         };
         builder
@@ -189,6 +193,10 @@ impl Application for AwesomeDisplay {
         String::from("AwesomeInfoDisplay")
     }
 
+    fn should_exit(&self) -> bool {
+        self.should_exit
+    }
+
     fn subscription(&self) -> Subscription<Message> {
         iced_futures::subscription::Subscription::batch(
             vec![
@@ -203,25 +211,25 @@ impl Application for AwesomeDisplay {
                             key_code,
                         }) => match key_code {
                             iced::keyboard::KeyCode::PlayPause => {
-                                Some(Message::EventOccurred(key_code, 179))
+                                Some(Message::KeyboardEventOccurred(key_code, 179))
                             }
                             iced::keyboard::KeyCode::MediaStop => {
-                                Some(Message::EventOccurred(key_code, 178))
+                                Some(Message::KeyboardEventOccurred(key_code, 178))
                             }
                             iced::keyboard::KeyCode::PrevTrack => {
-                                Some(Message::EventOccurred(key_code, 177))
+                                Some(Message::KeyboardEventOccurred(key_code, 177))
                             }
                             iced::keyboard::KeyCode::NextTrack => {
-                                Some(Message::EventOccurred(key_code, 176))
+                                Some(Message::KeyboardEventOccurred(key_code, 176))
                             }
                             iced::keyboard::KeyCode::VolumeDown => {
-                                Some(Message::EventOccurred(key_code, 174))
+                                Some(Message::KeyboardEventOccurred(key_code, 174))
                             }
                             iced::keyboard::KeyCode::VolumeUp => {
-                                Some(Message::EventOccurred(key_code, 175))
+                                Some(Message::KeyboardEventOccurred(key_code, 175))
                             }
                             iced::keyboard::KeyCode::Mute => {
-                                Some(Message::EventOccurred(key_code, 173))
+                                Some(Message::KeyboardEventOccurred(key_code, 173))
                             }
                             _ => None,
                         },
@@ -230,6 +238,7 @@ impl Application for AwesomeDisplay {
                 }),
                 time::every(std::time::Duration::from_millis(250))
                     .map(|_| Message::UpdateCurrentScreen),
+                iced_native::subscription::events().map(Message::WindowEventOccurred),
             ]
             .into_iter(),
         )
@@ -263,11 +272,19 @@ impl Application for AwesomeDisplay {
                 }
                 self.screens.update_current_screen();
             }
-            Message::EventOccurred(_event, key_code) => {
+            Message::KeyboardEventOccurred(_event, key_code) => {
                 // switch to media screen for a few seconds
                 *LAST_KEY.lock().unwrap() = true;
                 *LAST_KEY_VALUE.lock().unwrap() = key_code;
                 self.screens.update_current_screen();
+            }
+            Message::WindowEventOccurred(event) => {
+                if let iced_native::Event::Window(iced_native::window::Event::CloseRequested) =
+                    event
+                {
+                    self.config.save("./settings.json");
+                    self.should_exit = true;
+                }
             }
             Message::SliderChanged(slider_value) => {
                 self.config.brightness = slider_value as u16;
