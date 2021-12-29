@@ -231,6 +231,9 @@ impl Application for AwesomeDisplay {
                             iced::keyboard::KeyCode::Mute => {
                                 Some(Message::KeyboardEventOccurred(key_code, 173))
                             }
+                            iced::keyboard::KeyCode::Pause => {
+                                Some(Message::KeyboardEventOccurred(key_code, 180))
+                            }
                             _ => None,
                         },
                         _ => None,
@@ -265,8 +268,10 @@ impl Application for AwesomeDisplay {
                     let val = *LAST_KEY_VALUE.lock().unwrap();
                     if val > 173 && val < 176 {
                         self.screens.set_screen_for_short(1, 1); // 1 is media screen right now, 1 is "volume mode"
-                    } else {
+                    } else if val > 176 && val < 180 {
                         self.screens.set_screen_for_short(1, 0); // 1 is media screen right now, 0 is "normal mode"
+                    } else if val == 180 {
+                        self.screens.next_screen()
                     }
                     *LAST_KEY_VALUE.lock().unwrap() = 0;
                 }
@@ -537,6 +542,11 @@ fn callback(event: Event) -> Option<Event> {
         EventType::KeyPress(Key::Unknown(179)) => {
             *LAST_KEY.lock().unwrap() = true;
             *LAST_KEY_VALUE.lock().unwrap() = 179;
+            Some(event)
+        }
+        EventType::KeyPress(Key::Pause) => {
+            *LAST_KEY.lock().unwrap() = true;
+            *LAST_KEY_VALUE.lock().unwrap() = 180;
             Some(event)
         }
         _ => Some(event),
