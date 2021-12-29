@@ -142,27 +142,16 @@ impl Application for AwesomeDisplay {
         screens.push(Box::new(system_info_screen::SystemInfoScreen::new(
             String::from("System Stats"),
             font.clone(),
-            std::sync::Arc::new(std::sync::atomic::AtomicBool::new(
-                config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .system_info_screen_active,
-            )),
+            Arc::clone(&config_manager),
         )));
         screens.push(Box::new(media_info_screen::MediaInfoScreen::new(
             String::from("Media Stats"),
             font.clone(),
-            std::sync::Arc::new(std::sync::atomic::AtomicBool::new(
-                config_manager.read().unwrap().config.media_screen_active,
-            )),
+            Arc::clone(&config_manager),
         )));
         screens.push(Box::new(bitpanda_screen::BitpandaScreen::new(
             String::from("Bitpanda Info"),
             font.clone(),
-            std::sync::Arc::new(std::sync::atomic::AtomicBool::new(
-                config_manager.read().unwrap().config.bitpanda_screen_active,
-            )),
             Arc::clone(&config_manager),
         )));
 

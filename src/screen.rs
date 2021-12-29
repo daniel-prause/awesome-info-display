@@ -1,6 +1,7 @@
+use crate::config_manager::ConfigManager;
 use rusttype::Font;
 use std::fmt::Debug;
-use std::sync::{atomic::AtomicBool, Arc, Mutex};
+use std::sync::{atomic::AtomicBool, Arc, Mutex, RwLock};
 use std::thread::JoinHandle;
 use std::time::Instant;
 
@@ -14,7 +15,7 @@ pub struct Screen {
     pub handle: Arc<Mutex<Option<JoinHandle<()>>>>,
     pub mode: Arc<Mutex<u32>>,
     pub mode_timeout: Arc<Mutex<Option<Instant>>>,
-    pub enabled: Arc<AtomicBool>,
+    pub config: Arc<RwLock<ConfigManager>>,
 }
 
 impl Default for Screen {
@@ -28,7 +29,7 @@ impl Default for Screen {
             handle: Arc::new(Mutex::new(None)),
             mode: Arc::new(Mutex::new(0)),
             mode_timeout: Arc::new(Mutex::new(Some(Instant::now()))),
-            enabled: Arc::new(AtomicBool::new(true)),
+            config: Arc::new(RwLock::new(ConfigManager::new(None))),
         }
     }
 }

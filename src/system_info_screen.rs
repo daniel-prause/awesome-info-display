@@ -1,3 +1,4 @@
+use crate::config_manager::ConfigManager;
 use crate::screen::Screen;
 use crate::screen::SpecificScreen;
 
@@ -7,7 +8,7 @@ use imageproc::rect::Rect;
 use rusttype::Font;
 use rusttype::Scale;
 use std::fmt::Debug;
-use std::sync::{atomic::Ordering, Arc, Mutex};
+use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 use systemstat::{saturating_sub_bytes, Platform, System};
@@ -61,11 +62,22 @@ impl SpecificScreen for SystemInfoScreen {
     }
 
     fn enabled(&self) -> bool {
-        return self.screen.enabled.load(Ordering::Acquire);
+        return self
+            .screen
+            .config
+            .read()
+            .unwrap()
+            .config
+            .system_info_screen_active;
     }
 
     fn set_status(&self, status: bool) {
-        self.screen.enabled.store(status, Ordering::Release);
+        self.screen
+            .config
+            .write()
+            .unwrap()
+            .config
+            .system_info_screen_active = status;
     }
 }
 
@@ -149,13 +161,13 @@ impl SystemInfoScreen {
     pub fn new(
         description: String,
         font: Option<Font<'static>>,
-        enabled: std::sync::Arc<std::sync::atomic::AtomicBool>,
+        config: Arc<RwLock<ConfigManager>>,
     ) -> Self {
         let this = SystemInfoScreen {
             screen: Screen {
                 description,
                 font,
-                enabled,
+                config,
                 ..Default::default()
             },
             cpu_usage: Arc::new(Mutex::new(0.0)),

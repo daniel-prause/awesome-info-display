@@ -1,6 +1,8 @@
 extern crate winapi;
+use crate::config_manager::ConfigManager;
 use crate::screen::Screen;
 use crate::screen::SpecificScreen;
+
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{
     draw_filled_rect_mut, draw_hollow_rect_mut, draw_line_segment_mut, draw_text_mut,
@@ -14,7 +16,7 @@ use std::fmt::Debug;
 use std::iter::once;
 use std::os::windows::ffi::OsStrExt;
 use std::ptr::null_mut;
-use std::sync::{atomic::Ordering, Arc, Mutex};
+use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
@@ -89,11 +91,22 @@ impl SpecificScreen for MediaInfoScreen {
     }
 
     fn enabled(&self) -> bool {
-        return self.screen.enabled.load(Ordering::Acquire);
+        return self
+            .screen
+            .config
+            .read()
+            .unwrap()
+            .config
+            .media_screen_active;
     }
 
     fn set_status(&self, status: bool) {
-        self.screen.enabled.store(status, Ordering::Release);
+        self.screen
+            .config
+            .write()
+            .unwrap()
+            .config
+            .media_screen_active = status;
     }
 }
 
@@ -367,13 +380,13 @@ impl MediaInfoScreen {
     pub fn new(
         description: String,
         font: Option<Font<'static>>,
-        enabled: std::sync::Arc<std::sync::atomic::AtomicBool>,
+        config: Arc<RwLock<ConfigManager>>,
     ) -> Self {
         let this = MediaInfoScreen {
             screen: Screen {
                 description,
                 font,
-                enabled,
+                config,
                 ..Default::default()
             },
             symbols: Font::try_from_vec(Vec::from(include_bytes!("symbols.otf") as &[u8])),
