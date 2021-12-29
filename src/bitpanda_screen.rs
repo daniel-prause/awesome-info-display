@@ -10,7 +10,7 @@ use rusttype::Font;
 use rusttype::Scale;
 use std::fmt::Debug;
 
-use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 use std::time::SystemTime;
@@ -28,6 +28,7 @@ pub struct BitpandaScreen {
     screen: Screen,
     wallet_value: Arc<Mutex<f64>>,
     last_update: Arc<Mutex<SystemTime>>,
+    initial_tryout: Arc<AtomicBool>,
 }
 
 impl SpecificScreen for BitpandaScreen {
@@ -94,7 +95,6 @@ impl SpecificScreen for BitpandaScreen {
 
 impl BitpandaScreen {
     pub fn draw_wallet_value(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
-        let wallet_value = format!("{: >10}€", self.wallet_value.lock().unwrap()).to_string();
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
@@ -111,7 +111,7 @@ impl BitpandaScreen {
             0,
             scale,
             self.screen.font.as_ref().unwrap(),
-            &wallet_value,
+            &format!("{: >10}€", self.wallet_value.lock().unwrap()),
         );
     }
 
@@ -161,6 +161,7 @@ impl BitpandaScreen {
             },
             wallet_value: Arc::new(Mutex::new(0.0)),
             last_update: Arc::new(Mutex::new(SystemTime::now())),
+            initial_tryout: Arc::new(AtomicBool::new(false)),
         };
 
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
@@ -175,11 +176,12 @@ impl BitpandaScreen {
                         }
                         thread::sleep(Duration::from_millis(1000));
                         let value = this.wallet_value.lock().unwrap();
-                        let mut elapsed = this.last_update.lock().unwrap();
+                        let elapsed = this.last_update.lock().unwrap();
                         match elapsed.elapsed() {
                             Ok(duration) => {
                                 if (duration.as_secs() > 60
-                                    || duration.as_secs() < 60 && *value == 0.0)
+                                    || duration.as_secs() < 60
+                                        && !this.initial_tryout.load(Ordering::Acquire))
                                     && this
                                         .screen
                                         .config
@@ -191,7 +193,9 @@ impl BitpandaScreen {
                                         != ""
                                 {
                                     // unlock value mutex until request is done
+                                    this.initial_tryout.store(true, Ordering::Release);
                                     drop(value);
+                                    drop(elapsed);
                                     // 1. get current values for crypto coins
                                     let body = reqwest::blocking::get(
                                         "https://api.bitpanda.com/v1/ticker",
@@ -297,15 +301,13 @@ impl BitpandaScreen {
                                             println!("Error: {:?}", e);
                                         }
                                     }
-                                    *elapsed = SystemTime::now();
+                                    *this.last_update.lock().unwrap() = SystemTime::now();
                                 }
                             }
                             Err(e) => {
                                 println!("Error: {:?}", e);
                             }
                         }
-
-                        //io::Write::flush(&mut io::stdout()).expect("flush failed!");
                     }
                 })
                 .expect("Cannot create JOB_EXECUTOR thread"),
