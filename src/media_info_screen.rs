@@ -441,7 +441,7 @@ impl MediaInfoScreen {
                                 *this.track_length.lock().unwrap() = track_length;
                                 // get title
                                 let current_index = SendMessageW(hwnd, WM_USER, 0, 125);
-                                let mut title_length = SendMessageA(
+                                let mut title_length = SendMessageW(
                                     hwnd,
                                     WM_GETTEXTLENGTH,
                                     current_index as usize,
