@@ -397,117 +397,125 @@ impl MediaInfoScreen {
             title_x: Arc::new(Mutex::new(0)),
             artist: Arc::new(Mutex::new(String::new())),
             artist_x: Arc::new(Mutex::new(0)),
-            system_volume: Arc::new(Mutex::new(get_master_volume().0)),
-            mute: Arc::new(Mutex::new(get_master_volume().1)),
+            system_volume: Arc::new(Mutex::new(get_master_volume(true).0)),
+            mute: Arc::new(Mutex::new(get_master_volume(false).1)),
             editor_active: Arc::new(Mutex::new(false)),
             regex_first: Arc::new(Mutex::new(regex::Regex::new(r"\s(.*)-").unwrap())),
             regex_second: Arc::new(Mutex::new(regex::Regex::new(r"(.*) - (.*)").unwrap())),
         };
 
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
-
         *this.screen.handle.lock().unwrap() = Some(
             builder
                 .spawn({
                     let this = this.clone();
-                    move || loop {
-                        while !this.screen.active.load(Ordering::Acquire) {
-                            thread::park();
-                        }
+                    move || {
                         let window: Vec<u16> = OsStr::new("Winamp v1.x")
                             .encode_wide()
                             .chain(once(0))
                             .collect();
 
-                        let hwnd = unsafe { FindWindowW(window.as_ptr(), null_mut()) };
-
-                        if hwnd != null_mut() {
-                            unsafe {
-                                // 1 == playing, 3 == paused, anything else == stopped
-                                let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
-                                *this.playback_status.lock().unwrap() = playback_status;
-                                // current position in msecs
-                                let mut track_current_position =
-                                    SendMessageW(hwnd, WM_USER, 0, 105);
-                                if playback_status != 1 && playback_status != 3 {
-                                    track_current_position = 0;
-                                }
-
-                                *this.track_current_position.lock().unwrap() =
-                                    track_current_position;
-
-                                // track length in seconds (multiply by thousand)
-                                let track_length = SendMessageW(hwnd, WM_USER, 1, 105);
-                                *this.track_length.lock().unwrap() = track_length;
-                                // get title
-                                let current_index = SendMessageW(hwnd, WM_USER, 0, 125);
-                                let mut title_length = SendMessageW(
-                                    hwnd,
-                                    WM_GETTEXTLENGTH,
-                                    current_index as usize,
-                                    3034,
-                                );
-
-                                // WINAMP VOLUME. NOT USED RIGHT NOW.
-                                // let mut volume = SendMessageW(hwnd, WM_USER, -666i32 as usize, 122);
-                                title_length += 1;
-
-                                let mut buffer = Vec::<u16>::with_capacity(title_length as usize);
-                                buffer.set_len(title_length as usize);
-                                SendMessageW(hwnd, WM_GETTEXT, 3034, buffer.as_mut_ptr() as LPARAM);
-                                let data = String::from_utf16_lossy(&buffer);
-
-                                if title_length == 1
-                                    || !this.regex_first.lock().unwrap().is_match(&data)
-                                {
-                                    *this.editor_active.lock().unwrap() = false;
-                                    thread::sleep(Duration::from_millis(200));
-                                    continue;
-                                } else {
-                                    *this.editor_active.lock().unwrap() = true;
-                                }
-
-                                let caps =
-                                    this.regex_first.lock().unwrap().captures(&data).unwrap();
-                                let artist_and_title = caps.get(1).map_or("", |m| m.as_str());
-
-                                let artist_and_title_caps = this
-                                    .regex_second
-                                    .lock()
-                                    .unwrap()
-                                    .captures(&artist_and_title)
-                                    .unwrap();
-                                let artist = artist_and_title_caps
-                                    .get(1)
-                                    .map_or("", |m| m.as_str())
-                                    .trim();
-
-                                let title = artist_and_title_caps
-                                    .get(2)
-                                    .map_or("", |m| m.as_str())
-                                    .trim();
-
-                                if (*this.artist.lock().unwrap() != artist)
-                                    || (*this.title.lock().unwrap() != title)
-                                {
-                                    *this.title_x.lock().unwrap() = 0;
-                                }
-
-                                if *this.artist.lock().unwrap() != artist {
-                                    *this.artist_x.lock().unwrap() = 0;
-                                }
-                                *this.artist.lock().unwrap() = artist.to_string();
-                                *this.title.lock().unwrap() = title.to_string();
+                        loop {
+                            while !this.screen.active.load(Ordering::Acquire) {
+                                thread::park();
                             }
-                        } else {
-                            *this.editor_active.lock().unwrap() = false;
-                        }
 
-                        // TODO: only if audio mode is active!
-                        let volume_data = get_master_volume();
-                        *this.system_volume.lock().unwrap() = volume_data.0;
-                        *this.mute.lock().unwrap() = volume_data.1;
-                        thread::sleep(Duration::from_millis(200));
+                            let hwnd = unsafe { FindWindowW(window.as_ptr(), null_mut()) };
+
+                            if hwnd != null_mut() {
+                                unsafe {
+                                    // 1 == playing, 3 == paused, anything else == stopped
+                                    let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
+                                    *this.playback_status.lock().unwrap() = playback_status;
+                                    // current position in msecs
+                                    let mut track_current_position =
+                                        SendMessageW(hwnd, WM_USER, 0, 105);
+                                    if playback_status != 1 && playback_status != 3 {
+                                        track_current_position = 0;
+                                    }
+
+                                    *this.track_current_position.lock().unwrap() =
+                                        track_current_position;
+
+                                    // track length in seconds (multiply by thousand)
+                                    let track_length = SendMessageW(hwnd, WM_USER, 1, 105);
+                                    *this.track_length.lock().unwrap() = track_length;
+                                    // get title
+                                    let current_index = SendMessageW(hwnd, WM_USER, 0, 125);
+                                    let mut title_length = SendMessageW(
+                                        hwnd,
+                                        WM_GETTEXTLENGTH,
+                                        current_index as usize,
+                                        3034,
+                                    );
+
+                                    // WINAMP VOLUME. NOT USED RIGHT NOW.
+                                    // let mut volume = SendMessageW(hwnd, WM_USER, -666i32 as usize, 122);
+                                    title_length += 1;
+
+                                    let mut buffer =
+                                        Vec::<u16>::with_capacity(title_length as usize);
+                                    buffer.set_len(title_length as usize);
+                                    SendMessageW(
+                                        hwnd,
+                                        WM_GETTEXT,
+                                        3034,
+                                        buffer.as_mut_ptr() as LPARAM,
+                                    );
+                                    let data = String::from_utf16_lossy(&buffer);
+
+                                    if title_length == 1
+                                        || !this.regex_first.lock().unwrap().is_match(&data)
+                                    {
+                                        *this.editor_active.lock().unwrap() = false;
+                                        thread::sleep(Duration::from_millis(200));
+                                        continue;
+                                    } else {
+                                        *this.editor_active.lock().unwrap() = true;
+                                    }
+
+                                    let caps =
+                                        this.regex_first.lock().unwrap().captures(&data).unwrap();
+                                    let artist_and_title = caps.get(1).map_or("", |m| m.as_str());
+
+                                    let artist_and_title_caps = this
+                                        .regex_second
+                                        .lock()
+                                        .unwrap()
+                                        .captures(&artist_and_title)
+                                        .unwrap();
+                                    let artist = artist_and_title_caps
+                                        .get(1)
+                                        .map_or("", |m| m.as_str())
+                                        .trim();
+
+                                    let title = artist_and_title_caps
+                                        .get(2)
+                                        .map_or("", |m| m.as_str())
+                                        .trim();
+
+                                    if (*this.artist.lock().unwrap() != artist)
+                                        || (*this.title.lock().unwrap() != title)
+                                    {
+                                        *this.title_x.lock().unwrap() = 0;
+                                    }
+
+                                    if *this.artist.lock().unwrap() != artist {
+                                        *this.artist_x.lock().unwrap() = 0;
+                                    }
+                                    *this.artist.lock().unwrap() = artist.to_string();
+                                    *this.title.lock().unwrap() = title.to_string();
+                                }
+                            } else {
+                                *this.editor_active.lock().unwrap() = false;
+                            }
+
+                            // TODO: only if audio mode is active!
+                            let volume_data = get_master_volume(false);
+                            *this.system_volume.lock().unwrap() = volume_data.0;
+                            *this.mute.lock().unwrap() = volume_data.1;
+                            thread::sleep(Duration::from_millis(200));
+                        }
                     }
                 })
                 .expect("Cannot create JOB_EXECUTOR thread"),
@@ -531,11 +539,13 @@ pub fn rotate(str: &str, direction: Direction, count: usize) -> String {
 }
 
 // TODO: disable for non-windows OS and find another way.
-pub fn get_master_volume() -> (f32, i32) {
+pub fn get_master_volume(init: bool) -> (f32, i32) {
     let mut current_volume = 0.0 as f32;
     let mut mute = 0;
     unsafe {
-        winapi::um::objbase::CoInitialize(std::ptr::null_mut());
+        if init {
+            winapi::um::objbase::CoInitialize(std::ptr::null_mut());
+        }
         let mut device_enumerator: *mut winapi::um::mmdeviceapi::IMMDeviceEnumerator =
             std::ptr::null_mut();
         // let mut hresult = winapi::um::combaseapi::CoCreateInstance(
@@ -575,4 +585,12 @@ pub fn get_master_volume() -> (f32, i32) {
         (*endpoint_volume).GetMute(&mut mute as *mut i32);
     }
     (current_volume, mute)
+}
+
+impl Drop for MediaInfoScreen {
+    fn drop(&mut self) {
+        unsafe {
+            winapi::um::combaseapi::CoUninitialize();
+        }
+    }
 }
