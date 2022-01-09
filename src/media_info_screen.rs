@@ -548,7 +548,6 @@ pub fn get_master_volume(init: bool) -> (f32, i32) {
         }
         let mut device_enumerator: *mut winapi::um::mmdeviceapi::IMMDeviceEnumerator =
             std::ptr::null_mut();
-        // let mut hresult = winapi::um::combaseapi::CoCreateInstance(
         winapi::um::combaseapi::CoCreateInstance(
             &winapi::um::mmdeviceapi::CLSID_MMDeviceEnumerator,
             std::ptr::null_mut(),
@@ -568,7 +567,6 @@ pub fn get_master_volume(init: bool) -> (f32, i32) {
         }
 
         (*device_enumerator).Release();
-        //device_enumerator = std::mem::zeroed();
         let mut endpoint_volume: *mut winapi::um::endpointvolume::IAudioEndpointVolume =
             std::mem::zeroed();
 

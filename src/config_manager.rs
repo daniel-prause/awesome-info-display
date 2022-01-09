@@ -39,7 +39,6 @@ impl ConfigManager {
     }
 
     pub fn save(&mut self) {
-        // do nothing at all right now
         let config = serde_json::to_string(&self.config);
         match config {
             Ok(conf) => {
