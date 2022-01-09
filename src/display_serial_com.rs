@@ -42,24 +42,40 @@ pub fn convert_to_gray_scale(bytes: &Vec<u8>) -> Vec<u8> {
     buffer
 }
 
+#[allow(unused)]
 pub fn write_screen_buffer(
     port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
     screen_buf: &[u8],
 ) -> bool {
-    if port.is_none() {
+    if port.is_none() || port.as_deref_mut().is_none() {
+        //println!("Port error!");
         return false;
     }
-    port.as_deref_mut().unwrap().write(&hex!("e4")).unwrap();
-    // send buffer
-    let mut bytes_send = 0;
-    while bytes_send < screen_buf.len() {
-        let slice = &screen_buf[bytes_send..cmp::min(bytes_send + 64, screen_buf.len())];
-        bytes_send += slice.len();
-        let _wr = port.as_deref_mut().unwrap().write(&slice);
-
-        if _wr.is_err() {
+    match port.as_deref_mut().unwrap().write(&hex!("e4")) {
+        Ok(_) => {
+            let mut bytes_send = 0;
+            while bytes_send < screen_buf.len() {
+                let slice = &screen_buf[bytes_send..cmp::min(bytes_send + 64, screen_buf.len())];
+                bytes_send += slice.len();
+                match port.as_deref_mut() {
+                    Some(result) => match result.write(&slice) {
+                        Ok(_) => {
+                            return true;
+                        }
+                        Err(_) => {
+                            return false;
+                        }
+                    },
+                    None => {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        Err(_result) => {
+            //println!("Serial port error: {:?}", result);
             return false;
         }
     }
-    return true;
 }

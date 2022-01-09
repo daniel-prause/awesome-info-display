@@ -23,9 +23,7 @@ impl ScreenManager {
     }
 
     pub fn current_screen(&mut self) -> &mut Box<dyn super::screen::SpecificScreen> {
-        if self.screens.get(self.current).is_none() {
-            None.unwrap()
-        } else {
+        if self.screens.get(self.current).is_some() {
             let seconds = Duration::from_secs(3);
             if self.switch_in_progress && self.timeout.unwrap().elapsed() >= seconds {
                 self.screens[self.current].update();
@@ -34,8 +32,10 @@ impl ScreenManager {
             } else {
                 self.screens[self.current].start();
             }
-            &mut self.screens[self.current]
+            return &mut self.screens[self.current];
         }
+        // this should never happen...
+        panic!("No current screen!");
     }
 
     pub fn next_screen(&mut self) {

@@ -46,16 +46,14 @@ impl SpecificScreen for BitpandaScreen {
 
     fn start(&self) {
         self.screen.active.store(true, Ordering::Release);
-        if !self.screen.handle.lock().unwrap().is_none() {
-            self.screen
-                .handle
-                .lock()
-                .as_ref()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .thread()
-                .unpark();
+        match self.screen.handle.lock() {
+            Ok(lock) => match lock.as_ref() {
+                Some(handle) => {
+                    handle.thread().unpark();
+                }
+                None => {}
+            },
+            Err(_) => {}
         }
     }
 
