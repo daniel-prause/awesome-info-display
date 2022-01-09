@@ -442,29 +442,29 @@ impl MediaInfoScreen {
                                     *this.track_length.lock().unwrap() = track_length;
                                     // get title
                                     let current_index = SendMessageW(hwnd, WM_USER, 0, 125);
-                                    let mut title_length = SendMessageW(
+                                    let title_length = SendMessageW(
                                         hwnd,
                                         WM_GETTEXTLENGTH,
                                         current_index as usize,
-                                        3034,
+                                        0,
                                     );
 
                                     // WINAMP VOLUME. NOT USED RIGHT NOW.
                                     // let mut volume = SendMessageW(hwnd, WM_USER, -666i32 as usize, 122);
-                                    title_length += 1;
 
+                                    let buffer_length = title_length + 1;
                                     let mut buffer =
-                                        Vec::<u16>::with_capacity(title_length as usize);
-                                    buffer.set_len(title_length as usize);
+                                        Vec::<u16>::with_capacity(buffer_length as usize);
+                                    buffer.resize(buffer_length as usize, 0);
                                     SendMessageW(
                                         hwnd,
                                         WM_GETTEXT,
-                                        3034,
+                                        buffer_length as usize,
                                         buffer.as_mut_ptr() as LPARAM,
                                     );
                                     let data = String::from_utf16_lossy(&buffer);
 
-                                    if title_length == 1
+                                    if title_length == 0
                                         || !this.regex_first.lock().unwrap().is_match(&data)
                                     {
                                         *this.editor_active.lock().unwrap() = false;
