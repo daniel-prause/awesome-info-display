@@ -133,7 +133,9 @@ impl Application for AwesomeDisplay {
     type Message = Message;
     type Flags = ();
     fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
-        let font = Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8]));
+        let font = Arc::new(Mutex::new(Font::try_from_vec(Vec::from(
+            include_bytes!("Liberation.ttf") as &[u8],
+        ))));
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
         let config_manager =
             std::sync::Arc::new(RwLock::new(config_manager::ConfigManager::new(None)));

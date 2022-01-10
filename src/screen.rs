@@ -9,7 +9,7 @@ use std::time::Instant;
 pub struct Screen {
     pub description: String,
     pub bytes: Arc<Mutex<Vec<u8>>>,
-    pub font: Option<Font<'static>>,
+    pub font: Arc<Mutex<Option<Font<'static>>>>,
     pub active: Arc<AtomicBool>,
     pub initial_update_called: Arc<AtomicBool>,
     pub handle: Arc<Mutex<Option<JoinHandle<()>>>>,
@@ -23,7 +23,9 @@ impl Default for Screen {
         Screen {
             description: String::from(""),
             bytes: Arc::new(Mutex::new(Vec::new())),
-            font: Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8])),
+            font: Arc::new(Mutex::new(Font::try_from_vec(Vec::from(
+                include_bytes!("Liberation.ttf") as &[u8],
+            )))),
             active: Arc::new(AtomicBool::new(false)),
             initial_update_called: Arc::new(AtomicBool::new(false)),
             handle: Arc::new(Mutex::new(None)),

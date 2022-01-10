@@ -119,7 +119,7 @@ impl BitpandaScreen {
             0,
             0,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             "Bitpanda",
         );
         draw_text_mut(
@@ -128,7 +128,7 @@ impl BitpandaScreen {
             160,
             0,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             &format!("{: >10}€", self.wallet_value.lock().unwrap()),
         );
     }
@@ -141,7 +141,7 @@ impl BitpandaScreen {
             84,
             20,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             "Last update",
         );
 
@@ -151,7 +151,7 @@ impl BitpandaScreen {
             52,
             40,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             &date_value.format("%d.%m.%Y %T").to_string(),
         );
     }
@@ -170,7 +170,7 @@ impl BitpandaScreen {
 
     pub fn new(
         description: String,
-        font: Option<Font<'static>>,
+        font: Arc<Mutex<Option<Font<'static>>>>,
         config: Arc<RwLock<ConfigManager>>,
     ) -> Arc<RwLock<BitpandaScreen>> {
         let this = Arc::new(RwLock::new(BitpandaScreen {

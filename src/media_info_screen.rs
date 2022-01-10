@@ -137,7 +137,7 @@ impl MediaInfoScreen {
             77,
             4,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             "Media Screen",
         );
         draw_text_mut(
@@ -146,7 +146,7 @@ impl MediaInfoScreen {
             65,
             32,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             "Winamp inactive",
         );
     }
@@ -173,7 +173,7 @@ impl MediaInfoScreen {
             position_artist as u32,
             0,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             &rotate(
                 &[&artist.clone(), "   "].join("").to_string(),
                 Direction::Left,
@@ -205,7 +205,7 @@ impl MediaInfoScreen {
             position_title as u32,
             16,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             &rotate(
                 &[&title.clone(), "   "].join("").to_string(),
                 Direction::Left,
@@ -251,7 +251,7 @@ impl MediaInfoScreen {
             16,
             36,
             Scale { x: 14.0, y: 14.0 },
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             &elapsed,
         );
     }
@@ -269,7 +269,7 @@ impl MediaInfoScreen {
             166,
             36,
             Scale { x: 14.0, y: 14.0 },
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             &total,
         );
     }
@@ -416,7 +416,7 @@ impl MediaInfoScreen {
     #[cfg(windows)]
     pub fn new(
         description: String,
-        font: Option<Font<'static>>,
+        font: Arc<Mutex<Option<Font<'static>>>>,
         config: Arc<RwLock<ConfigManager>>,
     ) -> Arc<RwLock<MediaInfoScreen>> {
         let this = Arc::new(RwLock::new(MediaInfoScreen {

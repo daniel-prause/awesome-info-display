@@ -108,7 +108,7 @@ impl SystemInfoScreen {
             0,
             0,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             "CPU",
         );
         draw_text_mut(
@@ -117,7 +117,7 @@ impl SystemInfoScreen {
             222,
             0,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             &cpu_text,
         );
         draw_hollow_rect_mut(
@@ -141,7 +141,7 @@ impl SystemInfoScreen {
             0,
             30,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             "RAM",
         );
         draw_text_mut(
@@ -150,7 +150,7 @@ impl SystemInfoScreen {
             222,
             30,
             scale,
-            self.screen.font.as_ref().unwrap(),
+            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
             &memory_text,
         );
         draw_hollow_rect_mut(
@@ -178,7 +178,7 @@ impl SystemInfoScreen {
 
     pub fn new(
         description: String,
-        font: Option<Font<'static>>,
+        font: Arc<Mutex<Option<Font<'static>>>>,
         config: Arc<RwLock<ConfigManager>>,
     ) -> Arc<RwLock<SystemInfoScreen>> {
         let this = Arc::new(RwLock::new(SystemInfoScreen {
