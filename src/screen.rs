@@ -8,7 +8,7 @@ use std::time::Instant;
 #[derive(Debug, Clone)]
 pub struct Screen {
     pub description: String,
-    pub bytes: Vec<u8>,
+    pub bytes: Arc<Mutex<Vec<u8>>>,
     pub font: Option<Font<'static>>,
     pub active: Arc<AtomicBool>,
     pub initial_update_called: Arc<AtomicBool>,
@@ -22,7 +22,7 @@ impl Default for Screen {
     fn default() -> Screen {
         Screen {
             description: String::from(""),
-            bytes: Vec::new(),
+            bytes: Arc::new(Mutex::new(Vec::new())),
             font: Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8])),
             active: Arc::new(AtomicBool::new(false)),
             initial_update_called: Arc::new(AtomicBool::new(false)),

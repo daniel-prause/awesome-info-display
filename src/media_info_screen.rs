@@ -50,7 +50,7 @@ impl BasicScreen for std::sync::Arc<RwLock<MediaInfoScreen>> {
     }
 
     fn current_image(&self) -> Vec<u8> {
-        self.read().unwrap().screen.bytes.clone()
+        self.read().unwrap().screen.bytes.lock().unwrap().clone()
     }
 
     fn update(&mut self) {
@@ -405,7 +405,7 @@ impl MediaInfoScreen {
         } else {
             instance.write().unwrap().draw_intro(&mut image, scale);
         }
-        instance.write().unwrap().screen.bytes = image.into_vec();
+        *instance.write().unwrap().screen.bytes.lock().unwrap() = image.into_vec();
     }
 
     fn set_mode(instance: Arc<RwLock<MediaInfoScreen>>, mode: u32) {

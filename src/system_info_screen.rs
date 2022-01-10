@@ -26,7 +26,7 @@ impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
     }
 
     fn current_image(&self) -> Vec<u8> {
-        self.read().unwrap().screen.bytes.clone()
+        self.read().unwrap().screen.bytes.lock().unwrap().clone()
     }
 
     fn update(&mut self) {
@@ -173,7 +173,7 @@ impl SystemInfoScreen {
 
         instance.write().unwrap().draw_cpu(&mut image, scale);
         instance.write().unwrap().draw_memory(&mut image, scale);
-        instance.write().unwrap().screen.bytes = image.into_vec();
+        *instance.write().unwrap().screen.bytes.lock().unwrap() = image.into_vec();
     }
 
     pub fn new(
