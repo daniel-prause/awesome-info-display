@@ -34,15 +34,15 @@ impl Default for Screen {
     }
 }
 
-impl std::fmt::Debug for dyn SpecificScreen {
+impl std::fmt::Debug for dyn BasicScreen {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.description())
     }
 }
 
-pub trait SpecificScreen {
+pub trait BasicScreen {
     fn update(&mut self) -> ();
-    fn description(&self) -> &String;
+    fn description(&self) -> String;
     fn current_image(&self) -> Vec<u8>;
     fn initial_update_called(&mut self) -> bool;
     fn start(&self) -> ();

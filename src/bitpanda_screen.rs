@@ -1,6 +1,6 @@
 use crate::config_manager::ConfigManager;
+use crate::screen::BasicScreen;
 use crate::screen::Screen;
-use crate::screen::SpecificScreen;
 
 use chrono::{DateTime, Local}; // 0.4.15
 use error_chain::error_chain;
@@ -31,22 +31,26 @@ pub struct BitpandaScreen {
     initial_tryout: Arc<AtomicBool>,
 }
 
-impl SpecificScreen for BitpandaScreen {
-    fn description(&self) -> &String {
-        &self.screen.description
+impl BasicScreen for std::sync::Arc<RwLock<BitpandaScreen>> {
+    fn description(&self) -> String {
+        self.read().unwrap().screen.description.clone()
     }
 
     fn current_image(&self) -> Vec<u8> {
-        self.screen.bytes.clone()
+        self.read().unwrap().screen.bytes.clone()
     }
 
     fn update(&mut self) {
-        BitpandaScreen::update(self);
+        BitpandaScreen::update(self.clone());
     }
 
     fn start(&self) {
-        self.screen.active.store(true, Ordering::Release);
-        match self.screen.handle.lock() {
+        self.read()
+            .unwrap()
+            .screen
+            .active
+            .store(true, Ordering::Release);
+        match self.read().unwrap().screen.handle.lock() {
             Ok(lock) => match lock.as_ref() {
                 Some(handle) => {
                     handle.thread().unpark();
@@ -58,12 +62,24 @@ impl SpecificScreen for BitpandaScreen {
     }
 
     fn stop(&self) {
-        self.screen.active.store(false, Ordering::Release);
+        self.read()
+            .unwrap()
+            .screen
+            .active
+            .store(false, Ordering::Release);
     }
 
     fn initial_update_called(&mut self) -> bool {
-        if !self.screen.initial_update_called.load(Ordering::Acquire) {
-            self.screen
+        if !self
+            .read()
+            .unwrap()
+            .screen
+            .initial_update_called
+            .load(Ordering::Acquire)
+        {
+            self.read()
+                .unwrap()
+                .screen
                 .initial_update_called
                 .store(true, Ordering::Release);
             return false;
@@ -73,6 +89,8 @@ impl SpecificScreen for BitpandaScreen {
 
     fn enabled(&self) -> bool {
         return self
+            .read()
+            .unwrap()
             .screen
             .config
             .read()
@@ -82,7 +100,9 @@ impl SpecificScreen for BitpandaScreen {
     }
 
     fn set_status(&self, status: bool) {
-        self.screen
+        self.read()
+            .unwrap()
+            .screen
             .config
             .write()
             .unwrap()
@@ -136,21 +156,24 @@ impl BitpandaScreen {
         );
     }
 
-    fn update(&mut self) {
+    fn update(instance: Arc<RwLock<BitpandaScreen>>) {
         let mut image = RgbImage::new(256, 64);
         let scale = Scale { x: 16.0, y: 16.0 };
 
-        self.draw_wallet_value(&mut image, scale);
-        self.draw_updated_at(&mut image, scale);
-        self.screen.bytes = image.into_vec();
+        instance
+            .write()
+            .unwrap()
+            .draw_wallet_value(&mut image, scale);
+        instance.write().unwrap().draw_updated_at(&mut image, scale);
+        instance.write().unwrap().screen.bytes = image.into_vec();
     }
 
     pub fn new(
         description: String,
         font: Option<Font<'static>>,
         config: Arc<RwLock<ConfigManager>>,
-    ) -> Self {
-        let this = BitpandaScreen {
+    ) -> Arc<RwLock<BitpandaScreen>> {
+        let this = Arc::new(RwLock::new(BitpandaScreen {
             screen: Screen {
                 description,
                 font,
@@ -160,27 +183,32 @@ impl BitpandaScreen {
             wallet_value: Arc::new(Mutex::new(0.0)),
             last_update: Arc::new(Mutex::new(SystemTime::now())),
             initial_tryout: Arc::new(AtomicBool::new(false)),
-        };
-
+        }));
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
 
-        *this.screen.handle.lock().unwrap() = Some(
+        *this.read().unwrap().screen.handle.lock().unwrap() = Some(
             builder
                 .spawn({
                     let this = this.clone();
                     move || loop {
-                        while !this.screen.active.load(Ordering::Acquire) {
+                        while !this.read().unwrap().screen.active.load(Ordering::Acquire) {
                             thread::park();
                         }
                         thread::sleep(Duration::from_millis(1000));
-                        let value = this.wallet_value.lock().unwrap();
-                        let elapsed = this.last_update.lock().unwrap();
+                        let value = *this.read().unwrap().wallet_value.lock().unwrap();
+                        let elapsed = *this.read().unwrap().last_update.lock().unwrap();
                         match elapsed.elapsed() {
                             Ok(duration) => {
                                 if (duration.as_secs() > 60
                                     || duration.as_secs() < 60
-                                        && !this.initial_tryout.load(Ordering::Acquire))
+                                        && !this
+                                            .read()
+                                            .unwrap()
+                                            .initial_tryout
+                                            .load(Ordering::Acquire))
                                     && this
+                                        .read()
+                                        .unwrap()
                                         .screen
                                         .config
                                         .read()
@@ -191,7 +219,10 @@ impl BitpandaScreen {
                                         != ""
                                 {
                                     // unlock value mutex until request is done
-                                    this.initial_tryout.store(true, Ordering::Release);
+                                    this.read()
+                                        .unwrap()
+                                        .initial_tryout
+                                        .store(true, Ordering::Release);
                                     drop(value);
                                     drop(elapsed);
                                     // 1. get current values for crypto coins
@@ -207,7 +238,9 @@ impl BitpandaScreen {
                                                     .get("https://api.bitpanda.com/v1/wallets")
                                                     .header(
                                                         "X-API-KEY",
-                                                        this.screen
+                                                        this.read()
+                                                            .unwrap()
+                                                            .screen
                                                             .config
                                                             .read()
                                                             .unwrap()
@@ -271,6 +304,8 @@ impl BitpandaScreen {
                                                                         }
                                                                     }
                                                                     *this
+                                                                        .read()
+                                                                        .unwrap()
                                                                         .wallet_value
                                                                         .lock()
                                                                         .unwrap() = (sum * 100.0)
@@ -299,7 +334,8 @@ impl BitpandaScreen {
                                             println!("Error: {:?}", e);
                                         }
                                     }
-                                    *this.last_update.lock().unwrap() = SystemTime::now();
+                                    *this.read().unwrap().last_update.lock().unwrap() =
+                                        SystemTime::now();
                                 }
                             }
                             Err(e) => {
@@ -310,6 +346,6 @@ impl BitpandaScreen {
                 })
                 .expect("Cannot create JOB_EXECUTOR thread"),
         );
-        this
+        this.clone()
     }
 }

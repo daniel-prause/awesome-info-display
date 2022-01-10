@@ -137,7 +137,7 @@ impl Application for AwesomeDisplay {
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
         let config_manager =
             std::sync::Arc::new(RwLock::new(config_manager::ConfigManager::new(None)));
-        let mut screens: Vec<Box<dyn screen::SpecificScreen>> = Vec::new();
+        let mut screens: Vec<Box<dyn screen::BasicScreen>> = Vec::new();
 
         screens.push(Box::new(system_info_screen::SystemInfoScreen::new(
             String::from("System Stats"),
@@ -154,7 +154,6 @@ impl Application for AwesomeDisplay {
             font.clone(),
             Arc::clone(&config_manager),
         )));
-
         let this = AwesomeDisplay {
             increment_button: button::State::new(),
             decrement_button: button::State::new(),
