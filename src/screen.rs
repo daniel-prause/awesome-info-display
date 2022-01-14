@@ -1,7 +1,7 @@
 use crate::config_manager::ConfigManager;
 use rusttype::Font;
 use std::fmt::Debug;
-use std::sync::{atomic::AtomicBool, Arc, Mutex, RwLock};
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread::JoinHandle;
 use std::time::Instant;
 
@@ -57,12 +57,12 @@ pub trait BasicScreen {
 pub trait ScreenControl {
     fn start_worker(&self);
     fn stop_worker(&self);
+    fn initial_update_called(&mut self) -> bool;
 }
 
 impl ScreenControl for Screen {
     fn start_worker(&self) {
-        self.active
-            .store(true, std::sync::atomic::Ordering::Release);
+        self.active.store(true, Ordering::Release);
         match self.handle.lock() {
             Ok(lock) => match lock.as_ref() {
                 Some(handle) => {
@@ -75,7 +75,14 @@ impl ScreenControl for Screen {
     }
 
     fn stop_worker(&self) {
-        self.active
-            .store(false, std::sync::atomic::Ordering::Release);
+        self.active.store(false, Ordering::Release);
+    }
+
+    fn initial_update_called(&mut self) -> bool {
+        if !self.initial_update_called.load(Ordering::Acquire) {
+            self.initial_update_called.store(true, Ordering::Release);
+            return false;
+        }
+        true
     }
 }

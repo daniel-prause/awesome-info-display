@@ -71,21 +71,7 @@ impl BasicScreen for std::sync::Arc<RwLock<MediaInfoScreen>> {
     }
 
     fn initial_update_called(&mut self) -> bool {
-        if !self
-            .read()
-            .unwrap()
-            .screen
-            .initial_update_called
-            .load(Ordering::Acquire)
-        {
-            self.read()
-                .unwrap()
-                .screen
-                .initial_update_called
-                .store(true, Ordering::Release);
-            return false;
-        }
-        true
+        return self.write().unwrap().screen.initial_update_called();
     }
 
     fn enabled(&self) -> bool {
