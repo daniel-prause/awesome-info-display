@@ -53,3 +53,29 @@ pub trait BasicScreen {
     fn enabled(&self) -> bool;
     fn set_status(&self, status: bool) -> ();
 }
+
+pub trait ScreenControl {
+    fn start_worker(&self);
+    fn stop_worker(&self);
+}
+
+impl ScreenControl for Screen {
+    fn start_worker(&self) {
+        self.active
+            .store(true, std::sync::atomic::Ordering::Release);
+        match self.handle.lock() {
+            Ok(lock) => match lock.as_ref() {
+                Some(handle) => {
+                    handle.thread().unpark();
+                }
+                None => {}
+            },
+            Err(_) => {}
+        }
+    }
+
+    fn stop_worker(&self) {
+        self.active
+            .store(false, std::sync::atomic::Ordering::Release);
+    }
+}

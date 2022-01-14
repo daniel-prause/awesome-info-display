@@ -1,6 +1,7 @@
 use crate::config_manager::ConfigManager;
 use crate::screen::BasicScreen;
 use crate::screen::Screen;
+use crate::screen::ScreenControl;
 
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_mut};
@@ -34,27 +35,11 @@ impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
     }
 
     fn start(&self) {
-        self.read()
-            .unwrap()
-            .screen
-            .active
-            .store(true, Ordering::Release);
-        match self.read().unwrap().screen.handle.lock() {
-            Ok(lock) => match lock.as_ref() {
-                Some(handle) => {
-                    handle.thread().unpark();
-                }
-                None => {}
-            },
-            Err(_) => {}
-        }
+        self.read().unwrap().screen.start_worker();
     }
+
     fn stop(&self) {
-        self.read()
-            .unwrap()
-            .screen
-            .active
-            .store(false, Ordering::Release);
+        self.read().unwrap().screen.stop_worker();
     }
 
     fn initial_update_called(&mut self) -> bool {
