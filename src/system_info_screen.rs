@@ -27,7 +27,7 @@ impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
     }
 
     fn current_image(&self) -> Vec<u8> {
-        self.read().unwrap().screen.bytes.lock().unwrap().clone()
+        self.read().unwrap().screen.current_image()
     }
 
     fn update(&mut self) {
@@ -43,19 +43,18 @@ impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
     }
 
     fn initial_update_called(&mut self) -> bool {
-        return self.write().unwrap().screen.initial_update_called();
+        self.write().unwrap().screen.initial_update_called()
     }
 
     fn enabled(&self) -> bool {
-        return self
-            .read()
+        self.read()
             .unwrap()
             .screen
             .config_manager
             .read()
             .unwrap()
             .config
-            .system_info_screen_active;
+            .system_info_screen_active
     }
 
     fn set_status(&self, status: bool) {

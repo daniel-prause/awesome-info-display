@@ -58,6 +58,7 @@ pub trait ScreenControl {
     fn start_worker(&self);
     fn stop_worker(&self);
     fn initial_update_called(&mut self) -> bool;
+    fn current_image(&self) -> Vec<u8>;
 }
 
 impl ScreenControl for Screen {
@@ -84,5 +85,9 @@ impl ScreenControl for Screen {
             return false;
         }
         true
+    }
+
+    fn current_image(&self) -> Vec<u8> {
+        return self.bytes.lock().unwrap().clone();
     }
 }
