@@ -15,7 +15,7 @@ pub struct Screen {
     pub handle: Arc<Mutex<Option<JoinHandle<()>>>>,
     pub mode: Arc<Mutex<u32>>,
     pub mode_timeout: Arc<Mutex<Option<Instant>>>,
-    pub config: Arc<RwLock<ConfigManager>>,
+    pub config_manager: Arc<RwLock<ConfigManager>>,
 }
 
 impl Default for Screen {
@@ -31,7 +31,7 @@ impl Default for Screen {
             handle: Arc::new(Mutex::new(None)),
             mode: Arc::new(Mutex::new(0)),
             mode_timeout: Arc::new(Mutex::new(Some(Instant::now()))),
-            config: Arc::new(RwLock::new(ConfigManager::new(None))),
+            config_manager: Arc::new(RwLock::new(ConfigManager::new(None))),
         }
     }
 }

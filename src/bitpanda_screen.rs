@@ -62,7 +62,7 @@ impl BasicScreen for std::sync::Arc<RwLock<BitpandaScreen>> {
             .read()
             .unwrap()
             .screen
-            .config
+            .config_manager
             .read()
             .unwrap()
             .config
@@ -73,7 +73,7 @@ impl BasicScreen for std::sync::Arc<RwLock<BitpandaScreen>> {
         self.read()
             .unwrap()
             .screen
-            .config
+            .config_manager
             .write()
             .unwrap()
             .config
@@ -141,13 +141,13 @@ impl BitpandaScreen {
     pub fn new(
         description: String,
         font: Arc<Mutex<Option<Font<'static>>>>,
-        config: Arc<RwLock<ConfigManager>>,
+        config_manager: Arc<RwLock<ConfigManager>>,
     ) -> Arc<RwLock<BitpandaScreen>> {
         let this = Arc::new(RwLock::new(BitpandaScreen {
             screen: Screen {
                 description,
                 font,
-                config,
+                config_manager,
                 ..Default::default()
             },
             wallet_value: Arc::new(Mutex::new(0.0)),
@@ -180,7 +180,7 @@ impl BitpandaScreen {
                                         .read()
                                         .unwrap()
                                         .screen
-                                        .config
+                                        .config_manager
                                         .read()
                                         .unwrap()
                                         .config
@@ -211,7 +211,7 @@ impl BitpandaScreen {
                                                         this.read()
                                                             .unwrap()
                                                             .screen
-                                                            .config
+                                                            .config_manager
                                                             .read()
                                                             .unwrap()
                                                             .config

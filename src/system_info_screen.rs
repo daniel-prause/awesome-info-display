@@ -51,7 +51,7 @@ impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
             .read()
             .unwrap()
             .screen
-            .config
+            .config_manager
             .read()
             .unwrap()
             .config
@@ -62,7 +62,7 @@ impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
         self.read()
             .unwrap()
             .screen
-            .config
+            .config_manager
             .write()
             .unwrap()
             .config
@@ -150,13 +150,13 @@ impl SystemInfoScreen {
     pub fn new(
         description: String,
         font: Arc<Mutex<Option<Font<'static>>>>,
-        config: Arc<RwLock<ConfigManager>>,
+        config_manager: Arc<RwLock<ConfigManager>>,
     ) -> Arc<RwLock<SystemInfoScreen>> {
         let this = Arc::new(RwLock::new(SystemInfoScreen {
             screen: Screen {
                 description,
                 font,
-                config,
+                config_manager,
                 ..Default::default()
             },
             cpu_usage: Arc::new(Mutex::new(0.0)),

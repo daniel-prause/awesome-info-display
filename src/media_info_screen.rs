@@ -79,7 +79,7 @@ impl BasicScreen for std::sync::Arc<RwLock<MediaInfoScreen>> {
             .read()
             .unwrap()
             .screen
-            .config
+            .config_manager
             .read()
             .unwrap()
             .config
@@ -90,7 +90,7 @@ impl BasicScreen for std::sync::Arc<RwLock<MediaInfoScreen>> {
         self.read()
             .unwrap()
             .screen
-            .config
+            .config_manager
             .write()
             .unwrap()
             .config
@@ -387,13 +387,13 @@ impl MediaInfoScreen {
     pub fn new(
         description: String,
         font: Arc<Mutex<Option<Font<'static>>>>,
-        config: Arc<RwLock<ConfigManager>>,
+        config_manager: Arc<RwLock<ConfigManager>>,
     ) -> Arc<RwLock<MediaInfoScreen>> {
         let this = Arc::new(RwLock::new(MediaInfoScreen {
             screen: Screen {
                 description,
                 font,
-                config,
+                config_manager,
                 ..Default::default()
             },
             symbols: Font::try_from_vec(Vec::from(include_bytes!("symbols.otf") as &[u8])),
