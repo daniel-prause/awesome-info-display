@@ -267,9 +267,9 @@ impl Application for AwesomeDisplay {
                 if *LAST_KEY.lock().unwrap() {
                     *LAST_KEY.lock().unwrap() = false;
                     let val = *LAST_KEY_VALUE.lock().unwrap();
-                    if val > 173 && val < 176 {
+                    if val == 174 || val == 175 {
                         self.screens.set_screen_for_short(1, 1); // 1 is media screen right now, 1 is "volume mode"
-                    } else if val > 176 && val < 180 {
+                    } else if val >= 176 && val < 180 {
                         self.screens.set_screen_for_short(1, 0); // 1 is media screen right now, 0 is "normal mode"
                     } else if val == 180 {
                         self.screens.next_screen()
