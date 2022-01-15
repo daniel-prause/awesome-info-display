@@ -318,6 +318,12 @@ impl Application for AwesomeDisplay {
                         .unwrap()
                         .config
                         .bitpanda_screen_active
+                    || self
+                        .config_manager
+                        .read()
+                        .unwrap()
+                        .config
+                        .weather_screen_active
                 {
                     self.config_manager
                         .write()
@@ -368,6 +374,12 @@ impl Application for AwesomeDisplay {
                         .unwrap()
                         .config
                         .media_screen_active
+                    || self
+                        .config_manager
+                        .read()
+                        .unwrap()
+                        .config
+                        .weather_screen_active
                 {
                     self.config_manager
                         .write()
