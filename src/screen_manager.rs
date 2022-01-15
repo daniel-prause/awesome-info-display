@@ -18,7 +18,16 @@ impl ScreenManager {
             last_screen: 0,
             switch_in_progress: false,
         };
-        this.current_screen().start();
+        // find first enabled screen
+        if !this.screens[this.current].enabled() {
+            for (i, screen) in this.screens.iter().enumerate() {
+                if screen.enabled() {
+                    this.current = i;
+                    this.last_screen = i;
+                    break;
+                }
+            }
+        }
         this
     }
 
