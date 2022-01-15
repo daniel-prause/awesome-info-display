@@ -14,6 +14,7 @@ mod screen;
 mod screen_manager;
 mod style;
 mod system_info_screen;
+mod weather_screen;
 use crate::display_serial_com::{convert_to_gray_scale, init_serial, write_screen_buffer};
 use lazy_static::lazy_static;
 use rdev::{grab, Event, EventType, Key};
@@ -110,6 +111,7 @@ struct AwesomeDisplay {
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
     should_exit: bool,
     bitpanda_api_key_input: text_input::State,
+    openweather_api_key_input: text_input::State,
     slider: slider::State,
 }
 
@@ -123,9 +125,11 @@ enum Message {
     SystemInfoScreenStatusChanged(bool),
     MediaScreenStatusChanged(bool),
     BitpandaInfoStatusChanged(bool),
+    OpenWeatherInfoStatusChanged(bool),
     KeyboardEventOccurred(iced::keyboard::KeyCode, u32),
     WindowEventOccurred(iced_native::Event),
     BitpandaApiKeyChanged(String),
+    OpenWeatherApiKeyChanged(String),
 }
 
 impl Application for AwesomeDisplay {
@@ -156,6 +160,11 @@ impl Application for AwesomeDisplay {
             font.clone(),
             Arc::clone(&config_manager),
         )));
+        screens.push(Box::new(weather_screen::WeatherScreen::new(
+            String::from("Weather Info"),
+            font.clone(),
+            Arc::clone(&config_manager),
+        )));
         let this = AwesomeDisplay {
             increment_button: button::State::new(),
             decrement_button: button::State::new(),
@@ -165,6 +174,7 @@ impl Application for AwesomeDisplay {
             config_manager: config_manager.clone(),
             should_exit: false,
             bitpanda_api_key_input: text_input::State::new(),
+            openweather_api_key_input: text_input::State::new(),
             slider: slider::State::new(),
         };
         builder
@@ -330,6 +340,12 @@ impl Application for AwesomeDisplay {
                         .unwrap()
                         .config
                         .bitpanda_screen_active
+                    || self
+                        .config_manager
+                        .read()
+                        .unwrap()
+                        .config
+                        .weather_screen_active
                 {
                     self.config_manager
                         .write()
@@ -363,6 +379,41 @@ impl Application for AwesomeDisplay {
             }
             Message::BitpandaApiKeyChanged(message) => {
                 self.config_manager.write().unwrap().config.bitpanda_api_key = message;
+            }
+            Message::OpenWeatherInfoStatusChanged(status) => {
+                if self
+                    .config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .system_info_screen_active
+                    || self
+                        .config_manager
+                        .read()
+                        .unwrap()
+                        .config
+                        .media_screen_active
+                    || self
+                        .config_manager
+                        .read()
+                        .unwrap()
+                        .config
+                        .bitpanda_screen_active
+                {
+                    self.config_manager
+                        .write()
+                        .unwrap()
+                        .config
+                        .weather_screen_active = status;
+                    self.screens.set_status_for_screen(3, status);
+                }
+            }
+            Message::OpenWeatherApiKeyChanged(message) => {
+                self.config_manager
+                    .write()
+                    .unwrap()
+                    .config
+                    .openweather_api_key = message;
             }
         }
         Command::none()
@@ -472,11 +523,38 @@ impl Application for AwesomeDisplay {
                 .width(Length::Units(200)),
             )
             .push(
+                Checkbox::new(
+                    self.config_manager
+                        .read()
+                        .unwrap()
+                        .config
+                        .weather_screen_active,
+                    "Weather Info",
+                    Message::OpenWeatherInfoStatusChanged,
+                )
+                .width(Length::Units(200)),
+            )
+            .push(
                 TextInput::new(
                     &mut self.bitpanda_api_key_input,
                     "Bitpanda Api Key",
                     &self.config_manager.read().unwrap().config.bitpanda_api_key,
                     Message::BitpandaApiKeyChanged,
+                )
+                .password()
+                .width(Length::Units(200)),
+            )
+            .push(
+                TextInput::new(
+                    &mut self.openweather_api_key_input,
+                    "Openweather Api Key",
+                    &self
+                        .config_manager
+                        .read()
+                        .unwrap()
+                        .config
+                        .openweather_api_key,
+                    Message::OpenWeatherApiKeyChanged,
                 )
                 .password()
                 .width(Length::Units(200)),

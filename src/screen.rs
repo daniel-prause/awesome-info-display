@@ -88,6 +88,6 @@ impl ScreenControl for Screen {
     }
 
     fn current_image(&self) -> Vec<u8> {
-        return self.bytes.lock().unwrap().clone();
+        self.bytes.lock().unwrap().clone()
     }
 }

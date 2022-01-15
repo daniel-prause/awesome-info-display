@@ -1,8 +1,10 @@
+extern crate cpu_monitor;
 use crate::config_manager::ConfigManager;
 use crate::screen::BasicScreen;
 use crate::screen::Screen;
 use crate::screen::ScreenControl;
 
+use cpu_monitor::CpuInstant;
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
@@ -173,15 +175,15 @@ impl SystemInfoScreen {
                         while !this.read().unwrap().screen.active.load(Ordering::Acquire) {
                             thread::park();
                         }
-                        match sys.cpu_load_aggregate() {
-                            Ok(cpu) => {
-                                thread::sleep(Duration::from_millis(1000));
-                                let cpu = cpu.done().unwrap();
-                                *this.read().unwrap().cpu_usage.lock().unwrap() =
-                                    ((cpu.user + cpu.nice + cpu.system) * 100.0).floor().into();
-                            }
-                            Err(x) => println!("\nCPU load: error: {}", x),
-                        }
+
+                        // cpu load from different crate since systemstats is not specific enough
+                        let start = cpu_monitor::CpuInstant::now().unwrap();
+                        std::thread::sleep(Duration::from_millis(1000));
+                        let end = CpuInstant::now().unwrap();
+                        let duration = end - start;
+                        *this.read().unwrap().cpu_usage.lock().unwrap() =
+                            (duration.non_idle() * 100.0).floor().into();
+
                         match sys.memory() {
                             Ok(mem) => {
                                 let memory_used =
