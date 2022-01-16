@@ -8,6 +8,7 @@ use std::time::Instant;
 #[derive(Debug, Clone)]
 pub struct Screen {
     pub description: String,
+    pub key: String,
     pub bytes: Arc<Mutex<Vec<u8>>>,
     pub font: Arc<Mutex<Option<Font<'static>>>>,
     pub active: Arc<AtomicBool>,
@@ -22,6 +23,7 @@ impl Default for Screen {
     fn default() -> Screen {
         Screen {
             description: String::from(""),
+            key: String::from(""),
             bytes: Arc::new(Mutex::new(Vec::new())),
             font: Arc::new(Mutex::new(Font::try_from_vec(Vec::from(
                 include_bytes!("Liberation.ttf") as &[u8],
@@ -45,6 +47,7 @@ impl std::fmt::Debug for dyn BasicScreen {
 pub trait BasicScreen {
     fn update(&mut self) -> ();
     fn description(&self) -> String;
+    fn key(&self) -> String;
     fn current_image(&self) -> Vec<u8>;
     fn initial_update_called(&mut self) -> bool;
     fn start(&self) -> ();
@@ -59,9 +62,14 @@ pub trait ScreenControl {
     fn stop_worker(&self);
     fn initial_update_called(&mut self) -> bool;
     fn current_image(&self) -> Vec<u8>;
+    fn key(&self) -> String;
 }
 
 impl ScreenControl for Screen {
+    fn key(&self) -> String {
+        self.key.clone()
+    }
+
     fn start_worker(&self) {
         self.active.store(true, Ordering::Release);
         match self.handle.lock() {

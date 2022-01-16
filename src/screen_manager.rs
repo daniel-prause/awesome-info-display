@@ -113,4 +113,18 @@ impl ScreenManager {
             self.next_screen();
         }
     }
+
+    pub fn screen_deactivatable(&self, key: String) -> bool {
+        let mut count = 0;
+
+        for screen in self.screens.iter() {
+            if screen.enabled() && key != screen.key() {
+                count += 1
+            }
+            if count >= 1 {
+                return true;
+            }
+        }
+        count >= 1
+    }
 }

@@ -70,6 +70,10 @@ impl BasicScreen for std::sync::Arc<RwLock<MediaInfoScreen>> {
         self.read().unwrap().screen.stop_worker();
     }
 
+    fn key(&self) -> String {
+        self.read().unwrap().screen.key()
+    }
+
     fn initial_update_called(&mut self) -> bool {
         self.write().unwrap().screen.initial_update_called()
     }
@@ -385,6 +389,7 @@ impl MediaInfoScreen {
     #[cfg(windows)]
     pub fn new(
         description: String,
+        key: String,
         font: Arc<Mutex<Option<Font<'static>>>>,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> Arc<RwLock<MediaInfoScreen>> {
@@ -393,6 +398,7 @@ impl MediaInfoScreen {
                 description,
                 font,
                 config_manager,
+                key,
                 ..Default::default()
             },
             symbols: Font::try_from_vec(Vec::from(include_bytes!("symbols.otf") as &[u8])),

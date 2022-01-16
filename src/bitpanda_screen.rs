@@ -53,6 +53,10 @@ impl BasicScreen for std::sync::Arc<RwLock<BitpandaScreen>> {
         self.read().unwrap().screen.stop_worker();
     }
 
+    fn key(&self) -> String {
+        self.read().unwrap().screen.key()
+    }
+
     fn initial_update_called(&mut self) -> bool {
         self.write().unwrap().screen.initial_update_called()
     }
@@ -139,6 +143,7 @@ impl BitpandaScreen {
 
     pub fn new(
         description: String,
+        key: String,
         font: Arc<Mutex<Option<Font<'static>>>>,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> Arc<RwLock<BitpandaScreen>> {
@@ -147,6 +152,7 @@ impl BitpandaScreen {
                 description,
                 font,
                 config_manager,
+                key,
                 ..Default::default()
             },
             wallet_value: Arc::new(Mutex::new(0.0)),

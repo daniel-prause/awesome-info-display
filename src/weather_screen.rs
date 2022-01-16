@@ -44,6 +44,10 @@ impl BasicScreen for std::sync::Arc<RwLock<WeatherScreen>> {
         self.read().unwrap().screen.stop_worker();
     }
 
+    fn key(&self) -> String {
+        self.read().unwrap().screen.key()
+    }
+
     fn initial_update_called(&mut self) -> bool {
         self.write().unwrap().screen.initial_update_called()
     }
@@ -141,12 +145,14 @@ impl WeatherScreen {
     }
     pub fn new(
         description: String,
+        key: String,
         font: Arc<Mutex<Option<Font<'static>>>>,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> Arc<RwLock<WeatherScreen>> {
         let this = Arc::new(RwLock::new(WeatherScreen {
             screen: Screen {
                 description,
+                key,
                 font,
                 config_manager,
                 ..Default::default()
