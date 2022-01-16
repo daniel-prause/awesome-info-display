@@ -262,6 +262,44 @@ impl Application for AwesomeDisplay {
     }
 
     fn update(&mut self, message: Message, _clipboard: &mut iced::Clipboard) -> Command<Message> {
+        let any_other_screen_active = |screen: &str| -> bool {
+            let mut screens = std::collections::HashMap::new();
+            screens.insert(
+                "system_info_screen",
+                self.config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .system_info_screen_active,
+            );
+            screens.insert(
+                "media_info_screen",
+                self.config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .media_screen_active,
+            );
+            screens.insert(
+                "bitpanda_screen",
+                self.config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .bitpanda_screen_active,
+            );
+            screens.insert(
+                "weather_screen",
+                self.config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .weather_screen_active,
+            );
+            screens.remove(screen);
+
+            screens.values().any(|&val| val == true)
+        };
         match message {
             Message::SaveConfig => {
                 self.config_manager.write().unwrap().save();
@@ -309,25 +347,7 @@ impl Application for AwesomeDisplay {
                 self.config_manager.write().unwrap().config.brightness = slider_value as u16;
             }
             Message::SystemInfoScreenStatusChanged(status) => {
-                if self
-                    .config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .media_screen_active
-                    || self
-                        .config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .bitpanda_screen_active
-                    || self
-                        .config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .weather_screen_active
-                {
+                if any_other_screen_active("system_info_screen") {
                     self.config_manager
                         .write()
                         .unwrap()
@@ -337,25 +357,7 @@ impl Application for AwesomeDisplay {
                 }
             }
             Message::MediaScreenStatusChanged(status) => {
-                if self
-                    .config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .system_info_screen_active
-                    || self
-                        .config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .bitpanda_screen_active
-                    || self
-                        .config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .weather_screen_active
-                {
+                if any_other_screen_active("media_info_screen") {
                     self.config_manager
                         .write()
                         .unwrap()
@@ -365,25 +367,7 @@ impl Application for AwesomeDisplay {
                 }
             }
             Message::BitpandaInfoStatusChanged(status) => {
-                if self
-                    .config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .system_info_screen_active
-                    || self
-                        .config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .media_screen_active
-                    || self
-                        .config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .weather_screen_active
-                {
+                if any_other_screen_active("bitpanda_screen") {
                     self.config_manager
                         .write()
                         .unwrap()
@@ -396,25 +380,7 @@ impl Application for AwesomeDisplay {
                 self.config_manager.write().unwrap().config.bitpanda_api_key = message;
             }
             Message::OpenWeatherInfoStatusChanged(status) => {
-                if self
-                    .config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .system_info_screen_active
-                    || self
-                        .config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .media_screen_active
-                    || self
-                        .config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .bitpanda_screen_active
-                {
+                if any_other_screen_active("weather_screen") {
                     self.config_manager
                         .write()
                         .unwrap()
