@@ -65,8 +65,17 @@ impl ScreenManager {
         self.current_screen().update();
     }
 
-    pub fn set_screen_for_short(&mut self, screen: usize, mode: u32) {
-        if !self.screens[screen].enabled() {
+    pub fn set_screen_for_short(&mut self, key: String, mode: u32) {
+        let mut index = 0;
+
+        for screen in self.screens.iter() {
+            if screen.key() == key {
+                break;
+            }
+            index += 1;
+        }
+
+        if !self.screens[index].enabled() {
             return;
         }
         self.timeout = Some(Instant::now());
@@ -74,7 +83,7 @@ impl ScreenManager {
             self.current_screen().stop();
             self.last_screen = self.current;
         }
-        self.current = screen;
+        self.current = index;
         self.current_screen().set_mode_for_short(mode); // right now, volume mode for 3 seconds for media screen
         self.current_screen().start();
         self.switch_in_progress = true;
@@ -131,5 +140,13 @@ impl ScreenManager {
             }
         }
         count >= 1
+    }
+
+    pub fn descriptions_and_keys(&self) -> Vec<(String, String)> {
+        let mut result = Vec::<(String, String)>::new();
+        for screen in self.screens.iter() {
+            result.push((screen.description(), screen.key()))
+        }
+        return result;
     }
 }
