@@ -106,10 +106,15 @@ impl ScreenManager {
         }
     }
 
-    pub fn set_status_for_screen(&mut self, screen: usize, status: bool) {
+    pub fn set_status_for_screen(&mut self, key: String, status: bool) {
         self.switch_in_progress = false;
-        self.screens[screen].set_status(status);
-        if screen == self.current && !status {
+
+        for screen in self.screens.iter() {
+            if screen.key() == key {
+                screen.set_status(status)
+            }
+        }
+        if (key == self.screens[self.current].key()) && !status {
             self.next_screen();
         }
     }

@@ -123,10 +123,7 @@ enum Message {
     UpdateCurrentScreen,
     SaveConfig,
     SliderChanged(f32),
-    SystemInfoScreenStatusChanged(bool),
-    MediaScreenStatusChanged(bool),
-    BitpandaInfoStatusChanged(bool),
-    OpenWeatherInfoStatusChanged(bool),
+    ScreenStatusChanged(bool, String),
     KeyboardEventOccurred(iced::keyboard::KeyCode, u32),
     WindowEventOccurred(iced_native::Event),
     BitpandaApiKeyChanged(String),
@@ -312,54 +309,13 @@ impl Application for AwesomeDisplay {
             Message::SliderChanged(slider_value) => {
                 self.config_manager.write().unwrap().config.brightness = slider_value as u16;
             }
-            Message::SystemInfoScreenStatusChanged(status) => {
-                if self
-                    .screens
-                    .screen_deactivatable("system_info_screen".into())
-                {
-                    self.config_manager
-                        .write()
-                        .unwrap()
-                        .config
-                        .system_info_screen_active = status;
-                    self.screens.set_status_for_screen(0, status);
-                }
-            }
-            Message::MediaScreenStatusChanged(status) => {
-                if self
-                    .screens
-                    .screen_deactivatable("media_info_screen".into())
-                {
-                    self.config_manager
-                        .write()
-                        .unwrap()
-                        .config
-                        .media_screen_active = status;
-                    self.screens.set_status_for_screen(1, status);
-                }
-            }
-            Message::BitpandaInfoStatusChanged(status) => {
-                if self.screens.screen_deactivatable("bitpanda_screen".into()) {
-                    self.config_manager
-                        .write()
-                        .unwrap()
-                        .config
-                        .bitpanda_screen_active = status;
-                    self.screens.set_status_for_screen(2, status);
+            Message::ScreenStatusChanged(status, screen) => {
+                if self.screens.screen_deactivatable(screen.clone()) {
+                    self.screens.set_status_for_screen(screen.clone(), status);
                 }
             }
             Message::BitpandaApiKeyChanged(message) => {
                 self.config_manager.write().unwrap().config.bitpanda_api_key = message;
-            }
-            Message::OpenWeatherInfoStatusChanged(status) => {
-                if self.screens.screen_deactivatable("weather_screen".into()) {
-                    self.config_manager
-                        .write()
-                        .unwrap()
-                        .config
-                        .weather_screen_active = status;
-                    self.screens.set_status_for_screen(3, status);
-                }
             }
             Message::OpenWeatherApiKeyChanged(message) => {
                 self.config_manager
@@ -454,7 +410,7 @@ impl Application for AwesomeDisplay {
                         .config
                         .system_info_screen_active,
                     "System Stats",
-                    Message::SystemInfoScreenStatusChanged,
+                    |value: bool| Message::ScreenStatusChanged(value, "system_info_screen".into()),
                 )
                 .width(Length::Units(200)),
             )
@@ -466,7 +422,7 @@ impl Application for AwesomeDisplay {
                         .config
                         .media_screen_active,
                     "Media Stats",
-                    Message::MediaScreenStatusChanged,
+                    |value: bool| Message::ScreenStatusChanged(value, "media_info_screen".into()),
                 )
                 .width(Length::Units(200)),
             )
@@ -478,7 +434,7 @@ impl Application for AwesomeDisplay {
                         .config
                         .bitpanda_screen_active,
                     "Bitpanda Info",
-                    Message::BitpandaInfoStatusChanged,
+                    |value: bool| Message::ScreenStatusChanged(value, "bitpanda_screen".into()),
                 )
                 .width(Length::Units(200)),
             )
@@ -490,7 +446,7 @@ impl Application for AwesomeDisplay {
                         .config
                         .weather_screen_active,
                     "Weather Info",
-                    Message::OpenWeatherInfoStatusChanged,
+                    |value: bool| Message::ScreenStatusChanged(value, "weather_screen".into()),
                 )
                 .width(Length::Units(200)),
             )
