@@ -17,6 +17,7 @@ impl ConfigManager {
             bitpanda_api_key: String::new(),
             bitpanda_screen_active: true,
             openweather_api_key: String::new(),
+            openweather_location: String::new(),
             media_screen_active: true,
             weather_screen_active: true,
             system_info_screen_active: true,

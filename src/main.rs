@@ -112,6 +112,7 @@ struct AwesomeDisplay {
     should_exit: bool,
     bitpanda_api_key_input: text_input::State,
     openweather_api_key_input: text_input::State,
+    openweather_location_input: text_input::State,
     slider: slider::State,
 }
 
@@ -130,6 +131,7 @@ enum Message {
     WindowEventOccurred(iced_native::Event),
     BitpandaApiKeyChanged(String),
     OpenWeatherApiKeyChanged(String),
+    OpenWeatherLocationChanged(String),
 }
 
 impl Application for AwesomeDisplay {
@@ -175,6 +177,7 @@ impl Application for AwesomeDisplay {
             should_exit: false,
             bitpanda_api_key_input: text_input::State::new(),
             openweather_api_key_input: text_input::State::new(),
+            openweather_location_input: text_input::State::new(),
             slider: slider::State::new(),
         };
         builder
@@ -427,6 +430,13 @@ impl Application for AwesomeDisplay {
                     .config
                     .openweather_api_key = message;
             }
+            Message::OpenWeatherLocationChanged(message) => {
+                self.config_manager
+                    .write()
+                    .unwrap()
+                    .config
+                    .openweather_location = message;
+            }
         }
         Command::none()
     }
@@ -569,6 +579,20 @@ impl Application for AwesomeDisplay {
                     Message::OpenWeatherApiKeyChanged,
                 )
                 .password()
+                .width(Length::Units(200)),
+            )
+            .push(
+                TextInput::new(
+                    &mut self.openweather_location_input,
+                    "Openweather Location",
+                    &self
+                        .config_manager
+                        .read()
+                        .unwrap()
+                        .config
+                        .openweather_location,
+                    Message::OpenWeatherLocationChanged,
+                )
                 .width(Length::Units(200)),
             )
             .push(
