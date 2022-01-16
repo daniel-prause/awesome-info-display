@@ -4,8 +4,8 @@ use crate::screen::BasicScreen;
 use crate::screen::Screen;
 use crate::screen::ScreenControl;
 use image::{ImageBuffer, Rgb, RgbImage};
-use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_mut};
-use imageproc::rect::Rect;
+use imageproc::drawing::draw_text_mut;
+
 use openweathermap::blocking::weather;
 use rusttype::Font;
 use rusttype::Scale;
@@ -13,7 +13,6 @@ use std::fmt::Debug;
 use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
-use systemstat::{saturating_sub_bytes, Platform, System};
 
 #[derive(Debug, Clone)]
 pub struct WeatherScreen {
@@ -73,7 +72,7 @@ impl BasicScreen for std::sync::Arc<RwLock<WeatherScreen>> {
 }
 
 impl WeatherScreen {
-    pub fn draw_weather_info(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
+    pub fn draw_weather_info(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>) {
         // icon
         draw_text_mut(
             image,
@@ -119,12 +118,8 @@ impl WeatherScreen {
 
     fn update(instance: Arc<RwLock<WeatherScreen>>) {
         let mut image = RgbImage::new(256, 64);
-        let scale = Scale { x: 16.0, y: 16.0 };
 
-        instance
-            .write()
-            .unwrap()
-            .draw_weather_info(&mut image, scale);
+        instance.write().unwrap().draw_weather_info(&mut image);
         *instance.write().unwrap().screen.bytes.lock().unwrap() = image.into_vec();
     }
 
