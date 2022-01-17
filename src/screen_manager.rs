@@ -142,10 +142,10 @@ impl ScreenManager {
         count >= 1
     }
 
-    pub fn descriptions_and_keys(&self) -> Vec<(String, String)> {
-        let mut result = Vec::<(String, String)>::new();
+    pub fn descriptions_and_keys_and_state(&self) -> Vec<(String, String, bool)> {
+        let mut result = Vec::<(String, String, bool)>::new();
         for screen in self.screens.iter() {
-            result.push((screen.description(), screen.key()))
+            result.push((screen.description(), screen.key(), screen.enabled()))
         }
         return result;
     }

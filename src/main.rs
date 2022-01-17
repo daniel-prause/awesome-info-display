@@ -104,8 +104,8 @@ pub fn main() -> iced::Result {
 
 struct AwesomeDisplay {
     theme: style::Theme,
-    increment_button: button::State,
-    decrement_button: button::State,
+    next_screen: button::State,
+    previous_screen: button::State,
     save_config_button: button::State,
     screens: screen_manager::ScreenManager,
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
@@ -169,8 +169,8 @@ impl Application for AwesomeDisplay {
             Arc::clone(&config_manager),
         )));
         let this = AwesomeDisplay {
-            increment_button: button::State::new(),
-            decrement_button: button::State::new(),
+            next_screen: button::State::new(),
+            previous_screen: button::State::new(),
             save_config_button: button::State::new(),
             theme: style::Theme::Dark,
             screens: screen_manager::ScreenManager::new(screens),
@@ -369,139 +369,88 @@ impl Application for AwesomeDisplay {
         if !write_screen_buffer(&mut *SERIAL_PORT.lock().unwrap(), &bytes) {
             *SERIAL_PORT.lock().unwrap() = None;
         }
-
-        let col1 = Column::new()
-            .padding(20)
-            .align_items(Align::Center)
-            .spacing(10)
-            .push(
-                Button::new(
-                    &mut self.increment_button,
-                    Text::new("Next screen").horizontal_alignment(HorizontalAlignment::Center),
-                )
-                .style(self.theme)
-                .width(Length::Units(200))
-                .on_press(Message::NextScreen),
-            )
-            .push(
-                Button::new(
-                    &mut self.decrement_button,
-                    Text::new("Previous screen").horizontal_alignment(HorizontalAlignment::Center),
-                )
-                .style(self.theme)
-                .width(Length::Units(200))
-                .on_press(Message::PreviousScreen),
-            )
-            .push(Text::new(format!(
+        let mut column_parts = vec![
+            button(
+                "Next screen",
+                &mut self.next_screen,
+                self.theme,
+                Message::NextScreen,
+            ),
+            button(
+                "Previous Screen",
+                &mut self.previous_screen,
+                self.theme,
+                Message::PreviousScreen,
+            ),
+            Text::new(format!(
                 "Brightness: {:.2}",
                 self.config_manager.read().unwrap().config.brightness
-            )))
-            .push(
-                Slider::new(
-                    &mut self.slider,
-                    0.0..=100.0,
-                    self.config_manager.read().unwrap().config.brightness as f32,
-                    Message::SliderChanged,
-                )
-                .width(Length::Units(200))
-                .step(0.1),
+            ))
+            .into(),
+            Slider::new(
+                &mut self.slider,
+                0.0..=100.0,
+                self.config_manager.read().unwrap().config.brightness as f32,
+                Message::SliderChanged,
             )
-            .push(
-                Checkbox::new(
-                    self.config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .system_info_screen_active,
-                    "System Stats",
-                    |value: bool| Message::ScreenStatusChanged(value, "system_info_screen".into()),
-                )
-                .width(Length::Units(200)),
+            .width(Length::Units(200))
+            .step(0.1)
+            .into(),
+        ];
+
+        // insert screens into left column menu
+        for screen in self.screens.descriptions_and_keys_and_state().into_iter() {
+            column_parts.push(checkbox(screen.2, screen.1.into(), screen.0.into()));
+        }
+        let mut left_column_after_screens = vec![
+            TextInput::new(
+                &mut self.bitpanda_api_key_input,
+                "Bitpanda Api Key",
+                &self.config_manager.read().unwrap().config.bitpanda_api_key,
+                Message::BitpandaApiKeyChanged,
             )
-            .push(
-                Checkbox::new(
-                    self.config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .media_screen_active,
-                    "Media Stats",
-                    |value: bool| Message::ScreenStatusChanged(value, "media_info_screen".into()),
-                )
-                .width(Length::Units(200)),
+            .password()
+            .width(Length::Units(200))
+            .into(),
+            TextInput::new(
+                &mut self.openweather_api_key_input,
+                "Openweather Api Key",
+                &self
+                    .config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .openweather_api_key,
+                Message::OpenWeatherApiKeyChanged,
             )
-            .push(
-                Checkbox::new(
-                    self.config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .bitpanda_screen_active,
-                    "Bitpanda Info",
-                    |value: bool| Message::ScreenStatusChanged(value, "bitpanda_screen".into()),
-                )
-                .width(Length::Units(200)),
+            .password()
+            .width(Length::Units(200))
+            .into(),
+            TextInput::new(
+                &mut self.openweather_location_input,
+                "Openweather Location",
+                &self
+                    .config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .openweather_location,
+                Message::OpenWeatherLocationChanged,
             )
-            .push(
-                Checkbox::new(
-                    self.config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .weather_screen_active,
-                    "Weather Info",
-                    |value: bool| Message::ScreenStatusChanged(value, "weather_screen".into()),
-                )
-                .width(Length::Units(200)),
-            )
-            .push(
-                TextInput::new(
-                    &mut self.bitpanda_api_key_input,
-                    "Bitpanda Api Key",
-                    &self.config_manager.read().unwrap().config.bitpanda_api_key,
-                    Message::BitpandaApiKeyChanged,
-                )
-                .password()
-                .width(Length::Units(200)),
-            )
-            .push(
-                TextInput::new(
-                    &mut self.openweather_api_key_input,
-                    "Openweather Api Key",
-                    &self
-                        .config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .openweather_api_key,
-                    Message::OpenWeatherApiKeyChanged,
-                )
-                .password()
-                .width(Length::Units(200)),
-            )
-            .push(
-                TextInput::new(
-                    &mut self.openweather_location_input,
-                    "Openweather Location",
-                    &self
-                        .config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .openweather_location,
-                    Message::OpenWeatherLocationChanged,
-                )
-                .width(Length::Units(200)),
-            )
-            .push(
-                Button::new(
-                    &mut self.save_config_button,
-                    Text::new("Save config").horizontal_alignment(HorizontalAlignment::Center),
-                )
-                .style(self.theme)
-                .width(Length::Units(200))
-                .on_press(Message::SaveConfig),
-            );
+            .width(Length::Units(200))
+            .into(),
+            button(
+                "Save config",
+                &mut self.save_config_button,
+                self.theme,
+                Message::SaveConfig,
+            ),
+        ];
+        column_parts.append(&mut left_column_after_screens);
+        let col1 = Column::with_children(column_parts)
+            .padding(20)
+            .align_items(Align::Center)
+            .spacing(10);
 
         let col2 = Column::new()
             .padding(20)
@@ -511,6 +460,7 @@ impl Application for AwesomeDisplay {
             .push(Text::new(self.screens.current_screen().description()).size(25))
             .push(image.width(Length::Units(256)).height(Length::Units(64)));
 
+        //let col3 = Column::with_children(vec![checkbox(true, "Mudda".into(), "deine".into())]);
         Container::new(Row::new().push(col1).push(col2))
             .width(Length::Fill)
             .height(Length::Fill)
@@ -563,4 +513,28 @@ fn callback(event: Event) -> Option<Event> {
         }
         _ => Some(event),
     }
+}
+
+fn checkbox<'a>(checked: bool, key: String, description: String) -> Element<'a, Message> {
+    Checkbox::new(checked, description, move |value: bool| {
+        Message::ScreenStatusChanged(value, key.clone().into())
+    })
+    .width(Length::Units(200))
+    .into()
+}
+
+fn button<'a>(
+    label: &str,
+    button_state: &'a mut button::State,
+    theme: style::Theme,
+    msg: Message,
+) -> Element<'a, Message> {
+    Button::new(
+        button_state,
+        Text::new(label).horizontal_alignment(HorizontalAlignment::Center),
+    )
+    .style(theme)
+    .width(Length::Units(200))
+    .on_press(msg)
+    .into()
 }
