@@ -81,9 +81,9 @@ impl WeatherScreen {
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
-            4,
-            0,
-            Scale { x: 48.0, y: 48.0 },
+            6,
+            6,
+            Scale { x: 40.0, y: 40.0 },
             self.symbols.as_ref().unwrap(),
             self.weather_icon.lock().unwrap().as_str(),
         );
