@@ -145,13 +145,13 @@ impl Application for AwesomeDisplay {
         let mut screens: Vec<Box<dyn screen::BasicScreen>> = Vec::new();
 
         screens.push(Box::new(system_info_screen::SystemInfoScreen::new(
-            String::from("System Stats"),
+            String::from("System Info"),
             String::from("system_info_screen"),
             font.clone(),
             Arc::clone(&config_manager),
         )));
         screens.push(Box::new(media_info_screen::MediaInfoScreen::new(
-            String::from("Media Stats"),
+            String::from("Media Info"),
             String::from("media_info_screen"),
             font.clone(),
             Arc::clone(&config_manager),

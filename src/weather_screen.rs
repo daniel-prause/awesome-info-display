@@ -14,12 +14,12 @@ use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WeatherScreen {
     screen: Screen,
-    weather_icon: Arc<Mutex<String>>,
-    city: Arc<Mutex<String>>,
-    temperature: Arc<Mutex<f64>>,
+    weather_icon: Mutex<String>,
+    city: Mutex<String>,
+    temperature: Mutex<f64>,
     symbols: Option<Font<'static>>,
 }
 
@@ -158,9 +158,9 @@ impl WeatherScreen {
                 ..Default::default()
             },
             symbols: Font::try_from_vec(Vec::from(include_bytes!("symbols.otf") as &[u8])),
-            weather_icon: Arc::new(Mutex::new(String::from(""))),
-            city: Arc::new(Mutex::new(String::from(""))),
-            temperature: Arc::new(Mutex::new(0.0)),
+            weather_icon: Mutex::new(String::from("")),
+            city: Mutex::new(String::from("")),
+            temperature: Mutex::new(0.0),
         }));
 
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());

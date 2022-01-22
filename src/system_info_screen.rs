@@ -16,11 +16,11 @@ use std::thread;
 use std::time::Duration;
 use systemstat::{saturating_sub_bytes, Platform, System};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SystemInfoScreen {
     screen: Screen,
-    cpu_usage: Arc<Mutex<f64>>,
-    ram_usage: Arc<Mutex<f64>>,
+    cpu_usage: Mutex<f64>,
+    ram_usage: Mutex<f64>,
 }
 
 impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
@@ -166,8 +166,8 @@ impl SystemInfoScreen {
                 config_manager,
                 ..Default::default()
             },
-            cpu_usage: Arc::new(Mutex::new(0.0)),
-            ram_usage: Arc::new(Mutex::new(0.0)),
+            cpu_usage: Mutex::new(0.0),
+            ram_usage: Mutex::new(0.0),
         }));
 
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());

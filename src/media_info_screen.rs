@@ -27,22 +27,22 @@ use winapi::um::mmdeviceapi::*;
 use winapi::um::winuser::FindWindowW;
 use winapi::um::winuser::*;
 use winapi::Interface;
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MediaInfoScreen {
     screen: Screen,
     symbols: Option<Font<'static>>,
-    playback_status: Arc<Mutex<isize>>,
-    track_current_position: Arc<Mutex<isize>>,
-    track_length: Arc<Mutex<isize>>,
-    title: Arc<Mutex<String>>,
-    artist: Arc<Mutex<String>>,
-    editor_active: Arc<Mutex<bool>>,
-    regex_first: Arc<Mutex<regex::Regex>>,
-    regex_second: Arc<Mutex<regex::Regex>>,
-    title_x: Arc<Mutex<u32>>,
-    artist_x: Arc<Mutex<u32>>,
-    system_volume: Arc<Mutex<f32>>,
-    mute: Arc<Mutex<i32>>,
+    playback_status: Mutex<isize>,
+    track_current_position: Mutex<isize>,
+    track_length: Mutex<isize>,
+    title: Mutex<String>,
+    artist: Mutex<String>,
+    editor_active: Mutex<bool>,
+    regex_first: Mutex<regex::Regex>,
+    regex_second: Mutex<regex::Regex>,
+    title_x: Mutex<u32>,
+    artist_x: Mutex<u32>,
+    system_volume: Mutex<f32>,
+    mute: Mutex<i32>,
 }
 
 impl BasicScreen for std::sync::Arc<RwLock<MediaInfoScreen>> {
@@ -402,18 +402,18 @@ impl MediaInfoScreen {
                 ..Default::default()
             },
             symbols: Font::try_from_vec(Vec::from(include_bytes!("symbols.otf") as &[u8])),
-            playback_status: Arc::new(Mutex::new(0)),
-            track_current_position: Arc::new(Mutex::new(0)),
-            track_length: Arc::new(Mutex::new(0)),
-            title: Arc::new(Mutex::new(String::new())),
-            title_x: Arc::new(Mutex::new(0)),
-            artist: Arc::new(Mutex::new(String::new())),
-            artist_x: Arc::new(Mutex::new(0)),
-            system_volume: Arc::new(Mutex::new(get_master_volume(true).0)),
-            mute: Arc::new(Mutex::new(get_master_volume(false).1)),
-            editor_active: Arc::new(Mutex::new(false)),
-            regex_first: Arc::new(Mutex::new(regex::Regex::new(r"\s(.*)-").unwrap())),
-            regex_second: Arc::new(Mutex::new(regex::Regex::new(r"(.*) - (.*)").unwrap())),
+            playback_status: Mutex::new(0),
+            track_current_position: Mutex::new(0),
+            track_length: Mutex::new(0),
+            title: Mutex::new(String::new()),
+            title_x: Mutex::new(0),
+            artist: Mutex::new(String::new()),
+            artist_x: Mutex::new(0),
+            system_volume: Mutex::new(get_master_volume(true).0),
+            mute: Mutex::new(get_master_volume(false).1),
+            editor_active: Mutex::new(false),
+            regex_first: Mutex::new(regex::Regex::new(r"\s(.*)-").unwrap()),
+            regex_second: Mutex::new(regex::Regex::new(r"(.*) - (.*)").unwrap()),
         }));
 
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());

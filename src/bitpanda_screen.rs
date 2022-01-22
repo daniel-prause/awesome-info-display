@@ -24,12 +24,12 @@ error_chain! {
         HttpRequest(reqwest::Error);
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BitpandaScreen {
     screen: Screen,
-    wallet_value: Arc<Mutex<f64>>,
-    last_update: Arc<Mutex<SystemTime>>,
-    initial_tryout: Arc<AtomicBool>,
+    wallet_value: Mutex<f64>,
+    last_update: Mutex<SystemTime>,
+    initial_tryout: AtomicBool,
 }
 
 impl BasicScreen for std::sync::Arc<RwLock<BitpandaScreen>> {
@@ -155,9 +155,9 @@ impl BitpandaScreen {
                 key,
                 ..Default::default()
             },
-            wallet_value: Arc::new(Mutex::new(0.0)),
-            last_update: Arc::new(Mutex::new(SystemTime::now())),
-            initial_tryout: Arc::new(AtomicBool::new(false)),
+            wallet_value: Mutex::new(0.0),
+            last_update: Mutex::new(SystemTime::now()),
+            initial_tryout: AtomicBool::new(false),
         }));
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
 
