@@ -91,11 +91,11 @@ impl ScreenManager {
 
     fn find_previous_enabled_screen(&mut self) {
         loop {
-            if self.current == 0 {
-                self.current = self.screens.len() - 1;
+            self.current = if self.current == 0 {
+                self.screens.len() - 1
             } else {
-                self.current -= 1
-            }
+                self.current - 1
+            };
             if self.screens[self.current].enabled() {
                 break;
             }
@@ -104,11 +104,7 @@ impl ScreenManager {
 
     fn find_next_enabled_screen(&mut self) {
         loop {
-            if self.current == self.screens.len() - 1 {
-                self.current = 0;
-            } else {
-                self.current += 1
-            }
+            self.current = (self.current + 1) % self.screens.len();
             if self.screens[self.current].enabled() {
                 break;
             }
