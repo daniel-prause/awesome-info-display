@@ -188,8 +188,7 @@ impl Application for AwesomeDisplay {
             .expect("Cannot create JOB_EXECUTOR thread");
 
         thread::spawn(move || loop {
-            let initialized = SERIAL_PORT.lock().unwrap().is_some();
-            if !initialized {
+            if SERIAL_PORT.lock().unwrap().is_none() {
                 let port = init_serial();
                 if port.is_some() {
                     *SERIAL_PORT.lock().unwrap() = port;

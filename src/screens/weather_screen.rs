@@ -95,7 +95,7 @@ impl WeatherScreen {
             72,
             16,
             Scale { x: 32.0, y: 32.0 },
-            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
+            self.screen.font.lock().unwrap().as_ref().unwrap(),
             format!(
                 "{}\u{00B0}C",
                 (self.temperature.lock().unwrap().round() as i64)
@@ -115,7 +115,7 @@ impl WeatherScreen {
             4,
             50,
             Scale { x: 14.0, y: 14.0 },
-            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
+            self.screen.font.lock().unwrap().as_ref().unwrap(),
             self.city.lock().unwrap().as_str(),
         );
     }

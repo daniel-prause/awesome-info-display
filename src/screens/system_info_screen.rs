@@ -77,14 +77,14 @@ impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
 
 impl SystemInfoScreen {
     pub fn draw_cpu(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
-        let cpu_text = format!("{: >3}%", self.cpu_usage.lock().unwrap(),).to_string();
+        let cpu_text = format!("{: >3}%", self.cpu_usage.lock().unwrap()).to_string();
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
             0,
             0,
             scale,
-            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
+            self.screen.font.lock().unwrap().as_ref().unwrap(),
             "CPU",
         );
         draw_text_mut(
@@ -93,7 +93,7 @@ impl SystemInfoScreen {
             222,
             0,
             scale,
-            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
+            self.screen.font.lock().unwrap().as_ref().unwrap(),
             &cpu_text,
         );
         draw_hollow_rect_mut(
@@ -117,7 +117,7 @@ impl SystemInfoScreen {
             0,
             30,
             scale,
-            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
+            self.screen.font.lock().unwrap().as_ref().unwrap(),
             "RAM",
         );
         draw_text_mut(
@@ -126,7 +126,7 @@ impl SystemInfoScreen {
             222,
             30,
             scale,
-            *&self.screen.font.lock().unwrap().as_ref().unwrap(),
+            self.screen.font.lock().unwrap().as_ref().unwrap(),
             &memory_text,
         );
         draw_hollow_rect_mut(
