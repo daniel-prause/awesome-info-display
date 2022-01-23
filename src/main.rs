@@ -460,7 +460,6 @@ impl Application for AwesomeDisplay {
             .push(Text::new(self.screens.current_screen().description()).size(25))
             .push(image.width(Length::Units(256)).height(Length::Units(64)));
 
-        //let col3 = Column::with_children(vec![checkbox(true, "Mudda".into(), "deine".into())]);
         Container::new(Row::new().push(col1).push(col2))
             .width(Length::Fill)
             .height(Length::Fill)
