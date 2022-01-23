@@ -4,6 +4,10 @@ use std::fmt::Debug;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread::JoinHandle;
 use std::time::Instant;
+pub mod bitpanda_screen;
+pub mod media_info_screen;
+pub mod system_info_screen;
+pub mod weather_screen;
 
 #[derive(Debug, Clone)]
 pub struct Screen {
@@ -25,9 +29,10 @@ impl Default for Screen {
             description: String::from(""),
             key: String::from(""),
             bytes: Arc::new(Mutex::new(Vec::new())),
-            font: Arc::new(Mutex::new(Font::try_from_vec(Vec::from(
-                include_bytes!("Liberation.ttf") as &[u8],
-            )))),
+            font: Arc::new(Mutex::new(Font::try_from_vec(Vec::from(include_bytes!(
+                "../Liberation.ttf"
+            )
+                as &[u8])))),
             active: Arc::new(AtomicBool::new(false)),
             initial_update_called: Arc::new(AtomicBool::new(false)),
             handle: Arc::new(Mutex::new(None)),

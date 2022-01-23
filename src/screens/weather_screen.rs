@@ -1,8 +1,8 @@
 extern crate openweathermap;
 use crate::config_manager::ConfigManager;
-use crate::screen::BasicScreen;
-use crate::screen::Screen;
-use crate::screen::ScreenControl;
+use crate::screens::BasicScreen;
+use crate::screens::Screen;
+use crate::screens::ScreenControl;
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 
@@ -157,7 +157,7 @@ impl WeatherScreen {
                 config_manager,
                 ..Default::default()
             },
-            symbols: Font::try_from_vec(Vec::from(include_bytes!("symbols.otf") as &[u8])),
+            symbols: Font::try_from_vec(Vec::from(include_bytes!("../symbols.otf") as &[u8])),
             weather_icon: Mutex::new(String::from("")),
             city: Mutex::new(String::from("")),
             temperature: Mutex::new(0.0),

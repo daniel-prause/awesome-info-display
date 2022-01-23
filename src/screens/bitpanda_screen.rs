@@ -1,7 +1,7 @@
 use crate::config_manager::ConfigManager;
-use crate::screen::BasicScreen;
-use crate::screen::Screen;
-use crate::screen::ScreenControl;
+use crate::screens::BasicScreen;
+use crate::screens::Screen;
+use crate::screens::ScreenControl;
 
 use chrono::{DateTime, Local}; // 0.4.15
 use error_chain::error_chain;

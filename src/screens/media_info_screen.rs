@@ -1,8 +1,8 @@
 extern crate winapi;
 use crate::config_manager::ConfigManager;
-use crate::screen::BasicScreen;
-use crate::screen::Screen;
-use crate::screen::ScreenControl;
+use crate::screens::BasicScreen;
+use crate::screens::Screen;
+use crate::screens::ScreenControl;
 
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{
@@ -401,7 +401,7 @@ impl MediaInfoScreen {
                 key,
                 ..Default::default()
             },
-            symbols: Font::try_from_vec(Vec::from(include_bytes!("symbols.otf") as &[u8])),
+            symbols: Font::try_from_vec(Vec::from(include_bytes!("../symbols.otf") as &[u8])),
             playback_status: Mutex::new(0),
             track_current_position: Mutex::new(0),
             track_length: Mutex::new(0),

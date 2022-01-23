@@ -5,24 +5,18 @@ use iced::{
     Container, Element, HorizontalAlignment, Image, Length, Row, Settings, Slider, Subscription,
     Text,
 };
-mod bitpanda_screen;
 mod config;
 mod config_manager;
 mod display_serial_com;
-mod media_info_screen;
-mod screen;
 mod screen_manager;
+mod screens;
 mod style;
-mod system_info_screen;
-mod weather_screen;
 use crate::display_serial_com::{convert_to_gray_scale, init_serial, write_screen_buffer};
 use lazy_static::lazy_static;
 use rdev::{grab, Event, EventType, Key};
 use rusttype::Font;
 use std::ffi::CString;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 
 use std::error::Error;
@@ -142,27 +136,29 @@ impl Application for AwesomeDisplay {
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
         let config_manager =
             std::sync::Arc::new(RwLock::new(config_manager::ConfigManager::new(None)));
-        let mut screens: Vec<Box<dyn screen::BasicScreen>> = Vec::new();
+        let mut screens: Vec<Box<dyn screens::BasicScreen>> = Vec::new();
 
-        screens.push(Box::new(system_info_screen::SystemInfoScreen::new(
-            String::from("System Info"),
-            String::from("system_info_screen"),
-            font.clone(),
-            Arc::clone(&config_manager),
-        )));
-        screens.push(Box::new(media_info_screen::MediaInfoScreen::new(
+        screens.push(Box::new(
+            screens::system_info_screen::SystemInfoScreen::new(
+                String::from("System Info"),
+                String::from("system_info_screen"),
+                font.clone(),
+                Arc::clone(&config_manager),
+            ),
+        ));
+        screens.push(Box::new(screens::media_info_screen::MediaInfoScreen::new(
             String::from("Media Info"),
             String::from("media_info_screen"),
             font.clone(),
             Arc::clone(&config_manager),
         )));
-        screens.push(Box::new(bitpanda_screen::BitpandaScreen::new(
+        screens.push(Box::new(screens::bitpanda_screen::BitpandaScreen::new(
             String::from("Bitpanda Info"),
             String::from("bitpanda_screen"),
             font.clone(),
             Arc::clone(&config_manager),
         )));
-        screens.push(Box::new(weather_screen::WeatherScreen::new(
+        screens.push(Box::new(screens::weather_screen::WeatherScreen::new(
             String::from("Weather Info"),
             String::from("weather_screen"),
             font.clone(),

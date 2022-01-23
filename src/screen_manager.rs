@@ -2,7 +2,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 pub struct ScreenManager {
-    screens: Vec<Box<dyn super::screen::BasicScreen>>,
+    screens: Vec<Box<dyn super::screens::BasicScreen>>,
     current: usize,
     timeout: Option<std::time::Instant>,
     last_screen: usize,
@@ -10,7 +10,7 @@ pub struct ScreenManager {
 }
 
 impl ScreenManager {
-    pub fn new(screens: Vec<Box<dyn super::screen::BasicScreen>>) -> Self {
+    pub fn new(screens: Vec<Box<dyn super::screens::BasicScreen>>) -> Self {
         let mut this = ScreenManager {
             screens: screens,
             current: 0,
@@ -31,7 +31,7 @@ impl ScreenManager {
         this
     }
 
-    pub fn current_screen(&mut self) -> &mut Box<dyn super::screen::BasicScreen> {
+    pub fn current_screen(&mut self) -> &mut Box<dyn super::screens::BasicScreen> {
         if self.screens.get(self.current).is_some() {
             let seconds = Duration::from_secs(3);
             if self.switch_in_progress && self.timeout.unwrap().elapsed() >= seconds {
@@ -66,14 +66,7 @@ impl ScreenManager {
     }
 
     pub fn set_screen_for_short(&mut self, key: String, mode: u32) {
-        let mut index = 0;
-
-        for screen in self.screens.iter() {
-            if screen.key() == key {
-                break;
-            }
-            index += 1;
-        }
+        let index = self.screens.iter().position(|r| r.key() == key).unwrap();
 
         if !self.screens[index].enabled() {
             return;
