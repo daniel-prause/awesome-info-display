@@ -20,13 +20,13 @@ impl ScreenManager {
         };
         // find first enabled screen
         if !this.screens[this.current].enabled() {
-            for (i, screen) in this.screens.iter().enumerate() {
-                if screen.enabled() {
-                    this.current = i;
-                    this.last_screen = i;
-                    break;
+            match this.screens.iter().position(|r| r.enabled()) {
+                Some(idx) => {
+                    this.current = idx;
+                    this.last_screen = idx;
                 }
-            }
+                None => {}
+            };
         }
         this
     }
@@ -34,7 +34,9 @@ impl ScreenManager {
     pub fn current_screen(&mut self) -> &mut Box<dyn super::screens::BasicScreen> {
         if self.screens.get(self.current).is_some() {
             let seconds = Duration::from_secs(3);
-            if self.switch_in_progress && self.timeout.unwrap().elapsed() >= seconds {
+            if self.switch_in_progress
+                && self.timeout.unwrap_or(Instant::now()).elapsed() >= seconds
+            {
                 self.screens[self.current].update();
                 self.current = self.last_screen;
                 self.switch_in_progress = false;
@@ -66,7 +68,11 @@ impl ScreenManager {
     }
 
     pub fn set_screen_for_short(&mut self, key: String, mode: u32) {
-        let index = self.screens.iter().position(|r| r.key() == key).unwrap();
+        let index: usize;
+        match self.screens.iter().position(|r| r.key() == key) {
+            Some(idx) => index = idx,
+            None => return,
+        };
 
         if !self.screens[index].enabled() {
             return;
