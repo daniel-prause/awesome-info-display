@@ -4,6 +4,8 @@ use crate::screens::BasicScreen;
 use crate::screens::Screen;
 use crate::screens::ScreenControl;
 
+use crossbeam_channel::bounded;
+use crossbeam_channel::{Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{
     draw_filled_rect_mut, draw_hollow_rect_mut, draw_line_segment_mut, draw_text_mut,
@@ -17,7 +19,7 @@ use std::fmt::Debug;
 use std::iter::once;
 use std::os::windows::ffi::OsStrExt;
 use std::ptr::null_mut;
-use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
@@ -27,61 +29,63 @@ use winapi::um::mmdeviceapi::*;
 use winapi::um::winuser::FindWindowW;
 use winapi::um::winuser::*;
 use winapi::Interface;
-#[derive(Debug)]
+
 pub struct MediaInfoScreen {
     screen: Screen,
+    receiver: Receiver<MusicPlayerInfo>,
     symbols: Option<Font<'static>>,
-    playback_status: Mutex<isize>,
-    track_current_position: Mutex<isize>,
-    track_length: Mutex<isize>,
-    title: Mutex<String>,
-    artist: Mutex<String>,
-    editor_active: Mutex<bool>,
-    regex_first: Mutex<regex::Regex>,
-    regex_second: Mutex<regex::Regex>,
-    title_x: Mutex<u32>,
-    artist_x: Mutex<u32>,
-    system_volume: Mutex<f32>,
-    mute: Mutex<i32>,
+    title_x: u32,
+    artist_x: u32,
+    music_player_info: MusicPlayerInfo,
 }
 
-impl BasicScreen for std::sync::Arc<RwLock<MediaInfoScreen>> {
+#[derive(Clone, Default)]
+struct MusicPlayerInfo {
+    playback_status: isize,
+    current_track_position: isize,
+    track_length: isize,
+    title: String,
+    artist: String,
+    editor_active: bool,
+    system_volume: f32,
+    mute: i32,
+}
+
+impl BasicScreen for MediaInfoScreen {
     fn description(&self) -> String {
-        self.read().unwrap().screen.description.clone()
+        self.screen.description.clone()
     }
 
     fn current_image(&self) -> Vec<u8> {
-        self.read().unwrap().screen.current_image()
+        self.screen.current_image()
     }
 
     fn update(&mut self) {
-        MediaInfoScreen::update(self.clone());
+        self.update();
     }
 
     fn set_mode_for_short(&mut self, mode: u32) {
-        MediaInfoScreen::set_mode(self.clone(), mode);
+        self.set_mode(mode);
     }
 
     fn start(&self) {
-        self.read().unwrap().screen.start_worker();
+        self.screen.start_worker();
     }
 
     fn stop(&self) {
-        self.read().unwrap().screen.stop_worker();
+        self.screen.stop_worker();
     }
 
     fn key(&self) -> String {
-        self.read().unwrap().screen.key()
+        self.screen.key()
     }
 
     fn initial_update_called(&mut self) -> bool {
-        self.write().unwrap().screen.initial_update_called()
+        self.screen.initial_update_called()
     }
 
     fn enabled(&self) -> bool {
-        self.read()
-            .unwrap()
-            .screen
+        self.screen
             .config_manager
             .read()
             .unwrap()
@@ -90,9 +94,7 @@ impl BasicScreen for std::sync::Arc<RwLock<MediaInfoScreen>> {
     }
 
     fn set_status(&self, status: bool) {
-        self.read()
-            .unwrap()
-            .screen
+        self.screen
             .config_manager
             .write()
             .unwrap()
@@ -123,20 +125,24 @@ impl MediaInfoScreen {
             "Winamp inactive",
         );
     }
-    fn draw_artist(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
-        let artist = self.artist.lock().unwrap();
+    fn draw_artist(
+        &mut self,
+        artist: String,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        scale: Scale,
+    ) {
         let mut position_artist = 0;
         let artist_len = artist.graphemes(true).count();
-        let mut start = 0;
+        let mut start = 0usize;
         if artist_len * 17 < 480 {
             position_artist = (1 + ((256 - (artist_len as u32 * 17) / 2) / 2)) - 2;
         } else {
-            start = *self.artist_x.lock().unwrap() as usize;
-
-            if *self.artist_x.lock().unwrap() == artist_len as u32 + 2 as u32 {
-                *self.artist_x.lock().unwrap() = 0;
+            // if artist is on the left side,
+            start = self.artist_x as usize;
+            if self.artist_x == artist_len as u32 + 2u32 {
+                self.artist_x = 0;
             } else {
-                *self.artist_x.lock().unwrap() += 1;
+                self.artist_x += 1;
             }
         }
 
@@ -155,20 +161,24 @@ impl MediaInfoScreen {
         );
     }
 
-    fn draw_title(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
-        let title = self.title.lock().unwrap();
+    fn draw_title(
+        &mut self,
+        title: String,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        scale: Scale,
+    ) {
         let title_len = title.graphemes(true).count();
         let mut position_title = 0;
         let mut start = 0;
         if title_len * 17 < 480 {
             position_title = (1 + ((256 - (title_len as u32 * 17) / 2) / 2)) - 2;
         } else {
-            start = *self.title_x.lock().unwrap() as usize;
+            start = self.title_x as usize;
 
-            if *self.title_x.lock().unwrap() == title_len as u32 + 2 as u32 {
-                *self.title_x.lock().unwrap() = 0;
+            if self.title_x == title_len as u32 + 2u32 {
+                self.title_x = 0;
             } else {
-                *self.title_x.lock().unwrap() += 1;
+                self.title_x += 1;
             }
         }
 
@@ -187,17 +197,22 @@ impl MediaInfoScreen {
         );
     }
 
-    fn draw_play_button(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
+    fn draw_play_button(
+        &mut self,
+        playback_status: isize,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        _scale: Scale,
+    ) {
         let play_button = &String::from("\u{f04B}");
         let pause_button = &String::from("\u{f04C}");
         let stop_button = &String::from("\u{f04D}");
 
         let mut button = stop_button;
-        if *self.playback_status.lock().unwrap() == 1 {
+        if playback_status == 1 {
             button = play_button;
         }
 
-        if *self.playback_status.lock().unwrap() == 3 {
+        if playback_status == 3 {
             button = pause_button;
         }
         draw_text_mut(
@@ -211,11 +226,16 @@ impl MediaInfoScreen {
         );
     }
 
-    fn draw_elapsed(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
-        let original = *self.track_current_position.lock().unwrap() / 1000;
-        let seconds = original % 60;
-        let minutes = (original / 60) % 60;
-        let hours = (original / 60) / 60;
+    fn draw_elapsed(
+        &mut self,
+        length: isize,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        _scale: Scale,
+    ) {
+        let length = length / 1000;
+        let seconds = length % 60;
+        let minutes = (length / 60) % 60;
+        let hours = (length / 60) / 60;
         let elapsed = format!("{:0>2}:{:0>2}:{:0>2}", hours, minutes, seconds).to_string();
         let elapsed = format!("{: <12}", elapsed.to_string()).to_string();
         draw_text_mut(
@@ -229,11 +249,15 @@ impl MediaInfoScreen {
         );
     }
 
-    fn draw_total(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
-        let original = *self.track_length.lock().unwrap();
-        let seconds = original % 60;
-        let minutes = (original / 60) % 60;
-        let hours = (original / 60) / 60;
+    fn draw_total(
+        &mut self,
+        length: isize,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        _scale: Scale,
+    ) {
+        let seconds = length % 60;
+        let minutes = (length / 60) % 60;
+        let hours = (length / 60) / 60;
         let total = format!("{:0>2}:{:0>2}:{:0>2}", hours, minutes, seconds).to_string();
         let total = format!("{: >12}", total.to_string()).to_string();
         draw_text_mut(
@@ -247,12 +271,17 @@ impl MediaInfoScreen {
         );
     }
 
-    fn draw_elapsed_bar(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
+    fn draw_elapsed_bar(
+        &mut self,
+        current_track_position: isize,
+        track_length: isize,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        _scale: Scale,
+    ) {
         let indicator_position_x_min = 16.0;
         let indicator_position_x_max = 232.0;
 
-        let progress = (*self.track_current_position.lock().unwrap() as f64 / 1000.0)
-            / (*self.track_length.lock().unwrap() as f64);
+        let progress = (current_track_position as f64 / 1000.0) / (track_length as f64);
         let position = indicator_position_x_min + (progress * indicator_position_x_max);
         draw_hollow_rect_mut(
             image,
@@ -283,9 +312,14 @@ impl MediaInfoScreen {
         }
     }
 
-    fn draw_mute_speaker(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
+    fn draw_mute_speaker(
+        &mut self,
+        mute: i32,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        _scale: Scale,
+    ) {
         let mute_speaker = &String::from("\u{f6a9}");
-        if *self.mute.lock().unwrap() == 1 {
+        if mute == 1 {
             draw_text_mut(
                 image,
                 Rgb([255u8, 255u8, 255u8]),
@@ -297,8 +331,14 @@ impl MediaInfoScreen {
             );
         }
     }
-    fn draw_volume_bar(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, _scale: Scale) {
-        let progress = (1.0 + (238.0 * *self.system_volume.lock().unwrap())) as u32;
+    fn draw_volume_bar(
+        &mut self,
+        system_volume: f32,
+        playback_status: isize,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        _scale: Scale,
+    ) {
+        let progress = (1.0 + (238.0 * system_volume)) as u32;
 
         draw_hollow_rect_mut(
             image,
@@ -333,57 +373,73 @@ impl MediaInfoScreen {
             Rgb([255u8, 255u8, 255u8]),
         );
 
-        self.draw_play_button(image, Scale { x: 16.0, y: 16.0 });
+        self.draw_play_button(playback_status, image, Scale { x: 16.0, y: 16.0 });
     }
-    fn update(instance: Arc<RwLock<MediaInfoScreen>>) {
+
+    fn draw_screen(&mut self, music_player_info: MusicPlayerInfo) {
         let mut image = RgbImage::new(256, 64);
         let scale = Scale { x: 16.0, y: 16.0 };
         let seconds = Duration::from_secs(3);
-        if instance
-            .read()
-            .unwrap()
-            .screen
-            .mode_timeout
-            .lock()
-            .unwrap()
-            .unwrap()
-            .elapsed()
-            >= seconds
-        {
-            *instance.read().unwrap().screen.mode.lock().unwrap() = 0;
+        if self.screen.mode_timeout.lock().unwrap().unwrap().elapsed() >= seconds {
+            *self.screen.mode.lock().unwrap() = 0;
         }
-        if *instance.read().unwrap().editor_active.lock().unwrap() {
-            instance.write().unwrap().draw_artist(&mut image, scale);
-            instance.write().unwrap().draw_title(&mut image, scale);
-            instance
-                .write()
-                .unwrap()
-                .draw_mute_speaker(&mut image, scale);
 
-            if *instance.read().unwrap().screen.mode.lock().unwrap() == 0 {
-                instance
-                    .write()
-                    .unwrap()
-                    .draw_play_button(&mut image, scale);
-                instance.write().unwrap().draw_elapsed(&mut image, scale);
-                instance.write().unwrap().draw_total(&mut image, scale);
-                instance
-                    .write()
-                    .unwrap()
-                    .draw_elapsed_bar(&mut image, scale);
+        if (music_player_info.artist != self.music_player_info.artist)
+            || (music_player_info.title != self.music_player_info.title)
+        {
+            self.title_x = 0;
+        }
+
+        if music_player_info.artist != self.music_player_info.artist {
+            self.artist_x = 0;
+        }
+
+        if music_player_info.editor_active {
+            self.draw_artist(music_player_info.artist, &mut image, scale);
+            self.draw_title(music_player_info.title, &mut image, scale);
+            self.draw_mute_speaker(music_player_info.mute, &mut image, scale);
+
+            if *self.screen.mode.lock().unwrap() == 0 {
+                self.draw_play_button(music_player_info.playback_status, &mut image, scale);
+                self.draw_elapsed(music_player_info.current_track_position, &mut image, scale);
+                self.draw_total(music_player_info.track_length, &mut image, scale);
+                self.draw_elapsed_bar(
+                    music_player_info.current_track_position,
+                    music_player_info.track_length,
+                    &mut image,
+                    scale,
+                );
             } else {
                 // DRAW VOLUME BAR
-                instance.write().unwrap().draw_volume_bar(&mut image, scale);
+                self.draw_volume_bar(
+                    music_player_info.system_volume,
+                    music_player_info.playback_status,
+                    &mut image,
+                    scale,
+                );
             }
         } else {
-            instance.write().unwrap().draw_intro(&mut image, scale);
+            self.draw_intro(&mut image, scale);
         }
-        *instance.write().unwrap().screen.bytes.lock().unwrap() = image.into_vec();
+        *self.screen.bytes.lock().unwrap() = image.into_vec();
     }
 
-    fn set_mode(instance: Arc<RwLock<MediaInfoScreen>>, mode: u32) {
-        *instance.read().unwrap().screen.mode_timeout.lock().unwrap() = Some(Instant::now());
-        *instance.read().unwrap().screen.mode.lock().unwrap() = mode;
+    fn update(&mut self) {
+        let music_player_info = self.receiver.try_recv();
+        match music_player_info {
+            Ok(music_player_info) => {
+                self.music_player_info = music_player_info.clone();
+                self.draw_screen(music_player_info);
+            }
+            Err(_) => {
+                // well, do nothing :)
+            }
+        }
+    }
+
+    fn set_mode(&mut self, mode: u32) {
+        *self.screen.mode_timeout.lock().unwrap() = Some(Instant::now());
+        *self.screen.mode.lock().unwrap() = mode;
     }
 
     #[cfg(windows)]
@@ -392,164 +448,118 @@ impl MediaInfoScreen {
         key: String,
         font: Arc<Mutex<Option<Font<'static>>>>,
         config_manager: Arc<RwLock<ConfigManager>>,
-    ) -> Arc<RwLock<MediaInfoScreen>> {
-        let this = Arc::new(RwLock::new(MediaInfoScreen {
+    ) -> MediaInfoScreen {
+        let (tx, rx): (Sender<MusicPlayerInfo>, Receiver<MusicPlayerInfo>) = bounded(1);
+        let active = Arc::new(AtomicBool::new(false));
+
+        let this = MediaInfoScreen {
             screen: Screen {
                 description,
                 font,
                 config_manager,
                 key,
+                active: active.clone(),
                 ..Default::default()
             },
+            music_player_info: Default::default(),
             symbols: Font::try_from_vec(Vec::from(include_bytes!("../symbols.otf") as &[u8])),
-            playback_status: Mutex::new(0),
-            track_current_position: Mutex::new(0),
-            track_length: Mutex::new(0),
-            title: Mutex::new(String::new()),
-            title_x: Mutex::new(0),
-            artist: Mutex::new(String::new()),
-            artist_x: Mutex::new(0),
-            system_volume: Mutex::new(get_master_volume(true).0),
-            mute: Mutex::new(get_master_volume(false).1),
-            editor_active: Mutex::new(false),
-            regex_first: Mutex::new(regex::Regex::new(r"\s(.*)-").unwrap()),
-            regex_second: Mutex::new(regex::Regex::new(r"(.*) - (.*)").unwrap()),
-        }));
+            title_x: 0,
+            artist_x: 0,
+            receiver: rx,
+        };
 
-        let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
-        *this.read().unwrap().screen.handle.lock().unwrap() = Some(
-            builder
-                .spawn({
-                    let this = this.clone();
-                    move || {
-                        let window: Vec<u16> = OsStr::new("Winamp v1.x")
-                            .encode_wide()
-                            .chain(once(0))
-                            .collect();
+        *this.screen.handle.lock().unwrap() = Some(thread::spawn({
+            move || {
+                let window: Vec<u16> = OsStr::new("Winamp v1.x")
+                    .encode_wide()
+                    .chain(once(0))
+                    .collect();
+                let sender = tx.clone();
+                let active = active.clone();
+                let regex_first = regex::Regex::new(r"\s(.*)-").unwrap();
+                let regex_second = regex::Regex::new(r"(.*) - (.*)").unwrap();
 
-                        loop {
-                            while !this.read().unwrap().screen.active.load(Ordering::Acquire) {
-                                thread::park();
-                            }
-
-                            let hwnd = unsafe { FindWindowW(window.as_ptr(), null_mut()) };
-
-                            if hwnd != null_mut() {
-                                unsafe {
-                                    // 1 == playing, 3 == paused, anything else == stopped
-                                    let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
-                                    *this.read().unwrap().playback_status.lock().unwrap() =
-                                        playback_status;
-                                    // current position in msecs
-                                    let mut track_current_position =
-                                        SendMessageW(hwnd, WM_USER, 0, 105);
-                                    if playback_status != 1 && playback_status != 3 {
-                                        track_current_position = 0;
-                                    }
-
-                                    *this.read().unwrap().track_current_position.lock().unwrap() =
-                                        track_current_position;
-
-                                    // track length in seconds (multiply by thousand)
-                                    let track_length = SendMessageW(hwnd, WM_USER, 1, 105);
-                                    *this.read().unwrap().track_length.lock().unwrap() =
-                                        track_length;
-                                    // get title
-                                    let current_index = SendMessageW(hwnd, WM_USER, 0, 125);
-                                    let title_length = SendMessageW(
-                                        hwnd,
-                                        WM_GETTEXTLENGTH,
-                                        current_index as usize,
-                                        0,
-                                    );
-
-                                    // WINAMP VOLUME. NOT USED RIGHT NOW.
-                                    // let mut volume = SendMessageW(hwnd, WM_USER, -666i32 as usize, 122);
-
-                                    let buffer_length = title_length + 1;
-                                    let mut buffer =
-                                        Vec::<u16>::with_capacity(buffer_length as usize);
-                                    buffer.resize(buffer_length as usize, 0);
-                                    SendMessageW(
-                                        hwnd,
-                                        WM_GETTEXT,
-                                        buffer_length as usize,
-                                        buffer.as_mut_ptr() as LPARAM,
-                                    );
-                                    let data = String::from_utf16_lossy(&buffer);
-
-                                    if title_length == 0
-                                        || !this
-                                            .read()
-                                            .unwrap()
-                                            .regex_first
-                                            .lock()
-                                            .unwrap()
-                                            .is_match(&data)
-                                    {
-                                        *this.read().unwrap().editor_active.lock().unwrap() = false;
-                                        thread::sleep(Duration::from_millis(200));
-                                        continue;
-                                    } else {
-                                        *this.read().unwrap().editor_active.lock().unwrap() = true;
-                                    }
-
-                                    let caps = this
-                                        .read()
-                                        .unwrap()
-                                        .regex_first
-                                        .lock()
-                                        .unwrap()
-                                        .captures(&data)
-                                        .unwrap();
-                                    let artist_and_title = caps.get(1).map_or("", |m| m.as_str());
-
-                                    let artist_and_title_caps = this
-                                        .read()
-                                        .unwrap()
-                                        .regex_second
-                                        .lock()
-                                        .unwrap()
-                                        .captures(&artist_and_title)
-                                        .unwrap();
-                                    let artist = artist_and_title_caps
-                                        .get(1)
-                                        .map_or("", |m| m.as_str())
-                                        .trim();
-
-                                    let title = artist_and_title_caps
-                                        .get(2)
-                                        .map_or("", |m| m.as_str())
-                                        .trim();
-
-                                    if (*this.read().unwrap().artist.lock().unwrap() != artist)
-                                        || (*this.read().unwrap().title.lock().unwrap() != title)
-                                    {
-                                        *this.read().unwrap().title_x.lock().unwrap() = 0;
-                                    }
-
-                                    if *this.read().unwrap().artist.lock().unwrap() != artist {
-                                        *this.read().unwrap().artist_x.lock().unwrap() = 0;
-                                    }
-                                    *this.read().unwrap().artist.lock().unwrap() =
-                                        artist.to_string();
-                                    *this.read().unwrap().title.lock().unwrap() = title.to_string();
-                                }
-                            } else {
-                                *this.read().unwrap().editor_active.lock().unwrap() = false;
-                            }
-
-                            // TODO: only if audio mode is active!
-                            let volume_data = get_master_volume(false);
-                            *this.read().unwrap().system_volume.lock().unwrap() = volume_data.0;
-                            *this.read().unwrap().mute.lock().unwrap() = volume_data.1;
-                            thread::sleep(Duration::from_millis(200));
-                        }
+                loop {
+                    while !active.load(Ordering::Acquire) {
+                        thread::park();
                     }
-                })
-                .expect("Cannot create JOB_EXECUTOR thread"),
-        );
-        this.clone()
+                    let mut music_player_info: MusicPlayerInfo = Default::default();
+                    let hwnd = unsafe { FindWindowW(window.as_ptr(), null_mut()) };
+                    if hwnd != null_mut() {
+                        unsafe {
+                            // 1 == playing, 3 == paused, anything else == stopped
+                            let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
+                            music_player_info.playback_status = playback_status;
+                            // current position in msecs
+                            let mut current_track_position = SendMessageW(hwnd, WM_USER, 0, 105);
+                            if playback_status != 1 && playback_status != 3 {
+                                current_track_position = 0;
+                            }
+
+                            music_player_info.current_track_position = current_track_position;
+
+                            // track length in seconds (multiply by thousand)
+                            let track_length = SendMessageW(hwnd, WM_USER, 1, 105);
+                            music_player_info.track_length = track_length;
+                            // get title
+                            let current_index = SendMessageW(hwnd, WM_USER, 0, 125);
+                            let title_length =
+                                SendMessageW(hwnd, WM_GETTEXTLENGTH, current_index as usize, 0);
+
+                            // WINAMP VOLUME. NOT USED RIGHT NOW.
+                            // let mut volume = SendMessageW(hwnd, WM_USER, -666i32 as usize, 122);
+
+                            let buffer_length = title_length + 1;
+                            let mut buffer = Vec::<u16>::with_capacity(buffer_length as usize);
+                            buffer.resize(buffer_length as usize, 0);
+                            SendMessageW(
+                                hwnd,
+                                WM_GETTEXT,
+                                buffer_length as usize,
+                                buffer.as_mut_ptr() as LPARAM,
+                            );
+                            let data = String::from_utf16_lossy(&buffer);
+
+                            if title_length == 0 || !regex_first.is_match(&data) {
+                                music_player_info.editor_active = false;
+                                thread::sleep(Duration::from_millis(200));
+                                continue;
+                            } else {
+                                music_player_info.editor_active = true;
+                            }
+
+                            let caps = regex_first.captures(&data).unwrap();
+                            let artist_and_title = caps.get(1).map_or("", |m| m.as_str());
+
+                            let artist_and_title_caps =
+                                regex_second.captures(&artist_and_title).unwrap();
+                            let artist = artist_and_title_caps
+                                .get(1)
+                                .map_or("", |m| m.as_str())
+                                .trim();
+
+                            let title = artist_and_title_caps
+                                .get(2)
+                                .map_or("", |m| m.as_str())
+                                .trim();
+
+                            music_player_info.artist = artist.to_string();
+                            music_player_info.title = title.to_string();
+                        }
+                    } else {
+                        music_player_info.editor_active = false;
+                    }
+
+                    // TODO: only if audio mode is active!
+                    let volume_data = get_master_volume(false);
+                    music_player_info.system_volume = volume_data.0;
+                    music_player_info.mute = volume_data.1;
+                    sender.try_send(music_player_info);
+                    thread::sleep(Duration::from_millis(200));
+                }
+            }
+        }));
+        this
     }
 }
 // MOVE EVERYTHING BELOW SOMEWHERE ELSE, TO SOME MODULE ETC.
