@@ -15,7 +15,6 @@ use regex;
 use rusttype::Font;
 use rusttype::Scale;
 use std::ffi::OsStr;
-use std::fmt::Debug;
 use std::iter::once;
 use std::os::windows::ffi::OsStrExt;
 use std::ptr::null_mut;
@@ -380,8 +379,8 @@ impl MediaInfoScreen {
         let mut image = RgbImage::new(256, 64);
         let scale = Scale { x: 16.0, y: 16.0 };
         let seconds = Duration::from_secs(3);
-        if self.screen.mode_timeout.lock().unwrap().unwrap().elapsed() >= seconds {
-            *self.screen.mode.lock().unwrap() = 0;
+        if self.screen.mode_timeout.unwrap_or(Instant::now()).elapsed() >= seconds {
+            self.screen.mode = 0;
         }
 
         if (music_player_info.artist != self.music_player_info.artist)
@@ -399,7 +398,7 @@ impl MediaInfoScreen {
             self.draw_title(music_player_info.title, &mut image, scale);
             self.draw_mute_speaker(music_player_info.mute, &mut image, scale);
 
-            if *self.screen.mode.lock().unwrap() == 0 {
+            if self.screen.mode == 0 {
                 self.draw_play_button(music_player_info.playback_status, &mut image, scale);
                 self.draw_elapsed(music_player_info.current_track_position, &mut image, scale);
                 self.draw_total(music_player_info.track_length, &mut image, scale);
@@ -438,8 +437,8 @@ impl MediaInfoScreen {
     }
 
     fn set_mode(&mut self, mode: u32) {
-        *self.screen.mode_timeout.lock().unwrap() = Some(Instant::now());
-        *self.screen.mode.lock().unwrap() = mode;
+        self.screen.mode_timeout = Some(Instant::now());
+        self.screen.mode = mode;
     }
 
     #[cfg(windows)]
@@ -452,13 +451,147 @@ impl MediaInfoScreen {
         let (tx, rx): (Sender<MusicPlayerInfo>, Receiver<MusicPlayerInfo>) = bounded(1);
         let active = Arc::new(AtomicBool::new(false));
 
-        let this = MediaInfoScreen {
+        let mut this = MediaInfoScreen {
             screen: Screen {
                 description,
                 font,
                 config_manager,
                 key,
                 active: active.clone(),
+                handle: Mutex::new(Some(thread::spawn({
+                    move || {
+                        let window: Vec<u16> = OsStr::new("Winamp v1.x")
+                            .encode_wide()
+                            .chain(once(0))
+                            .collect();
+                        let sender = tx.clone();
+                        let active = active.clone();
+                        let match_correct_artist_and_title_format;
+                        let match_artist_and_title;
+                        match regex::Regex::new(r"\s(.*)-") {
+                            Ok(regex) => {
+                                match_correct_artist_and_title_format = regex;
+                            }
+                            Err(err) => {
+                                println!("REGEX ERROR: {:?}", err);
+                                return;
+                            }
+                        }
+                        match regex::Regex::new(r"(.*) - (.*)") {
+                            Ok(regex) => {
+                                match_artist_and_title = regex;
+                            }
+                            Err(err) => {
+                                println!("REGEX ERROR: {:?}", err);
+                                return;
+                            }
+                        }
+
+                        loop {
+                            while !active.load(Ordering::Acquire) {
+                                thread::park();
+                            }
+                            let mut music_player_info: MusicPlayerInfo = Default::default();
+                            let hwnd = unsafe { FindWindowW(window.as_ptr(), null_mut()) };
+                            if hwnd != null_mut() {
+                                unsafe {
+                                    // 1 == playing, 3 == paused, anything else == stopped
+                                    let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
+                                    music_player_info.playback_status = playback_status;
+                                    // current position in msecs
+                                    let mut current_track_position =
+                                        SendMessageW(hwnd, WM_USER, 0, 105);
+                                    if playback_status != 1 && playback_status != 3 {
+                                        current_track_position = 0;
+                                    }
+
+                                    music_player_info.current_track_position =
+                                        current_track_position;
+
+                                    // track length in seconds (multiply by thousand)
+                                    let track_length = SendMessageW(hwnd, WM_USER, 1, 105);
+                                    music_player_info.track_length = track_length;
+                                    // get title
+                                    let current_index = SendMessageW(hwnd, WM_USER, 0, 125);
+                                    let title_length = SendMessageW(
+                                        hwnd,
+                                        WM_GETTEXTLENGTH,
+                                        current_index as usize,
+                                        0,
+                                    );
+
+                                    // WINAMP VOLUME. NOT USED RIGHT NOW.
+                                    // let mut volume = SendMessageW(hwnd, WM_USER, -666i32 as usize, 122);
+
+                                    let buffer_length = title_length + 1;
+                                    let mut buffer =
+                                        Vec::<u16>::with_capacity(buffer_length as usize);
+                                    buffer.resize(buffer_length as usize, 0);
+                                    SendMessageW(
+                                        hwnd,
+                                        WM_GETTEXT,
+                                        buffer_length as usize,
+                                        buffer.as_mut_ptr() as LPARAM,
+                                    );
+                                    let data = String::from_utf16_lossy(&buffer);
+
+                                    if title_length == 0
+                                        || !match_correct_artist_and_title_format.is_match(&data)
+                                    {
+                                        music_player_info.editor_active = false;
+                                        thread::sleep(Duration::from_millis(200));
+                                        continue;
+                                    } else {
+                                        music_player_info.editor_active = true;
+                                    }
+
+                                    let caps =
+                                        match_correct_artist_and_title_format.captures(&data);
+                                    match caps {
+                                        Some(caps) => {
+                                            let artist_and_title =
+                                                caps.get(1).map_or("", |m| m.as_str());
+                                            let artist_and_title_caps =
+                                                match_artist_and_title.captures(&artist_and_title);
+                                            match artist_and_title_caps {
+                                                Some(artist_and_title_caps) => {
+                                                    let artist = artist_and_title_caps
+                                                        .get(1)
+                                                        .map_or("", |m| m.as_str())
+                                                        .trim();
+                                                    let title = artist_and_title_caps
+                                                        .get(2)
+                                                        .map_or("", |m| m.as_str())
+                                                        .trim();
+
+                                                    music_player_info.artist = artist.to_string();
+                                                    music_player_info.title = title.to_string();
+                                                }
+                                                None => {
+                                                    music_player_info.editor_active = false;
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                        None => {
+                                            music_player_info.editor_active = false;
+                                            continue;
+                                        }
+                                    }
+                                }
+                            } else {
+                                music_player_info.editor_active = false;
+                            }
+
+                            // TODO: only if audio mode is active!
+                            let volume_data = get_master_volume(false);
+                            music_player_info.system_volume = volume_data.0;
+                            music_player_info.mute = volume_data.1;
+                            sender.try_send(music_player_info).unwrap_or_default();
+                            thread::sleep(Duration::from_millis(200));
+                        }
+                    }
+                }))),
                 ..Default::default()
             },
             music_player_info: Default::default(),
@@ -467,98 +600,7 @@ impl MediaInfoScreen {
             artist_x: 0,
             receiver: rx,
         };
-
-        *this.screen.handle.lock().unwrap() = Some(thread::spawn({
-            move || {
-                let window: Vec<u16> = OsStr::new("Winamp v1.x")
-                    .encode_wide()
-                    .chain(once(0))
-                    .collect();
-                let sender = tx.clone();
-                let active = active.clone();
-                let regex_first = regex::Regex::new(r"\s(.*)-").unwrap();
-                let regex_second = regex::Regex::new(r"(.*) - (.*)").unwrap();
-
-                loop {
-                    while !active.load(Ordering::Acquire) {
-                        thread::park();
-                    }
-                    let mut music_player_info: MusicPlayerInfo = Default::default();
-                    let hwnd = unsafe { FindWindowW(window.as_ptr(), null_mut()) };
-                    if hwnd != null_mut() {
-                        unsafe {
-                            // 1 == playing, 3 == paused, anything else == stopped
-                            let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
-                            music_player_info.playback_status = playback_status;
-                            // current position in msecs
-                            let mut current_track_position = SendMessageW(hwnd, WM_USER, 0, 105);
-                            if playback_status != 1 && playback_status != 3 {
-                                current_track_position = 0;
-                            }
-
-                            music_player_info.current_track_position = current_track_position;
-
-                            // track length in seconds (multiply by thousand)
-                            let track_length = SendMessageW(hwnd, WM_USER, 1, 105);
-                            music_player_info.track_length = track_length;
-                            // get title
-                            let current_index = SendMessageW(hwnd, WM_USER, 0, 125);
-                            let title_length =
-                                SendMessageW(hwnd, WM_GETTEXTLENGTH, current_index as usize, 0);
-
-                            // WINAMP VOLUME. NOT USED RIGHT NOW.
-                            // let mut volume = SendMessageW(hwnd, WM_USER, -666i32 as usize, 122);
-
-                            let buffer_length = title_length + 1;
-                            let mut buffer = Vec::<u16>::with_capacity(buffer_length as usize);
-                            buffer.resize(buffer_length as usize, 0);
-                            SendMessageW(
-                                hwnd,
-                                WM_GETTEXT,
-                                buffer_length as usize,
-                                buffer.as_mut_ptr() as LPARAM,
-                            );
-                            let data = String::from_utf16_lossy(&buffer);
-
-                            if title_length == 0 || !regex_first.is_match(&data) {
-                                music_player_info.editor_active = false;
-                                thread::sleep(Duration::from_millis(200));
-                                continue;
-                            } else {
-                                music_player_info.editor_active = true;
-                            }
-
-                            let caps = regex_first.captures(&data).unwrap();
-                            let artist_and_title = caps.get(1).map_or("", |m| m.as_str());
-
-                            let artist_and_title_caps =
-                                regex_second.captures(&artist_and_title).unwrap();
-                            let artist = artist_and_title_caps
-                                .get(1)
-                                .map_or("", |m| m.as_str())
-                                .trim();
-
-                            let title = artist_and_title_caps
-                                .get(2)
-                                .map_or("", |m| m.as_str())
-                                .trim();
-
-                            music_player_info.artist = artist.to_string();
-                            music_player_info.title = title.to_string();
-                        }
-                    } else {
-                        music_player_info.editor_active = false;
-                    }
-
-                    // TODO: only if audio mode is active!
-                    let volume_data = get_master_volume(false);
-                    music_player_info.system_volume = volume_data.0;
-                    music_player_info.mute = volume_data.1;
-                    sender.try_send(music_player_info);
-                    thread::sleep(Duration::from_millis(200));
-                }
-            }
-        }));
+        this.draw_screen(Default::default());
         this
     }
 }

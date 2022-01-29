@@ -18,8 +18,8 @@ pub struct Screen {
     pub active: Arc<AtomicBool>,
     pub initial_update_called: Arc<AtomicBool>,
     pub handle: Mutex<Option<JoinHandle<()>>>,
-    pub mode: Arc<Mutex<u32>>,
-    pub mode_timeout: Arc<Mutex<Option<Instant>>>,
+    pub mode: u32,
+    pub mode_timeout: Option<Instant>,
     pub config_manager: Arc<RwLock<ConfigManager>>,
 }
 
@@ -36,16 +36,10 @@ impl Default for Screen {
             active: Arc::new(AtomicBool::new(false)),
             initial_update_called: Arc::new(AtomicBool::new(false)),
             handle: Mutex::new(None),
-            mode: Arc::new(Mutex::new(0)),
-            mode_timeout: Arc::new(Mutex::new(Some(Instant::now()))),
+            mode: 0,
+            mode_timeout: Some(Instant::now()),
             config_manager: Arc::new(RwLock::new(ConfigManager::new(None))),
         }
-    }
-}
-
-impl std::fmt::Debug for dyn BasicScreen {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.description())
     }
 }
 
