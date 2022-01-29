@@ -9,7 +9,7 @@ pub mod media_info_screen;
 pub mod system_info_screen;
 pub mod weather_screen;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Screen {
     pub description: String,
     pub key: String,
@@ -17,7 +17,7 @@ pub struct Screen {
     pub font: Arc<Mutex<Option<Font<'static>>>>,
     pub active: Arc<AtomicBool>,
     pub initial_update_called: Arc<AtomicBool>,
-    pub handle: Arc<Mutex<Option<JoinHandle<()>>>>,
+    pub handle: Mutex<Option<JoinHandle<()>>>,
     pub mode: Arc<Mutex<u32>>,
     pub mode_timeout: Arc<Mutex<Option<Instant>>>,
     pub config_manager: Arc<RwLock<ConfigManager>>,
@@ -35,7 +35,7 @@ impl Default for Screen {
                 as &[u8])))),
             active: Arc::new(AtomicBool::new(false)),
             initial_update_called: Arc::new(AtomicBool::new(false)),
-            handle: Arc::new(Mutex::new(None)),
+            handle: Mutex::new(None),
             mode: Arc::new(Mutex::new(0)),
             mode_timeout: Arc::new(Mutex::new(Some(Instant::now()))),
             config_manager: Arc::new(RwLock::new(ConfigManager::new(None))),

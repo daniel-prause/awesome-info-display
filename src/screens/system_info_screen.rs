@@ -5,53 +5,60 @@ use crate::screens::Screen;
 use crate::screens::ScreenControl;
 
 use cpu_monitor::CpuInstant;
+use crossbeam_channel::bounded;
+use crossbeam_channel::{Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
 use rusttype::Font;
 use rusttype::Scale;
-use std::fmt::Debug;
-use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 use systemstat::{saturating_sub_bytes, Platform, System};
 
-#[derive(Debug)]
 pub struct SystemInfoScreen {
     screen: Screen,
+    receiver: Receiver<SystemInfoState>,
 }
 
-impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
+#[derive(Default)]
+struct SystemInfoState {
+    cpu_usage: f64,
+    ram_usage: f64,
+}
+
+impl BasicScreen for SystemInfoScreen {
     fn description(&self) -> String {
-        self.read().unwrap().screen.description.clone()
+        self.screen.description.clone()
     }
 
     fn current_image(&self) -> Vec<u8> {
-        self.read().unwrap().screen.current_image()
+        self.screen.current_image()
     }
 
-    fn update(&mut self) {}
+    fn update(&mut self) {
+        SystemInfoScreen::update(self)
+    }
 
     fn start(&self) {
-        self.read().unwrap().screen.start_worker();
+        self.screen.start_worker();
     }
 
     fn stop(&self) {
-        self.read().unwrap().screen.stop_worker();
+        self.screen.stop_worker();
     }
 
     fn key(&self) -> String {
-        self.read().unwrap().screen.key()
+        self.screen.key()
     }
 
     fn initial_update_called(&mut self) -> bool {
-        self.write().unwrap().screen.initial_update_called()
+        self.screen.initial_update_called()
     }
 
     fn enabled(&self) -> bool {
-        self.read()
-            .unwrap()
-            .screen
+        self.screen
             .config_manager
             .read()
             .unwrap()
@@ -60,9 +67,7 @@ impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
     }
 
     fn set_status(&self, status: bool) {
-        self.read()
-            .unwrap()
-            .screen
+        self.screen
             .config_manager
             .write()
             .unwrap()
@@ -156,6 +161,7 @@ impl SystemInfoScreen {
 
         self.draw_cpu(&mut image, cpu_usage, scale);
         self.draw_memory(&mut image, ram_usage, scale);
+        // TODO: remove all the wonderful locks...
         *self.screen.bytes.lock().unwrap() = image.into_vec();
     }
 
@@ -164,52 +170,66 @@ impl SystemInfoScreen {
         key: String,
         font: Arc<Mutex<Option<Font<'static>>>>,
         config_manager: Arc<RwLock<ConfigManager>>,
-    ) -> Arc<RwLock<SystemInfoScreen>> {
-        let this = Arc::new(RwLock::new(SystemInfoScreen {
+    ) -> SystemInfoScreen {
+        let (tx, rx): (Sender<SystemInfoState>, Receiver<SystemInfoState>) = bounded(1);
+        let active = Arc::new(AtomicBool::new(false));
+        let mut this = SystemInfoScreen {
             screen: Screen {
                 description,
                 key,
                 font,
-                config_manager,
-                ..Default::default()
-            },
-        }));
-
-        // start thread
-        let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
-        let sys = System::new();
-        this.write().unwrap().draw_screen(0f64, 0f64);
-        *this.read().unwrap().screen.handle.lock().unwrap() = Some(
-            builder
-                .spawn({
-                    let this = this.clone();
-                    move || loop {
-                        while !this.read().unwrap().screen.active.load(Ordering::Acquire) {
+                active: active.clone(),
+                handle: Mutex::new(Some(thread::spawn(move || {
+                    let sys = System::new();
+                    let sender = tx.clone();
+                    let active = active.clone();
+                    loop {
+                        while !active.load(Ordering::Acquire) {
                             thread::park();
                         }
-
-                        // cpu load from different crate since systemstats is not specific enough
                         let start = cpu_monitor::CpuInstant::now().unwrap();
-                        std::thread::sleep(Duration::from_millis(1000));
+                        thread::sleep(Duration::from_millis(1000));
                         let end = CpuInstant::now().unwrap();
                         let duration = end - start;
-                        let cpu_usage: f64 = (duration.non_idle() * 100.0).floor().into();
-                        let mut memory_used = 0f64;
+                        let mut system_info: SystemInfoState = Default::default();
+                        system_info.cpu_usage = (duration.non_idle() * 100.0).floor().into();
                         match sys.memory() {
                             Ok(mem) => {
-                                memory_used =
+                                system_info.ram_usage =
                                     saturating_sub_bytes(mem.total, mem.free).as_u64() as f64;
-                                memory_used =
-                                    ((memory_used / mem.total.as_u64() as f64) * 100.0).floor();
+                                system_info.ram_usage =
+                                    ((system_info.ram_usage / mem.total.as_u64() as f64) * 100.0)
+                                        .floor();
+
+                                // we are right now not interested in the error value.
+                                // since we only want to have the most recent screen,
+                                // it is ok, if screen infos get lost
+                                sender.try_send(system_info).unwrap_or_default();
                             }
                             Err(x) => println!("\nMemory: error: {}", x),
                         }
-                        // draw image
-                        this.write().unwrap().draw_screen(cpu_usage, memory_used);
                     }
-                })
-                .expect("Cannot create JOB_EXECUTOR thread"),
-        );
-        this.clone()
+                }))),
+                config_manager,
+                ..Default::default()
+            },
+            receiver: rx,
+        };
+
+        this.draw_screen(0f64, 0f64);
+        this
+    }
+
+    // call me on a different thread
+    pub fn update(&mut self) {
+        let system_stats = self.receiver.try_recv();
+        match system_stats {
+            Ok(system_info_state) => {
+                self.draw_screen(system_info_state.cpu_usage, system_info_state.ram_usage);
+            }
+            Err(_) => {
+                // well, do nothing :)
+            }
+        }
     }
 }

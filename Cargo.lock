@@ -125,6 +125,7 @@ dependencies = [
  "chrono",
  "confy",
  "cpu-monitor",
+ "crossbeam-channel",
  "error-chain",
  "futures",
  "hex-literal",
