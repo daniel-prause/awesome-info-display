@@ -19,8 +19,6 @@ use systemstat::{saturating_sub_bytes, Platform, System};
 #[derive(Debug)]
 pub struct SystemInfoScreen {
     screen: Screen,
-    cpu_usage: Mutex<f64>,
-    ram_usage: Mutex<f64>,
 }
 
 impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
@@ -32,9 +30,7 @@ impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
         self.read().unwrap().screen.current_image()
     }
 
-    fn update(&mut self) {
-        SystemInfoScreen::update(self.clone());
-    }
+    fn update(&mut self) {}
 
     fn start(&self) {
         self.read().unwrap().screen.start_worker();
@@ -76,8 +72,13 @@ impl BasicScreen for std::sync::Arc<RwLock<SystemInfoScreen>> {
 }
 
 impl SystemInfoScreen {
-    pub fn draw_cpu(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
-        let cpu_text = format!("{: >3}%", self.cpu_usage.lock().unwrap()).to_string();
+    pub fn draw_cpu(
+        &mut self,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        cpu_usage: f64,
+        scale: Scale,
+    ) {
+        let cpu_text = format!("{: >3}%", cpu_usage.to_string());
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
@@ -102,15 +103,20 @@ impl SystemInfoScreen {
             Rgb([255u8, 255u8, 255u8]),
         );
 
-        let cpu_filled = ((*self.cpu_usage.lock().unwrap() * 2.56) + 1.0).floor() as u32;
+        let cpu_filled = ((cpu_usage * 2.56) + 1.0).floor() as u32;
         draw_filled_rect_mut(
             image,
             Rect::at(0, 16).of_size(cpu_filled, 10),
             Rgb([255u8, 255u8, 255u8]),
         );
     }
-    pub fn draw_memory(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
-        let memory_text = format!("{: >3}%", self.ram_usage.lock().unwrap()).to_string();
+    pub fn draw_memory(
+        &mut self,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        ram_usage: f64,
+        scale: Scale,
+    ) {
+        let memory_text = format!("{: >3}%", ram_usage.to_string());
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
@@ -135,7 +141,7 @@ impl SystemInfoScreen {
             Rgb([255u8, 255u8, 255u8]),
         );
 
-        let memory_filled = ((*self.ram_usage.lock().unwrap() * 2.56) + 1.0).floor() as u32;
+        let memory_filled = ((ram_usage * 2.56) + 1.0).floor() as u32;
         draw_filled_rect_mut(
             image,
             Rect::at(0, 48).of_size(memory_filled, 10),
@@ -143,13 +149,14 @@ impl SystemInfoScreen {
         );
     }
 
-    fn update(instance: Arc<RwLock<SystemInfoScreen>>) {
+    fn draw_screen(&mut self, cpu_usage: f64, ram_usage: f64) {
+        // draw initial image
         let mut image = RgbImage::new(256, 64);
         let scale = Scale { x: 16.0, y: 16.0 };
 
-        instance.write().unwrap().draw_cpu(&mut image, scale);
-        instance.write().unwrap().draw_memory(&mut image, scale);
-        *instance.write().unwrap().screen.bytes.lock().unwrap() = image.into_vec();
+        self.draw_cpu(&mut image, cpu_usage, scale);
+        self.draw_memory(&mut image, ram_usage, scale);
+        *self.screen.bytes.lock().unwrap() = image.into_vec();
     }
 
     pub fn new(
@@ -166,13 +173,12 @@ impl SystemInfoScreen {
                 config_manager,
                 ..Default::default()
             },
-            cpu_usage: Mutex::new(0.0),
-            ram_usage: Mutex::new(0.0),
         }));
 
+        // start thread
         let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
         let sys = System::new();
-
+        this.write().unwrap().draw_screen(0f64, 0f64);
         *this.read().unwrap().screen.handle.lock().unwrap() = Some(
             builder
                 .spawn({
@@ -187,18 +193,19 @@ impl SystemInfoScreen {
                         std::thread::sleep(Duration::from_millis(1000));
                         let end = CpuInstant::now().unwrap();
                         let duration = end - start;
-                        *this.read().unwrap().cpu_usage.lock().unwrap() =
-                            (duration.non_idle() * 100.0).floor().into();
-
+                        let cpu_usage: f64 = (duration.non_idle() * 100.0).floor().into();
+                        let mut memory_used = 0f64;
                         match sys.memory() {
                             Ok(mem) => {
-                                let memory_used =
+                                memory_used =
                                     saturating_sub_bytes(mem.total, mem.free).as_u64() as f64;
-                                *this.read().unwrap().ram_usage.lock().unwrap() =
+                                memory_used =
                                     ((memory_used / mem.total.as_u64() as f64) * 100.0).floor();
                             }
                             Err(x) => println!("\nMemory: error: {}", x),
                         }
+                        // draw image
+                        this.write().unwrap().draw_screen(cpu_usage, memory_used);
                     }
                 })
                 .expect("Cannot create JOB_EXECUTOR thread"),
