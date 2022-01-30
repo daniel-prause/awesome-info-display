@@ -180,7 +180,7 @@ impl BitpandaScreen {
                 config_manager: config_manager.clone(),
                 key,
                 active: active.clone(),
-                handle: Mutex::new(Some(thread::spawn(move || {
+                handle: Some(thread::spawn(move || {
                     let mut initial_tryout = false;
                     let mut wallet_value = 0.0;
                     let mut last_update = SystemTime::now();
@@ -320,7 +320,7 @@ impl BitpandaScreen {
                             }
                         }
                     }
-                }))),
+                })),
                 ..Default::default()
             },
             receiver: rx,

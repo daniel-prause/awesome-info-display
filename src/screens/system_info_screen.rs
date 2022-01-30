@@ -177,7 +177,7 @@ impl SystemInfoScreen {
                 key,
                 font,
                 active: active.clone(),
-                handle: Mutex::new(Some(thread::spawn(move || {
+                handle: Some(thread::spawn(move || {
                     let sys = System::new();
                     let sender = tx.to_owned();
                     let active = active.clone();
@@ -207,7 +207,7 @@ impl SystemInfoScreen {
                             Err(x) => println!("\nMemory: error: {}", x),
                         }
                     }
-                }))),
+                })),
                 config_manager,
                 ..Default::default()
             },

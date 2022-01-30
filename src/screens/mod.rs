@@ -15,7 +15,7 @@ pub struct Screen {
     pub font: Arc<Mutex<Option<Font<'static>>>>,
     pub active: Arc<AtomicBool>,
     pub initial_update_called: bool,
-    pub handle: Mutex<Option<JoinHandle<()>>>,
+    pub handle: Option<JoinHandle<()>>,
     pub mode: u32,
     pub mode_timeout: Option<Instant>,
     pub config_manager: Arc<RwLock<ConfigManager>>,
@@ -33,7 +33,7 @@ impl Default for Screen {
                 as &[u8])))),
             active: Arc::new(AtomicBool::new(false)),
             initial_update_called: false,
-            handle: Mutex::new(None),
+            handle: None,
             mode: 0,
             mode_timeout: Some(Instant::now()),
             config_manager: Arc::new(RwLock::new(ConfigManager::new(None))),
@@ -69,14 +69,11 @@ impl ScreenControl for Screen {
 
     fn start_worker(&self) {
         self.active.store(true, Ordering::Release);
-        match self.handle.lock() {
-            Ok(lock) => match lock.as_ref() {
-                Some(handle) => {
-                    handle.thread().unpark();
-                }
-                None => {}
-            },
-            Err(_) => {}
+        match self.handle.as_ref() {
+            Some(handle) => {
+                handle.thread().unpark();
+            }
+            None => {}
         }
     }
 

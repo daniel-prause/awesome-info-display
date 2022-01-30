@@ -171,7 +171,7 @@ impl WeatherScreen {
                 font,
                 config_manager: config_manager.clone(),
                 active: active.clone(),
-                handle: Mutex::new(Some(thread::spawn(move || {
+                handle: Some(thread::spawn(move || {
                     let sender = tx.to_owned();
                     loop {
                         while !active.load(Ordering::Acquire) {
@@ -207,7 +207,7 @@ impl WeatherScreen {
                         // TODO: think about whether we want to solve this like in bitpanda screen with last_update...
                         thread::sleep(Duration::from_millis(60000));
                     }
-                }))),
+                })),
                 ..Default::default()
             },
             symbols: Font::try_from_vec(Vec::from(include_bytes!("../symbols.otf") as &[u8])),

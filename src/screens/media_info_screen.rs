@@ -454,7 +454,7 @@ impl MediaInfoScreen {
                 config_manager,
                 key,
                 active: active.clone(),
-                handle: Mutex::new(Some(thread::spawn(move || {
+                handle: Some(thread::spawn(move || {
                     let window: Vec<u16> = OsStr::new("Winamp v1.x")
                         .encode_wide()
                         .chain(once(0))
@@ -577,7 +577,7 @@ impl MediaInfoScreen {
                         sender.try_send(music_player_info).unwrap_or_default();
                         thread::sleep(Duration::from_millis(200));
                     }
-                }))),
+                })),
                 ..Default::default()
             },
             music_player_info: Default::default(),
