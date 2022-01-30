@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use std::fs;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ConfigManager {
     pub config: Config,
     config_hash: String,

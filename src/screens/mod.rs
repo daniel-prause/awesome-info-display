@@ -1,6 +1,5 @@
 use crate::config_manager::ConfigManager;
 use rusttype::Font;
-use std::fmt::Debug;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread::JoinHandle;
 use std::time::Instant;
@@ -9,7 +8,6 @@ pub mod media_info_screen;
 pub mod system_info_screen;
 pub mod weather_screen;
 
-#[derive(Debug)]
 pub struct Screen {
     pub description: String,
     pub key: String,

@@ -10,7 +10,6 @@ use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use rusttype::Font;
 use rusttype::Scale;
-use std::fmt::Debug;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;

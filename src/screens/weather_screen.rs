@@ -10,12 +10,10 @@ use imageproc::drawing::draw_text_mut;
 use openweathermap::blocking::weather;
 use rusttype::Font;
 use rusttype::Scale;
-use std::fmt::Debug;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 
-#[derive(Debug)]
 pub struct WeatherScreen {
     screen: Screen,
     symbols: Option<Font<'static>>,
