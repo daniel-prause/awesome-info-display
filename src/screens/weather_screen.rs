@@ -82,7 +82,6 @@ impl WeatherScreen {
         // draw initial image
         let mut image = RgbImage::new(256, 64);
         self.draw_weather_info(weather_info, &mut image);
-        // TODO: remove all the wonderful locks...
         self.screen.bytes = image.into_vec();
     }
     fn draw_weather_info(
@@ -139,9 +138,7 @@ impl WeatherScreen {
             Ok(weather_info) => {
                 self.draw_screen(weather_info);
             }
-            Err(_) => {
-                // well, do nothing :)
-            }
+            Err(_) => {}
         }
     }
 
@@ -176,48 +173,49 @@ impl WeatherScreen {
                 font,
                 config_manager: config_manager.clone(),
                 active: active.clone(),
+                handle: Mutex::new(Some(thread::spawn(move || {
+                    let sender = tx.to_owned();
+                    loop {
+                        while !active.load(Ordering::Acquire) {
+                            thread::park();
+                        }
+                        let api_key = config_manager
+                            .read()
+                            .unwrap()
+                            .config
+                            .openweather_api_key
+                            .clone();
+                        let location = config_manager
+                            .read()
+                            .unwrap()
+                            .config
+                            .openweather_location
+                            .clone();
+                        // TODO: make this configurable for language and metric/non-metric units
+                        // get current weather for location
+                        match &weather(location.as_str(), "metric", "en", api_key.as_str()) {
+                            Ok(current) => {
+                                let mut weather_info: WeatherInfo = Default::default();
+
+                                weather_info.weather_icon = current.weather[0].icon.clone();
+
+                                weather_info.temperature = current.main.temp;
+                                weather_info.city =
+                                    format!("{},{}", current.name.clone(), current.sys.country);
+                                sender.try_send(weather_info).unwrap_or_default();
+                            }
+                            Err(e) => println!("Could not fetch weather because: {}", e),
+                        }
+                        // TODO: think about whether we want to solve this like in bitpanda screen with last_update...
+                        thread::sleep(Duration::from_millis(60000));
+                    }
+                }))),
                 ..Default::default()
             },
             symbols: Font::try_from_vec(Vec::from(include_bytes!("../symbols.otf") as &[u8])),
             receiver: rx,
         };
 
-        *this.screen.handle.lock().unwrap() = Some(thread::spawn({
-            let sender = tx.clone();
-            move || loop {
-                while !active.load(Ordering::Acquire) {
-                    thread::park();
-                }
-                let api_key = config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .openweather_api_key
-                    .clone();
-                let location = config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .openweather_location
-                    .clone();
-                // TODO: make this configurable for language and metric/non-metric units
-                // get current weather for location
-                match &weather(location.as_str(), "metric", "en", api_key.as_str()) {
-                    Ok(current) => {
-                        let mut weather_info: WeatherInfo = Default::default();
-
-                        weather_info.weather_icon = current.weather[0].icon.clone();
-
-                        weather_info.temperature = current.main.temp;
-                        weather_info.city =
-                            format!("{},{}", current.name.clone(), current.sys.country);
-                        sender.try_send(weather_info).unwrap_or_default();
-                    }
-                    Err(e) => println!("Could not fetch weather because: {}", e),
-                }
-                thread::sleep(Duration::from_millis(60000));
-            }
-        }));
         this.draw_screen(Default::default());
         this
     }

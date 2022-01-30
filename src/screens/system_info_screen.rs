@@ -160,7 +160,6 @@ impl SystemInfoScreen {
 
         self.draw_cpu(&mut image, cpu_usage, scale);
         self.draw_memory(&mut image, ram_usage, scale);
-        // TODO: remove all the wonderful locks...
         self.screen.bytes = image.into_vec();
     }
 
@@ -180,7 +179,7 @@ impl SystemInfoScreen {
                 active: active.clone(),
                 handle: Mutex::new(Some(thread::spawn(move || {
                     let sys = System::new();
-                    let sender = tx.clone();
+                    let sender = tx.to_owned();
                     let active = active.clone();
                     loop {
                         while !active.load(Ordering::Acquire) {
@@ -219,16 +218,13 @@ impl SystemInfoScreen {
         this
     }
 
-    // call me on a different thread
     pub fn update(&mut self) {
         let system_stats = self.receiver.try_recv();
         match system_stats {
             Ok(system_info_state) => {
                 self.draw_screen(system_info_state.cpu_usage, system_info_state.ram_usage);
             }
-            Err(_) => {
-                // well, do nothing :)
-            }
+            Err(_) => {}
         }
     }
 }
