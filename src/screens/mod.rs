@@ -1,6 +1,7 @@
 use crate::config_manager::ConfigManager;
 use rusttype::Font;
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
+use std::rc::Rc;
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
 use std::thread::JoinHandle;
 use std::time::Instant;
 pub mod bitpanda_screen;
@@ -12,7 +13,7 @@ pub struct Screen {
     pub description: String,
     pub key: String,
     pub bytes: Vec<u8>,
-    pub font: Arc<Mutex<Option<Font<'static>>>>,
+    pub font: Rc<Font<'static>>,
     pub active: Arc<AtomicBool>,
     pub initial_update_called: bool,
     pub handle: Option<JoinHandle<()>>,
@@ -27,10 +28,10 @@ impl Default for Screen {
             description: String::from(""),
             key: String::from(""),
             bytes: Vec::new(),
-            font: Arc::new(Mutex::new(Font::try_from_vec(Vec::from(include_bytes!(
-                "../Liberation.ttf"
-            )
-                as &[u8])))),
+            font: Rc::new(
+                Font::try_from_vec(Vec::from(include_bytes!("../Liberation.ttf") as &[u8]))
+                    .unwrap(),
+            ),
             active: Arc::new(AtomicBool::new(false)),
             initial_update_called: false,
             handle: None,

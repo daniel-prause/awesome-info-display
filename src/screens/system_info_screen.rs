@@ -11,7 +11,8 @@ use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_m
 use imageproc::rect::Rect;
 use rusttype::Font;
 use rusttype::Scale;
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
+use std::rc::Rc;
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 use systemstat::{saturating_sub_bytes, Platform, System};
@@ -89,7 +90,7 @@ impl SystemInfoScreen {
             0,
             0,
             scale,
-            self.screen.font.lock().unwrap().as_ref().unwrap(),
+            &self.screen.font,
             "CPU",
         );
         draw_text_mut(
@@ -98,7 +99,7 @@ impl SystemInfoScreen {
             222,
             0,
             scale,
-            self.screen.font.lock().unwrap().as_ref().unwrap(),
+            &self.screen.font,
             &cpu_text,
         );
         draw_hollow_rect_mut(
@@ -127,7 +128,7 @@ impl SystemInfoScreen {
             0,
             30,
             scale,
-            self.screen.font.lock().unwrap().as_ref().unwrap(),
+            &self.screen.font,
             "RAM",
         );
         draw_text_mut(
@@ -136,7 +137,7 @@ impl SystemInfoScreen {
             222,
             30,
             scale,
-            self.screen.font.lock().unwrap().as_ref().unwrap(),
+            &self.screen.font,
             &memory_text,
         );
         draw_hollow_rect_mut(
@@ -166,7 +167,7 @@ impl SystemInfoScreen {
     pub fn new(
         description: String,
         key: String,
-        font: Arc<Mutex<Option<Font<'static>>>>,
+        font: Rc<Font<'static>>,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> SystemInfoScreen {
         let (tx, rx): (Sender<SystemInfoState>, Receiver<SystemInfoState>) = bounded(1);

@@ -10,7 +10,8 @@ use imageproc::drawing::draw_text_mut;
 use openweathermap::blocking::weather;
 use rusttype::Font;
 use rusttype::Scale;
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
+use std::rc::Rc;
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 
@@ -105,7 +106,7 @@ impl WeatherScreen {
             72,
             16,
             Scale { x: 32.0, y: 32.0 },
-            self.screen.font.lock().unwrap().as_ref().unwrap(),
+            &self.screen.font,
             format!(
                 "{}\u{00B0}C",
                 (weather_info.temperature.round() as i64)
@@ -125,7 +126,7 @@ impl WeatherScreen {
             4,
             50,
             Scale { x: 14.0, y: 14.0 },
-            self.screen.font.lock().unwrap().as_ref().unwrap(),
+            &self.screen.font,
             weather_info.city.as_str(),
         );
     }
@@ -159,7 +160,7 @@ impl WeatherScreen {
     pub fn new(
         description: String,
         key: String,
-        font: Arc<Mutex<Option<Font<'static>>>>,
+        font: Rc<Font<'static>>,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> WeatherScreen {
         let (tx, rx): (Sender<WeatherInfo>, Receiver<WeatherInfo>) = bounded(1);

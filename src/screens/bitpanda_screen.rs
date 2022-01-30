@@ -10,7 +10,8 @@ use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use rusttype::Font;
 use rusttype::Scale;
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
+use std::rc::Rc;
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 use std::time::SystemTime;
@@ -113,7 +114,7 @@ impl BitpandaScreen {
             0,
             0,
             scale,
-            self.screen.font.lock().unwrap().as_ref().unwrap(),
+            &self.screen.font,
             "Bitpanda",
         );
         draw_text_mut(
@@ -122,7 +123,7 @@ impl BitpandaScreen {
             160,
             0,
             scale,
-            self.screen.font.lock().unwrap().as_ref().unwrap(),
+            &self.screen.font,
             &format!("{: >10}€", wallet_value),
         );
     }
@@ -140,7 +141,7 @@ impl BitpandaScreen {
             84,
             20,
             scale,
-            self.screen.font.lock().unwrap().as_ref().unwrap(),
+            &self.screen.font,
             "Last update",
         );
 
@@ -150,7 +151,7 @@ impl BitpandaScreen {
             52,
             40,
             scale,
-            self.screen.font.lock().unwrap().as_ref().unwrap(),
+            &self.screen.font,
             &date_value.format("%d.%m.%Y %T").to_string(),
         );
     }
@@ -168,7 +169,7 @@ impl BitpandaScreen {
     pub fn new(
         description: String,
         key: String,
-        font: Arc<Mutex<Option<Font<'static>>>>,
+        font: Rc<Font<'static>>,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> BitpandaScreen {
         let (tx, rx): (Sender<WalletInfo>, Receiver<WalletInfo>) = bounded(1);
