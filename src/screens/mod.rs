@@ -16,7 +16,7 @@ pub struct Screen {
     pub bytes: Arc<Mutex<Vec<u8>>>,
     pub font: Arc<Mutex<Option<Font<'static>>>>,
     pub active: Arc<AtomicBool>,
-    pub initial_update_called: Arc<AtomicBool>,
+    pub initial_update_called: bool,
     pub handle: Mutex<Option<JoinHandle<()>>>,
     pub mode: u32,
     pub mode_timeout: Option<Instant>,
@@ -34,7 +34,7 @@ impl Default for Screen {
             )
                 as &[u8])))),
             active: Arc::new(AtomicBool::new(false)),
-            initial_update_called: Arc::new(AtomicBool::new(false)),
+            initial_update_called: false,
             handle: Mutex::new(None),
             mode: 0,
             mode_timeout: Some(Instant::now()),
@@ -87,8 +87,8 @@ impl ScreenControl for Screen {
     }
 
     fn initial_update_called(&mut self) -> bool {
-        if !self.initial_update_called.load(Ordering::Acquire) {
-            self.initial_update_called.store(true, Ordering::Release);
+        if !self.initial_update_called {
+            self.initial_update_called = true;
             return false;
         }
         true

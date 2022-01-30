@@ -3,59 +3,63 @@ use crate::config_manager::ConfigManager;
 use crate::screens::BasicScreen;
 use crate::screens::Screen;
 use crate::screens::ScreenControl;
+use crossbeam_channel::bounded;
+use crossbeam_channel::{Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
-
 use openweathermap::blocking::weather;
 use rusttype::Font;
 use rusttype::Scale;
 use std::fmt::Debug;
-use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 
 #[derive(Debug)]
 pub struct WeatherScreen {
     screen: Screen,
-    weather_icon: Mutex<String>,
-    city: Mutex<String>,
-    temperature: Mutex<f64>,
     symbols: Option<Font<'static>>,
+    receiver: Receiver<WeatherInfo>,
 }
 
-impl BasicScreen for std::sync::Arc<RwLock<WeatherScreen>> {
+#[derive(Default, Clone)]
+struct WeatherInfo {
+    weather_icon: String,
+    city: String,
+    temperature: f64,
+}
+
+impl BasicScreen for WeatherScreen {
     fn description(&self) -> String {
-        self.read().unwrap().screen.description.clone()
+        self.screen.description.clone()
     }
 
     fn current_image(&self) -> Vec<u8> {
-        self.read().unwrap().screen.current_image()
+        self.screen.current_image()
     }
 
     fn update(&mut self) {
-        WeatherScreen::update(self.clone());
+        WeatherScreen::update(self);
     }
 
     fn start(&self) {
-        self.read().unwrap().screen.start_worker();
+        self.screen.start_worker();
     }
 
     fn stop(&self) {
-        self.read().unwrap().screen.stop_worker();
+        self.screen.stop_worker();
     }
 
     fn key(&self) -> String {
-        self.read().unwrap().screen.key()
+        self.screen.key()
     }
 
     fn initial_update_called(&mut self) -> bool {
-        self.write().unwrap().screen.initial_update_called()
+        self.screen.initial_update_called()
     }
 
     fn enabled(&self) -> bool {
-        self.read()
-            .unwrap()
-            .screen
+        self.screen
             .config_manager
             .read()
             .unwrap()
@@ -64,9 +68,7 @@ impl BasicScreen for std::sync::Arc<RwLock<WeatherScreen>> {
     }
 
     fn set_status(&self, status: bool) {
-        self.read()
-            .unwrap()
-            .screen
+        self.screen
             .config_manager
             .write()
             .unwrap()
@@ -76,7 +78,18 @@ impl BasicScreen for std::sync::Arc<RwLock<WeatherScreen>> {
 }
 
 impl WeatherScreen {
-    pub fn draw_weather_info(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>) {
+    fn draw_screen(&mut self, weather_info: WeatherInfo) {
+        // draw initial image
+        let mut image = RgbImage::new(256, 64);
+        self.draw_weather_info(weather_info, &mut image);
+        // TODO: remove all the wonderful locks...
+        *self.screen.bytes.lock().unwrap() = image.into_vec();
+    }
+    fn draw_weather_info(
+        &mut self,
+        weather_info: WeatherInfo,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+    ) {
         // icon
         draw_text_mut(
             image,
@@ -85,7 +98,7 @@ impl WeatherScreen {
             6,
             Scale { x: 40.0, y: 40.0 },
             self.symbols.as_ref().unwrap(),
-            self.weather_icon.lock().unwrap().as_str(),
+            WeatherScreen::get_weather_icon(weather_info.weather_icon).as_str(),
         );
 
         // temperature
@@ -98,7 +111,7 @@ impl WeatherScreen {
             self.screen.font.lock().unwrap().as_ref().unwrap(),
             format!(
                 "{}\u{00B0}C",
-                (self.temperature.lock().unwrap().round() as i64)
+                (weather_info.temperature.round() as i64)
                     .to_string()
                     .as_str()
                     .to_string()
@@ -116,15 +129,20 @@ impl WeatherScreen {
             50,
             Scale { x: 14.0, y: 14.0 },
             self.screen.font.lock().unwrap().as_ref().unwrap(),
-            self.city.lock().unwrap().as_str(),
+            weather_info.city.as_str(),
         );
     }
 
-    fn update(instance: Arc<RwLock<WeatherScreen>>) {
-        let mut image = RgbImage::new(256, 64);
-
-        instance.write().unwrap().draw_weather_info(&mut image);
-        *instance.write().unwrap().screen.bytes.lock().unwrap() = image.into_vec();
+    fn update(&mut self) {
+        let weather_info = self.receiver.try_recv();
+        match weather_info {
+            Ok(weather_info) => {
+                self.draw_screen(weather_info);
+            }
+            Err(_) => {
+                // well, do nothing :)
+            }
+        }
     }
 
     fn get_weather_icon(code: String) -> String {
@@ -148,71 +166,59 @@ impl WeatherScreen {
         key: String,
         font: Arc<Mutex<Option<Font<'static>>>>,
         config_manager: Arc<RwLock<ConfigManager>>,
-    ) -> Arc<RwLock<WeatherScreen>> {
-        let this = Arc::new(RwLock::new(WeatherScreen {
+    ) -> WeatherScreen {
+        let (tx, rx): (Sender<WeatherInfo>, Receiver<WeatherInfo>) = bounded(1);
+        let active = Arc::new(AtomicBool::new(false));
+        let mut this = WeatherScreen {
             screen: Screen {
                 description,
                 key,
                 font,
-                config_manager,
+                config_manager: config_manager.clone(),
+                active: active.clone(),
                 ..Default::default()
             },
             symbols: Font::try_from_vec(Vec::from(include_bytes!("../symbols.otf") as &[u8])),
-            weather_icon: Mutex::new(String::from("")),
-            city: Mutex::new(String::from("")),
-            temperature: Mutex::new(0.0),
-        }));
+            receiver: rx,
+        };
 
-        let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
-        *this.read().unwrap().screen.handle.lock().unwrap() = Some(
-            builder
-                .spawn({
-                    let this = this.clone();
-                    move || loop {
-                        while !this.read().unwrap().screen.active.load(Ordering::Acquire) {
-                            thread::park();
-                        }
-                        let api_key = this
-                            .read()
-                            .unwrap()
-                            .screen
-                            .config_manager
-                            .read()
-                            .unwrap()
-                            .config
-                            .openweather_api_key
-                            .clone();
-                        let location = this
-                            .read()
-                            .unwrap()
-                            .screen
-                            .config_manager
-                            .read()
-                            .unwrap()
-                            .config
-                            .openweather_location
-                            .clone();
-                        // TODO: make this configurable for language and metric/non-metric units
-                        // get current weather for location
-                        match &weather(location.as_str(), "metric", "en", api_key.as_str()) {
-                            Ok(current) => {
-                                *this.write().unwrap().weather_icon.lock().unwrap() =
-                                    WeatherScreen::get_weather_icon(
-                                        current.weather[0].icon.clone(),
-                                    );
+        *this.screen.handle.lock().unwrap() = Some(thread::spawn({
+            let sender = tx.clone();
+            move || loop {
+                while !active.load(Ordering::Acquire) {
+                    thread::park();
+                }
+                let api_key = config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .openweather_api_key
+                    .clone();
+                let location = config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .openweather_location
+                    .clone();
+                // TODO: make this configurable for language and metric/non-metric units
+                // get current weather for location
+                match &weather(location.as_str(), "metric", "en", api_key.as_str()) {
+                    Ok(current) => {
+                        let mut weather_info: WeatherInfo = Default::default();
 
-                                *this.write().unwrap().temperature.lock().unwrap() =
-                                    current.main.temp;
-                                *this.write().unwrap().city.lock().unwrap() =
-                                    format!("{},{}", current.name.clone(), current.sys.country);
-                            }
-                            Err(e) => println!("Could not fetch weather because: {}", e),
-                        }
-                        thread::sleep(Duration::from_millis(60000));
+                        weather_info.weather_icon = current.weather[0].icon.clone();
+
+                        weather_info.temperature = current.main.temp;
+                        weather_info.city =
+                            format!("{},{}", current.name.clone(), current.sys.country);
+                        sender.try_send(weather_info).unwrap_or_default();
                     }
-                })
-                .expect("Cannot create JOB_EXECUTOR thread"),
-        );
-        this.clone()
+                    Err(e) => println!("Could not fetch weather because: {}", e),
+                }
+                thread::sleep(Duration::from_millis(60000));
+            }
+        }));
+        this.draw_screen(Default::default());
+        this
     }
 }
