@@ -13,7 +13,7 @@ pub mod weather_screen;
 pub struct Screen {
     pub description: String,
     pub key: String,
-    pub bytes: Arc<Mutex<Vec<u8>>>,
+    pub bytes: Vec<u8>,
     pub font: Arc<Mutex<Option<Font<'static>>>>,
     pub active: Arc<AtomicBool>,
     pub initial_update_called: bool,
@@ -28,7 +28,7 @@ impl Default for Screen {
         Screen {
             description: String::from(""),
             key: String::from(""),
-            bytes: Arc::new(Mutex::new(Vec::new())),
+            bytes: Vec::new(),
             font: Arc::new(Mutex::new(Font::try_from_vec(Vec::from(include_bytes!(
                 "../Liberation.ttf"
             )
@@ -95,6 +95,6 @@ impl ScreenControl for Screen {
     }
 
     fn current_image(&self) -> Vec<u8> {
-        self.bytes.lock().unwrap().clone()
+        self.bytes.clone()
     }
 }

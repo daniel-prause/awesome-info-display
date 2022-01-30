@@ -419,7 +419,7 @@ impl MediaInfoScreen {
         } else {
             self.draw_intro(&mut image, scale);
         }
-        *self.screen.bytes.lock().unwrap() = image.into_vec();
+        self.screen.bytes = image.into_vec();
     }
 
     fn update(&mut self) {

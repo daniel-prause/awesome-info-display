@@ -83,7 +83,7 @@ impl WeatherScreen {
         let mut image = RgbImage::new(256, 64);
         self.draw_weather_info(weather_info, &mut image);
         // TODO: remove all the wonderful locks...
-        *self.screen.bytes.lock().unwrap() = image.into_vec();
+        self.screen.bytes = image.into_vec();
     }
     fn draw_weather_info(
         &mut self,

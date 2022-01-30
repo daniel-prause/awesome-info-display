@@ -101,7 +101,7 @@ impl BitpandaScreen {
         self.draw_wallet_value(wallet_info.wallet_value, &mut image, scale);
         self.draw_updated_at(wallet_info.last_update, &mut image, scale);
         // TODO: remove all the wonderful locks...
-        *self.screen.bytes.lock().unwrap() = image.into_vec();
+        self.screen.bytes = image.into_vec();
     }
     pub fn draw_wallet_value(
         &mut self,
