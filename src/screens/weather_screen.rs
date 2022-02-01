@@ -29,8 +29,8 @@ struct WeatherInfo {
 }
 
 impl BasicScreen for WeatherScreen {
-    fn description(&self) -> String {
-        self.screen.description.clone()
+    fn description(&self) -> &String {
+        &self.screen.description
     }
 
     fn current_image(&self) -> Vec<u8> {

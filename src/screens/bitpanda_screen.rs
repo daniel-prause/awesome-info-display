@@ -45,8 +45,8 @@ impl Default for WalletInfo {
 }
 
 impl BasicScreen for BitpandaScreen {
-    fn description(&self) -> String {
-        self.screen.description.clone()
+    fn description(&self) -> &String {
+        &self.screen.description
     }
 
     fn current_image(&self) -> Vec<u8> {

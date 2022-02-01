@@ -310,8 +310,8 @@ impl Application for AwesomeDisplay {
                 self.config_manager.write().unwrap().config.brightness = slider_value as u16;
             }
             Message::ScreenStatusChanged(status, screen) => {
-                if self.screens.screen_deactivatable(screen.clone()) {
-                    self.screens.set_status_for_screen(screen.clone(), status);
+                if self.screens.screen_deactivatable(&screen) {
+                    self.screens.set_status_for_screen(&screen, status);
                 }
             }
             Message::BitpandaApiKeyChanged(message) => {
@@ -512,7 +512,7 @@ fn callback(event: Event) -> Option<Event> {
 
 fn checkbox<'a>(checked: bool, key: String, description: String) -> Element<'a, Message> {
     Checkbox::new(checked, description, move |value: bool| {
-        Message::ScreenStatusChanged(value, key.clone().into())
+        Message::ScreenStatusChanged(value, key.clone())
     })
     .width(Length::Units(200))
     .into()

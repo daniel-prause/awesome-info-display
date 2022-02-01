@@ -51,8 +51,8 @@ struct MusicPlayerInfo {
 }
 
 impl BasicScreen for MediaInfoScreen {
-    fn description(&self) -> String {
-        self.screen.description.clone()
+    fn description(&self) -> &String {
+        &self.screen.description
     }
 
     fn current_image(&self) -> Vec<u8> {

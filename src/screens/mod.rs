@@ -44,7 +44,7 @@ impl Default for Screen {
 
 pub trait BasicScreen {
     fn update(&mut self) -> ();
-    fn description(&self) -> String;
+    fn description(&self) -> &String;
     fn key(&self) -> String;
     fn current_image(&self) -> Vec<u8>;
     fn initial_update_called(&mut self) -> bool;
