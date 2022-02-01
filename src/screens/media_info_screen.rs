@@ -152,7 +152,7 @@ impl MediaInfoScreen {
             scale,
             &self.screen.font,
             &rotate(
-                &[&artist.clone(), "   "].join("").to_string(),
+                &[&artist, "   "].join("").to_string(),
                 Direction::Left,
                 start,
             ),
@@ -188,7 +188,7 @@ impl MediaInfoScreen {
             scale,
             &self.screen.font,
             &rotate(
-                &[&title.clone(), "   "].join("").to_string(),
+                &[&title, "   "].join("").to_string(),
                 Direction::Left,
                 start,
             ),

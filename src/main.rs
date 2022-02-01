@@ -133,7 +133,7 @@ impl Application for AwesomeDisplay {
         let font = Rc::new(
             Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8])).unwrap(),
         );
-        let builder = thread::Builder::new().name("JOB_EXECUTOR".into());
+
         let config_manager =
             std::sync::Arc::new(RwLock::new(config_manager::ConfigManager::new(None)));
         let mut screens: Vec<Box<dyn screens::BasicScreen>> = Vec::new();
@@ -177,16 +177,17 @@ impl Application for AwesomeDisplay {
             openweather_location_input: text_input::State::new(),
             slider: slider::State::new(),
         };
-        builder
-            .spawn({
-                move || loop {
-                    if let Err(error) = grab(callback) {
-                        println!("Error: {:?}", error)
-                    }
-                }
-            })
-            .expect("Cannot create JOB_EXECUTOR thread");
 
+        // global key press listener
+        thread::spawn({
+            move || loop {
+                if let Err(error) = grab(callback) {
+                    println!("Error: {:?}", error)
+                }
+            }
+        });
+
+        // look for serial port
         thread::spawn(move || loop {
             if SERIAL_PORT.lock().unwrap().is_none() {
                 let port = init_serial();
