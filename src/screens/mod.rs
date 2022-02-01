@@ -46,7 +46,7 @@ pub trait BasicScreen {
     fn update(&mut self) -> ();
     fn description(&self) -> &String;
     fn key(&self) -> &String;
-    fn current_image(&self) -> Vec<u8>;
+    fn current_image(&self) -> &Vec<u8>;
     fn initial_update_called(&mut self) -> bool;
     fn start(&self) -> ();
     fn stop(&self) -> ();
@@ -59,7 +59,7 @@ pub trait ScreenControl {
     fn start_worker(&self);
     fn stop_worker(&self);
     fn initial_update_called(&mut self) -> bool;
-    fn current_image(&self) -> Vec<u8>;
+    fn current_image(&self) -> &Vec<u8>;
     fn key(&self) -> &String;
 }
 
@@ -90,7 +90,7 @@ impl ScreenControl for Screen {
         true
     }
 
-    fn current_image(&self) -> Vec<u8> {
-        self.bytes.clone()
+    fn current_image(&self) -> &Vec<u8> {
+        &self.bytes
     }
 }

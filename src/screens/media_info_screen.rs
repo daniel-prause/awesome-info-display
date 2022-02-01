@@ -55,7 +55,7 @@ impl BasicScreen for MediaInfoScreen {
         &self.screen.description
     }
 
-    fn current_image(&self) -> Vec<u8> {
+    fn current_image(&self) -> &Vec<u8> {
         self.screen.current_image()
     }
 

@@ -360,7 +360,7 @@ impl Application for AwesomeDisplay {
         let image = Image::new(iced::image::Handle::from_pixels(256, 64, converted_sb));
 
         // SEND TO DISPLAY
-        let bytes = &self.screens.current_screen().current_image();
+        let bytes = self.screens.current_screen().current_image();
         let bytes = convert_to_gray_scale(bytes);
         if !write_screen_buffer(&mut *SERIAL_PORT.lock().unwrap(), &bytes) {
             *SERIAL_PORT.lock().unwrap() = None;
