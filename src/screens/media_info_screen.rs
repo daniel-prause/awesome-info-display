@@ -519,7 +519,8 @@ impl MediaInfoScreen {
                                 match caps {
                                     Some(caps) => {
                                         let artist_and_title =
-                                            caps.get(1).map_or("", |m| m.as_str());
+                                            caps.get(1).map_or("", |m| m.as_str()).trim();
+
                                         let artist_and_title_caps =
                                             match_artist_and_title.captures(&artist_and_title);
                                         match artist_and_title_caps {
