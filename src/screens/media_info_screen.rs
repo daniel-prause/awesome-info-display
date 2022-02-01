@@ -126,7 +126,7 @@ impl MediaInfoScreen {
     }
     fn draw_artist(
         &mut self,
-        artist: String,
+        artist: &String,
         image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
         scale: Scale,
     ) {
@@ -161,7 +161,7 @@ impl MediaInfoScreen {
 
     fn draw_title(
         &mut self,
-        title: String,
+        title: &String,
         image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
         scale: Scale,
     ) {
@@ -356,7 +356,7 @@ impl MediaInfoScreen {
         self.draw_play_button(playback_status, image);
     }
 
-    fn draw_screen(&mut self, music_player_info: MusicPlayerInfo) {
+    fn draw_screen(&mut self, music_player_info: &MusicPlayerInfo) {
         let mut image = RgbImage::new(256, 64);
         let scale = Scale { x: 16.0, y: 16.0 };
         let seconds = Duration::from_secs(3);
@@ -375,8 +375,8 @@ impl MediaInfoScreen {
         }
 
         if music_player_info.editor_active {
-            self.draw_artist(music_player_info.artist, &mut image, scale);
-            self.draw_title(music_player_info.title, &mut image, scale);
+            self.draw_artist(&music_player_info.artist, &mut image, scale);
+            self.draw_title(&music_player_info.title, &mut image, scale);
             self.draw_mute_speaker(music_player_info.mute, &mut image);
 
             if self.screen.mode == 0 {
@@ -406,8 +406,8 @@ impl MediaInfoScreen {
         let music_player_info = self.receiver.try_recv();
         match music_player_info {
             Ok(music_player_info) => {
-                self.draw_screen(music_player_info.clone());
-                self.music_player_info = music_player_info.clone();
+                self.draw_screen(&music_player_info);
+                self.music_player_info = music_player_info;
             }
             Err(_) => {}
         }
@@ -567,7 +567,7 @@ impl MediaInfoScreen {
             artist_x: 0,
             receiver: rx,
         };
-        this.draw_screen(Default::default());
+        this.draw_screen(&Default::default());
         this
     }
 }
