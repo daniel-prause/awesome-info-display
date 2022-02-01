@@ -69,7 +69,7 @@ impl ScreenManager {
 
     pub fn set_screen_for_short(&mut self, key: String, mode: u32) {
         let index: usize;
-        match self.screens.iter().position(|r| r.key() == key) {
+        match self.screens.iter().position(|r| *r.key() == key) {
             Some(idx) => index = idx,
             None => return,
         };
@@ -114,11 +114,11 @@ impl ScreenManager {
         self.switch_in_progress = false;
 
         for screen in self.screens.iter() {
-            if screen.key() == *key {
+            if *screen.key() == *key {
                 screen.set_status(status)
             }
         }
-        if (*key == self.screens[self.current].key()) && !status {
+        if (*key == *self.screens[self.current].key()) && !status {
             self.next_screen();
         }
     }
@@ -127,7 +127,7 @@ impl ScreenManager {
         let mut count = 0;
 
         for screen in self.screens.iter() {
-            if screen.enabled() && *key != screen.key() {
+            if screen.enabled() && *key != *screen.key() {
                 count += 1
             }
             if count >= 1 {
@@ -137,10 +137,10 @@ impl ScreenManager {
         count >= 1
     }
 
-    pub fn descriptions_and_keys_and_state(&self) -> Vec<(&String, String, bool)> {
-        let mut result = Vec::<(&String, String, bool)>::new();
+    pub fn descriptions_and_keys_and_state(&self) -> Vec<(&String, &String, bool)> {
+        let mut result = Vec::<(&String, &String, bool)>::new();
         for screen in self.screens.iter() {
-            result.push((&screen.description(), screen.key(), screen.enabled()))
+            result.push((&screen.description(), &screen.key(), screen.enabled()))
         }
         return result;
     }

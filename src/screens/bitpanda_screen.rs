@@ -65,8 +65,8 @@ impl BasicScreen for BitpandaScreen {
         self.screen.stop_worker();
     }
 
-    fn key(&self) -> String {
-        self.screen.key()
+    fn key(&self) -> &String {
+        &self.screen.key
     }
 
     fn initial_update_called(&mut self) -> bool {
