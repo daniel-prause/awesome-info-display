@@ -197,13 +197,8 @@ impl BitpandaScreen {
                             Ok(duration) => {
                                 if (duration.as_secs() > 60
                                     || duration.as_secs() < 60 && !initial_tryout)
-                                    && config_manager
-                                        .read()
-                                        .unwrap()
-                                        .config
-                                        .bitpanda_api_key
-                                        .clone()
-                                        != ""
+                                    && &config_manager.read().unwrap().config.bitpanda_api_key.len()
+                                        > &0
                                 {
                                     initial_tryout = true;
                                     // 1. get current values for crypto coins
@@ -220,12 +215,11 @@ impl BitpandaScreen {
                                                         .get("https://api.bitpanda.com/v1/wallets")
                                                         .header(
                                                             "X-API-KEY",
-                                                            config_manager
+                                                            &config_manager
                                                                 .read()
                                                                 .unwrap()
                                                                 .config
-                                                                .bitpanda_api_key
-                                                                .clone(),
+                                                                .bitpanda_api_key,
                                                         )
                                                         .send();
                                                     match wallet_values {
@@ -254,11 +248,7 @@ impl BitpandaScreen {
                                                                             .unwrap_or_default();
                                                                         let mut sum = 0.0;
                                                                         for wallet in wallets {
-                                                                            let asset_key = wallet
-                                                                    ["attributes"]
-                                                                    ["cryptocoin_symbol"]
-                                                                    .as_str()
-                                                                    .unwrap();
+                                                                            let asset_key = wallet["attributes"]["cryptocoin_symbol"].as_str().unwrap();
                                                                             if wallet["attributes"]
                                                                                 ["balance"]
                                                                                 != "0.00000000"
@@ -276,8 +266,7 @@ impl BitpandaScreen {
                                                                         .parse::<f64>()
                                                                         .unwrap();
 
-                                                                                sum += amount_of_crypto
-                                                                        * amount_of_eur;
+                                                                                sum += amount_of_crypto * amount_of_eur;
                                                                             }
                                                                         }
 
