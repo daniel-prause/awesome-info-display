@@ -120,11 +120,11 @@ impl BitpandaScreen {
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
-            160,
+            112,
             0,
             scale,
             &self.screen.font,
-            &format!("{: >10.2}€", wallet_value),
+            &format!("{: >16.2}€", wallet_value),
         );
     }
 
