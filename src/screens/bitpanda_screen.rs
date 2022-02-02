@@ -242,8 +242,7 @@ impl BitpandaScreen {
                                                                             .unwrap_or_default();
                                                                         let assets: Value =
                                                                             serde_json::from_str(
-                                                                                &asset_values
-                                                                                    .to_string(),
+                                                                                &asset_values,
                                                                             )
                                                                             .unwrap_or_default();
                                                                         let mut sum = 0.0;

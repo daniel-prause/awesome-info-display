@@ -107,16 +107,7 @@ impl WeatherScreen {
             16,
             Scale { x: 32.0, y: 32.0 },
             &self.screen.font,
-            format!(
-                "{}\u{00B0}C",
-                (weather_info.temperature.round() as i64)
-                    .to_string()
-                    .as_str()
-                    .to_string()
-                    .as_str()
-            )
-            .to_string()
-            .as_str(),
+            format!("{}\u{00B0}C", (weather_info.temperature.round() as i64)).as_str(),
         );
 
         // city
