@@ -151,11 +151,7 @@ impl MediaInfoScreen {
             0,
             scale,
             &self.screen.font,
-            &rotate(
-                &[&artist, "   "].join("").to_string(),
-                Direction::Left,
-                start,
-            ),
+            &rotate(&[&artist, "   "].join(""), Direction::Left, start),
         );
     }
 
@@ -187,11 +183,7 @@ impl MediaInfoScreen {
             16,
             scale,
             &self.screen.font,
-            &rotate(
-                &[&title, "   "].join("").to_string(),
-                Direction::Left,
-                start,
-            ),
+            &rotate(&[&title, "   "].join(""), Direction::Left, start),
         );
     }
 
@@ -228,8 +220,8 @@ impl MediaInfoScreen {
         let seconds = length % 60;
         let minutes = (length / 60) % 60;
         let hours = (length / 60) / 60;
-        let elapsed = format!("{:0>2}:{:0>2}:{:0>2}", hours, minutes, seconds).to_string();
-        let elapsed = format!("{: <12}", elapsed.to_string()).to_string();
+        let elapsed = format!("{:0>2}:{:0>2}:{:0>2}", hours, minutes, seconds);
+        let elapsed = format!("{: <12}", elapsed);
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
@@ -245,8 +237,8 @@ impl MediaInfoScreen {
         let seconds = length % 60;
         let minutes = (length / 60) % 60;
         let hours = (length / 60) / 60;
-        let total = format!("{:0>2}:{:0>2}:{:0>2}", hours, minutes, seconds).to_string();
-        let total = format!("{: >12}", total.to_string()).to_string();
+        let total = format!("{:0>2}:{:0>2}:{:0>2}", hours, minutes, seconds);
+        let total = format!("{: >12}", total);
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
