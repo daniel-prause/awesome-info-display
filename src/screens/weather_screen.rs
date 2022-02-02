@@ -192,7 +192,7 @@ impl WeatherScreen {
                             .clone();
                         // TODO: make this configurable for language and metric/non-metric units
                         // get current weather for location
-                        match &weather(location.as_str(), "metric", "en", api_key.as_str()) {
+                        match weather(location.as_str(), "metric", "en", api_key.as_str()) {
                             Ok(current) => {
                                 let mut weather_info: WeatherInfo = Default::default();
 
@@ -200,7 +200,7 @@ impl WeatherScreen {
 
                                 weather_info.temperature = current.main.temp;
                                 weather_info.city =
-                                    format!("{},{}", current.name.clone(), current.sys.country);
+                                    format!("{},{}", &current.name, &current.sys.country);
                                 sender.try_send(weather_info).unwrap_or_default();
                             }
                             Err(e) => println!("Could not fetch weather because: {}", e),
