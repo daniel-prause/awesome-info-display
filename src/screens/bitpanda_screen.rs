@@ -124,7 +124,7 @@ impl BitpandaScreen {
             0,
             scale,
             &self.screen.font,
-            &format!("{: >10}€", wallet_value),
+            &format!("{: >10.2}€", wallet_value),
         );
     }
 
