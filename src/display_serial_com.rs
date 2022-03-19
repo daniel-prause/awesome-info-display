@@ -2,29 +2,7 @@ use hex_literal::hex;
 use serialport;
 use std::cmp;
 use std::io::Write;
-use std::thread;
 use std::time::Duration;
-
-pub fn init_serial() -> Option<std::boxed::Box<dyn serialport::SerialPort>> {
-    let ports = serialport::available_ports().expect("No ports found!");
-    thread::sleep(Duration::from_millis(1000));
-
-    if ports.len() == 0 {
-        return None;
-    }
-    for p in ports.clone() {
-        let mut port = match serialport::new(p.port_name, 4608000)
-            .timeout(Duration::new(0, 500000))
-            .open()
-        {
-            Ok(port) => port,
-            Err(_) => continue,
-        };
-        port.flush().unwrap();
-        return Some(port);
-    }
-    return None;
-}
 
 pub fn convert_to_gray_scale(bytes: &Vec<u8>) -> Vec<u8> {
     let mut buffer = Vec::new();
@@ -43,39 +21,60 @@ pub fn convert_to_gray_scale(bytes: &Vec<u8>) -> Vec<u8> {
 }
 
 #[allow(unused)]
-pub fn write_screen_buffer(
-    port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
-    screen_buf: &[u8],
-) -> bool {
-    if port.is_none() || port.as_deref_mut().is_none() {
-        //println!("Port error!");
-        return false;
-    }
-    match port.as_deref_mut().unwrap().write(&hex!("e4")) {
-        Ok(_) => {
-            let mut bytes_send = 0;
-            while bytes_send < screen_buf.len() {
-                let slice = &screen_buf[bytes_send..cmp::min(bytes_send + 64, screen_buf.len())];
-                bytes_send += slice.len();
-                match port.as_deref_mut() {
-                    Some(result) => match result.write(&slice) {
-                        Ok(_) => {
-                            return true;
+pub fn write_screen_buffer(screen_buf: &[u8]) -> bool {
+    match serialport::available_ports() {
+        Ok(ports) => {
+            for p in ports {
+                match p.port_type {
+                    serialport::SerialPortType::UsbPort(info) => {
+                        let comp = format!("{:04x}{:04x}", info.vid, info.pid);
+                        // look for teensy 4.0 vendor and product id
+                        if ("16c00483".eq(&comp)) {
+                            let mut port = serialport::new(p.port_name, 115_200)
+                                .timeout(Duration::from_millis(10));
+                            match port.open() {
+                                Ok(mut port_ok) => match port_ok.write(&hex!("e4")) {
+                                    Ok(_) => match std::io::stdout().flush() {
+                                        Ok(_) => {
+                                            let mut bytes_send = 0;
+                                            while bytes_send < screen_buf.len() {
+                                                let slice = &screen_buf[bytes_send
+                                                    ..cmp::min(bytes_send + 64, screen_buf.len())];
+                                                bytes_send += slice.len();
+
+                                                match port_ok.write(&slice) {
+                                                    Ok(_) => {
+                                                        return true;
+                                                    }
+                                                    Err(_) => {
+                                                        return false;
+                                                    }
+                                                }
+                                            }
+                                            return true;
+                                        }
+                                        Err(_) => {}
+                                    },
+                                    Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => (),
+                                    Err(e) => eprintln!("{:?}", e),
+                                },
+                                Err(err) => {
+                                    println!("ERR: {}", err);
+                                }
+                            }
                         }
-                        Err(_) => {
-                            return false;
-                        }
-                    },
-                    None => {
-                        return false;
+                    }
+                    _ => {
+                        // ignore other types; we are only interested in
                     }
                 }
             }
-            return true;
         }
-        Err(_result) => {
-            //println!("Serial port error: {:?}", result);
-            return false;
+        Err(e) => {
+            eprintln!("{:?}", e);
+            eprintln!("Error listing serial ports");
         }
     }
+
+    return false;
 }

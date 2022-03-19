@@ -11,7 +11,9 @@ mod display_serial_com;
 mod screen_manager;
 mod screens;
 mod style;
-use crate::display_serial_com::{convert_to_gray_scale, init_serial, write_screen_buffer};
+use crate::display_serial_com::{convert_to_gray_scale, write_screen_buffer};
+use crossbeam_channel::bounded;
+use crossbeam_channel::{Receiver, Sender};
 use lazy_static::lazy_static;
 use rdev::{grab, Event, EventType, Key};
 use rusttype::Font;
@@ -108,6 +110,7 @@ struct AwesomeDisplay {
     openweather_api_key_input: text_input::State,
     openweather_location_input: text_input::State,
     slider: slider::State,
+    sender: Sender<Vec<u8>>,
 }
 
 #[derive(Debug, Clone)]
@@ -164,6 +167,7 @@ impl Application for AwesomeDisplay {
             Rc::clone(&font),
             Arc::clone(&config_manager),
         )));
+        let (tx, rx): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         let this = AwesomeDisplay {
             next_screen: button::State::new(),
             previous_screen: button::State::new(),
@@ -176,6 +180,7 @@ impl Application for AwesomeDisplay {
             openweather_api_key_input: text_input::State::new(),
             openweather_location_input: text_input::State::new(),
             slider: slider::State::new(),
+            sender: tx,
         };
 
         // global key press listener
@@ -187,15 +192,15 @@ impl Application for AwesomeDisplay {
             }
         });
 
-        // look for serial port
+        // write to serial port ... since it is blocking, we'll just do this in a different thread
         thread::spawn(move || loop {
-            if SERIAL_PORT.lock().unwrap().is_none() {
-                let port = init_serial();
-                if port.is_some() {
-                    *SERIAL_PORT.lock().unwrap() = port;
+            let buf = rx.recv();
+
+            match buf {
+                Ok(b) => {
+                    write_screen_buffer(&b);
                 }
-            } else {
-                thread::sleep(std::time::Duration::from_millis(1000));
+                Err(_) => {}
             }
         });
         (this, Command::none())
@@ -362,8 +367,9 @@ impl Application for AwesomeDisplay {
         // SEND TO DISPLAY
         let bytes = self.screens.current_screen().current_image();
         let bytes = convert_to_gray_scale(bytes);
-        if !write_screen_buffer(&mut *SERIAL_PORT.lock().unwrap(), &bytes) {
-            *SERIAL_PORT.lock().unwrap() = None;
+        match self.sender.try_send(bytes.clone()) {
+            Ok(_) => {}
+            Err(_) => {}
         }
         let mut column_parts = vec![
             button(
