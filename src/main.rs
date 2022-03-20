@@ -11,7 +11,7 @@ mod display_serial_com;
 mod screen_manager;
 mod screens;
 mod style;
-use crate::display_serial_com::{convert_to_gray_scale, write_screen_buffer};
+use crate::display_serial_com::{convert_to_gray_scale, init_serial, write_screen_buffer};
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use lazy_static::lazy_static;
@@ -195,12 +195,17 @@ impl Application for AwesomeDisplay {
         // write to serial port ... since it is blocking, we'll just do this in a different thread
         thread::spawn(move || loop {
             let buf = rx.recv();
-
-            match buf {
-                Ok(b) => {
-                    write_screen_buffer(&b);
+            if SERIAL_PORT.lock().unwrap().is_none() {
+                *SERIAL_PORT.lock().unwrap() = init_serial();
+            } else {
+                match buf {
+                    Ok(b) => {
+                        if !write_screen_buffer(&mut *SERIAL_PORT.lock().unwrap(), &b) {
+                            *SERIAL_PORT.lock().unwrap() = None;
+                        }
+                    }
+                    Err(_) => {}
                 }
-                Err(_) => {}
             }
         });
         (this, Command::none())
