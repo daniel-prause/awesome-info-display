@@ -5,6 +5,7 @@ use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
 use std::thread::JoinHandle;
 use std::time::Instant;
 pub mod bitpanda_screen;
+pub mod current_date_screen;
 pub mod media_info_screen;
 pub mod system_info_screen;
 pub mod weather_screen;

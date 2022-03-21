@@ -21,6 +21,7 @@ impl ConfigManager {
             media_screen_active: true,
             weather_screen_active: true,
             system_info_screen_active: true,
+            current_date_screen_active: true,
             brightness: 100,
         };
         let mut this = ConfigManager {

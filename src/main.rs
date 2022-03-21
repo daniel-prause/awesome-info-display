@@ -167,6 +167,14 @@ impl Application for AwesomeDisplay {
             Rc::clone(&font),
             Arc::clone(&config_manager),
         )));
+        screens.push(Box::new(
+            screens::current_date_screen::CurrentDateScreen::new(
+                String::from("Time Info"),
+                String::from("current_date_screen"),
+                Rc::clone(&font),
+                Arc::clone(&config_manager),
+            ),
+        ));
         let (tx, rx): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         let this = AwesomeDisplay {
             next_screen: button::State::new(),
