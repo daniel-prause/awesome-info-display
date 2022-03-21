@@ -95,7 +95,7 @@ impl CurrentDateScreen {
         local: DateTime<Local>,
         scale: Scale,
     ) {
-        let date_time = local.format("%Y-%m-%d %H:%M:%S").to_string();
+        let date_time = local.format("%d.%m.%Y %H:%M:%S").to_string();
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
