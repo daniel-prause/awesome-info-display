@@ -3,6 +3,7 @@ use serialport;
 use std::cmp;
 use std::io::Write;
 use std::time::Duration;
+use std::thread;
 
 pub fn init_serial() -> Option<std::boxed::Box<dyn serialport::SerialPort>> {
     let ports = serialport::available_ports().expect("No ports found!");
@@ -30,6 +31,11 @@ pub fn init_serial() -> Option<std::boxed::Box<dyn serialport::SerialPort>> {
         }
     }
     return None;
+}
+
+pub fn reset_display(port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>) {
+    port.as_deref_mut().unwrap().write(&hex!("11")).unwrap();
+    thread::sleep(Duration::from_millis(500));
 }
 
 pub fn convert_to_gray_scale(bytes: &Vec<u8>) -> Vec<u8> {

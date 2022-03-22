@@ -11,7 +11,7 @@ mod display_serial_com;
 mod screen_manager;
 mod screens;
 mod style;
-use crate::display_serial_com::{convert_to_gray_scale, init_serial, write_screen_buffer};
+use crate::display_serial_com::{convert_to_gray_scale, init_serial, write_screen_buffer, reset_display};
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use lazy_static::lazy_static;
@@ -205,6 +205,7 @@ impl Application for AwesomeDisplay {
             let buf = rx.recv();
             if SERIAL_PORT.lock().unwrap().is_none() {
                 *SERIAL_PORT.lock().unwrap() = init_serial();
+                reset_display(&mut *SERIAL_PORT.lock().unwrap());
             } else {
                 match buf {
                     Ok(b) => {
