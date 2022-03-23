@@ -207,7 +207,9 @@ impl Application for AwesomeDisplay {
             let buf = rx.recv();
             if SERIAL_PORT.lock().unwrap().is_none() {
                 *SERIAL_PORT.lock().unwrap() = init_serial();
-                reset_display(&mut *SERIAL_PORT.lock().unwrap());
+                if SERIAL_PORT.lock().unwrap().is_some() {
+                    reset_display(&mut *SERIAL_PORT.lock().unwrap());
+                }
             } else {
                 match buf {
                     Ok(b) => {
