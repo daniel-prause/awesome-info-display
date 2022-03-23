@@ -2,8 +2,8 @@ use hex_literal::hex;
 use serialport;
 use std::cmp;
 use std::io::Write;
-use std::time::Duration;
 use std::thread;
+use std::time::Duration;
 
 pub fn init_serial() -> Option<std::boxed::Box<dyn serialport::SerialPort>> {
     let ports = serialport::available_ports().expect("No ports found!");
@@ -59,13 +59,11 @@ pub fn write_screen_buffer(
     port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
     screen_buf: &[u8],
 ) -> bool {
-    println!("WRITING STUFF");
     match port.as_deref_mut().unwrap().write(&hex!("e4")) {
         Ok(_) => match std::io::stdout().flush() {
             Ok(_) => {
                 let mut bytes_send = 0;
                 while bytes_send < screen_buf.len() {
-                    println!("BYTE SENT: {}", bytes_send);
                     let slice =
                         &screen_buf[bytes_send..cmp::min(bytes_send + 64, screen_buf.len())];
                     bytes_send += slice.len();

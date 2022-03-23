@@ -11,7 +11,9 @@ mod display_serial_com;
 mod screen_manager;
 mod screens;
 mod style;
-use crate::display_serial_com::{convert_to_gray_scale, init_serial, write_screen_buffer, reset_display};
+use crate::display_serial_com::{
+    convert_to_gray_scale, init_serial, reset_display, write_screen_buffer,
+};
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use lazy_static::lazy_static;
@@ -360,31 +362,43 @@ impl Application for AwesomeDisplay {
         }
         // RENDER IN APP
         let screen_buffer = self.screens.current_screen().current_image();
-        let mut converted_sb = Vec::new();
+        let mut converted_sb_rgba = Vec::with_capacity(65536);
+        let mut converted_sb_rgb = Vec::with_capacity(49152);
+        let set_brightness = |chunk_param: u8| {
+            (chunk_param as f32 * self.config_manager.read().unwrap().config.brightness as f32
+                / 100.0) as u8
+        };
+
         for chunk in screen_buffer.chunks(3) {
-            converted_sb.push(
-                (chunk[2] as f32 * self.config_manager.read().unwrap().config.brightness as f32
-                    / 100.0) as u8,
-            );
-            converted_sb.push(
-                (chunk[1] as f32 * self.config_manager.read().unwrap().config.brightness as f32
-                    / 100.0) as u8,
-            );
-            converted_sb.push(
-                (chunk[0] as f32 * self.config_manager.read().unwrap().config.brightness as f32
-                    / 100.0) as u8,
-            );
-            converted_sb.push(255);
+            let chunk_two = set_brightness(chunk[2]);
+            let chunk_one = set_brightness(chunk[1]);
+            let chunk_zero = set_brightness(chunk[0]);
+            // for preview
+            converted_sb_rgba.push(chunk[2]);
+            converted_sb_rgba.push(chunk[1]);
+            converted_sb_rgba.push(chunk[0]);
+            converted_sb_rgba.push(255);
+            // for display
+            converted_sb_rgb.push(chunk_two);
+            converted_sb_rgb.push(chunk_one);
+            converted_sb_rgb.push(chunk_zero);
         }
-        let image = Image::new(iced::image::Handle::from_pixels(256, 64, converted_sb));
+        let image = Image::new(iced::image::Handle::from_pixels(256, 64, converted_sb_rgba));
 
         // SEND TO DISPLAY
-        let bytes = self.screens.current_screen().current_image();
-        let bytes = convert_to_gray_scale(bytes);
+        let bytes = convert_to_gray_scale(&converted_sb_rgb);
         match self.sender.try_send(bytes.clone()) {
             Ok(_) => {}
             Err(_) => {}
         }
+
+        let convert_brightness = |value: u16| {
+            let old_range = 100f32 - 20f32;
+            let new_range = 100f32 - 0f32;
+            let new_value = (((value as f32 - 20f32) * new_range) / old_range) + 0f32;
+            return new_value;
+        };
+
         let mut column_parts = vec![
             button(
                 "Next screen",
@@ -400,12 +414,12 @@ impl Application for AwesomeDisplay {
             ),
             Text::new(format!(
                 "Brightness: {:.2}",
-                self.config_manager.read().unwrap().config.brightness
+                convert_brightness(self.config_manager.read().unwrap().config.brightness) as u16
             ))
             .into(),
             Slider::new(
                 &mut self.slider,
-                0.0..=100.0,
+                20.0..=100.0,
                 self.config_manager.read().unwrap().config.brightness as f32,
                 Message::SliderChanged,
             )
