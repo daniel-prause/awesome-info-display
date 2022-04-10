@@ -1,7 +1,7 @@
 use crate::config_manager::ConfigManager;
 use crate::screens::BasicScreen;
 use crate::screens::Screen;
-use crate::screens::ScreenControl;
+use crate::screens::Screenable;
 use chrono::{DateTime, Local};
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
@@ -31,51 +31,21 @@ impl Default for ClockInfo {
     }
 }
 
+impl Screenable for CurrentDateScreen {
+    fn get_screen(&mut self) -> &mut Screen {
+        &mut self.screen
+    }
+}
+
 impl BasicScreen for CurrentDateScreen {
-    fn description(&self) -> &String {
-        &self.screen.description
-    }
-
-    fn current_image(&self) -> &Vec<u8> {
-        self.screen.current_image()
-    }
-
     fn update(&mut self) {
-        CurrentDateScreen::update(self)
-    }
-
-    fn start(&self) {
-        self.screen.start_worker();
-    }
-
-    fn stop(&self) {
-        self.screen.stop_worker();
-    }
-
-    fn key(&self) -> &String {
-        &self.screen.key()
-    }
-
-    fn initial_update_called(&mut self) -> bool {
-        self.screen.initial_update_called()
-    }
-
-    fn enabled(&self) -> bool {
-        self.screen
-            .config_manager
-            .read()
-            .unwrap()
-            .config
-            .current_date_screen_active
-    }
-
-    fn set_status(&self, status: bool) {
-        self.screen
-            .config_manager
-            .write()
-            .unwrap()
-            .config
-            .current_date_screen_active = status;
+        let clock_info = self.receiver.try_recv();
+        match clock_info {
+            Ok(clock_info_state) => {
+                self.draw_screen(clock_info_state.local);
+            }
+            Err(_) => {}
+        }
     }
 }
 
@@ -142,15 +112,5 @@ impl CurrentDateScreen {
         let initial_clock_info = ClockInfo::default();
         this.draw_screen(initial_clock_info.local);
         this
-    }
-
-    pub fn update(&mut self) {
-        let clock_info = self.receiver.try_recv();
-        match clock_info {
-            Ok(clock_info_state) => {
-                self.draw_screen(clock_info_state.local);
-            }
-            Err(_) => {}
-        }
     }
 }

@@ -43,35 +43,39 @@ impl Default for Screen {
     }
 }
 
-pub trait BasicScreen {
+pub trait Screenable {
+    fn get_screen(&mut self) -> &mut Screen;
+}
+
+pub trait BasicScreen: Screenable {
     fn update(&mut self) -> ();
-    fn description(&self) -> &String;
-    fn key(&self) -> &String;
-    fn current_image(&self) -> &Vec<u8>;
-    fn initial_update_called(&mut self) -> bool;
-    fn start(&self) -> ();
-    fn stop(&self) -> ();
-    fn set_mode_for_short(&mut self, _mode: u32) {}
-    fn enabled(&self) -> bool;
-    fn set_status(&self, status: bool) -> ();
-}
-
-pub trait ScreenControl {
-    fn start_worker(&self);
-    fn stop_worker(&self);
-    fn initial_update_called(&mut self) -> bool;
-    fn current_image(&self) -> &Vec<u8>;
-    fn key(&self) -> &String;
-}
-
-impl ScreenControl for Screen {
-    fn key(&self) -> &String {
-        &self.key
+    fn description(&mut self) -> String {
+        let screen = self.get_screen();
+        screen.description.clone()
     }
 
-    fn start_worker(&self) {
-        self.active.store(true, Ordering::Release);
-        match self.handle.as_ref() {
+    fn key(&mut self) -> String {
+        let screen = self.get_screen();
+        screen.key.clone()
+    }
+
+    fn current_image(&mut self) -> &Vec<u8> {
+        let screen = self.get_screen();
+        &screen.bytes
+    }
+
+    fn initial_update_called(&mut self) -> bool {
+        let mut screen = self.get_screen();
+        if !screen.initial_update_called {
+            screen.initial_update_called = true;
+            return false;
+        }
+        true
+    }
+    fn start(&mut self) {
+        let screen = self.get_screen();
+        screen.active.store(true, Ordering::Release);
+        match screen.handle.as_ref() {
             Some(handle) => {
                 handle.thread().unpark();
             }
@@ -79,19 +83,31 @@ impl ScreenControl for Screen {
         }
     }
 
-    fn stop_worker(&self) {
-        self.active.store(false, Ordering::Release);
+    fn stop(&mut self) {
+        self.get_screen().active.store(false, Ordering::Release)
     }
 
-    fn initial_update_called(&mut self) -> bool {
-        if !self.initial_update_called {
-            self.initial_update_called = true;
-            return false;
-        }
-        true
+    fn set_mode(&mut self, mode: u32) {
+        let mut screen = self.get_screen();
+        screen.mode_timeout = Some(Instant::now());
+        screen.mode = mode;
     }
 
-    fn current_image(&self) -> &Vec<u8> {
-        &self.bytes
+    fn enabled(&mut self) -> bool {
+        self.get_screen()
+            .config_manager
+            .read()
+            .unwrap()
+            .config
+            .bitpanda_screen_active
+    }
+
+    fn set_status(&mut self, status: bool) {
+        self.get_screen()
+            .config_manager
+            .write()
+            .unwrap()
+            .config
+            .bitpanda_screen_active = status;
     }
 }

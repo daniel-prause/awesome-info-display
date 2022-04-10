@@ -2,7 +2,7 @@ extern crate cpu_monitor;
 use crate::config_manager::ConfigManager;
 use crate::screens::BasicScreen;
 use crate::screens::Screen;
-use crate::screens::ScreenControl;
+use crate::screens::Screenable;
 use cpu_monitor::CpuInstant;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
@@ -28,51 +28,21 @@ struct SystemInfoState {
     ram_usage: f64,
 }
 
+impl Screenable for SystemInfoScreen {
+    fn get_screen(&mut self) -> &mut Screen {
+        &mut self.screen
+    }
+}
+
 impl BasicScreen for SystemInfoScreen {
-    fn description(&self) -> &String {
-        &self.screen.description
-    }
-
-    fn current_image(&self) -> &Vec<u8> {
-        self.screen.current_image()
-    }
-
     fn update(&mut self) {
-        SystemInfoScreen::update(self)
-    }
-
-    fn start(&self) {
-        self.screen.start_worker();
-    }
-
-    fn stop(&self) {
-        self.screen.stop_worker();
-    }
-
-    fn key(&self) -> &String {
-        &self.screen.key()
-    }
-
-    fn initial_update_called(&mut self) -> bool {
-        self.screen.initial_update_called()
-    }
-
-    fn enabled(&self) -> bool {
-        self.screen
-            .config_manager
-            .read()
-            .unwrap()
-            .config
-            .system_info_screen_active
-    }
-
-    fn set_status(&self, status: bool) {
-        self.screen
-            .config_manager
-            .write()
-            .unwrap()
-            .config
-            .system_info_screen_active = status;
+        let system_stats = self.receiver.try_recv();
+        match system_stats {
+            Ok(system_info_state) => {
+                self.draw_screen(system_info_state.cpu_usage, system_info_state.ram_usage);
+            }
+            Err(_) => {}
+        }
     }
 }
 
@@ -217,15 +187,5 @@ impl SystemInfoScreen {
 
         this.draw_screen(0f64, 0f64);
         this
-    }
-
-    pub fn update(&mut self) {
-        let system_stats = self.receiver.try_recv();
-        match system_stats {
-            Ok(system_info_state) => {
-                self.draw_screen(system_info_state.cpu_usage, system_info_state.ram_usage);
-            }
-            Err(_) => {}
-        }
     }
 }

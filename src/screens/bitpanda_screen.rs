@@ -1,7 +1,7 @@
 use crate::config_manager::ConfigManager;
 use crate::screens::BasicScreen;
 use crate::screens::Screen;
-use crate::screens::ScreenControl;
+use crate::screens::Screenable;
 use chrono::{DateTime, Local};
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
@@ -44,51 +44,21 @@ impl Default for WalletInfo {
     }
 }
 
+impl Screenable for BitpandaScreen {
+    fn get_screen(&mut self) -> &mut Screen {
+        &mut self.screen
+    }
+}
+
 impl BasicScreen for BitpandaScreen {
-    fn description(&self) -> &String {
-        &self.screen.description
-    }
-
-    fn current_image(&self) -> &Vec<u8> {
-        self.screen.current_image()
-    }
-
     fn update(&mut self) {
-        BitpandaScreen::update(self);
-    }
-
-    fn start(&self) {
-        self.screen.start_worker();
-    }
-
-    fn stop(&self) {
-        self.screen.stop_worker();
-    }
-
-    fn key(&self) -> &String {
-        &self.screen.key
-    }
-
-    fn initial_update_called(&mut self) -> bool {
-        self.screen.initial_update_called()
-    }
-
-    fn enabled(&self) -> bool {
-        self.screen
-            .config_manager
-            .read()
-            .unwrap()
-            .config
-            .bitpanda_screen_active
-    }
-
-    fn set_status(&self, status: bool) {
-        self.screen
-            .config_manager
-            .write()
-            .unwrap()
-            .config
-            .bitpanda_screen_active = status;
+        let wallet_info = self.receiver.try_recv();
+        match wallet_info {
+            Ok(wallet_info) => {
+                self.draw_screen(wallet_info);
+            }
+            Err(_) => {}
+        }
     }
 }
 
@@ -154,16 +124,6 @@ impl BitpandaScreen {
             &self.screen.font,
             &date_value.format("%d.%m.%Y %T").to_string(),
         );
-    }
-
-    fn update(&mut self) {
-        let wallet_info = self.receiver.try_recv();
-        match wallet_info {
-            Ok(wallet_info) => {
-                self.draw_screen(wallet_info);
-            }
-            Err(_) => {}
-        }
     }
 
     pub fn new(

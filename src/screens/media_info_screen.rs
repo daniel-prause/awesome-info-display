@@ -2,7 +2,7 @@ extern crate winapi;
 use crate::config_manager::ConfigManager;
 use crate::screens::BasicScreen;
 use crate::screens::Screen;
-use crate::screens::ScreenControl;
+use crate::screens::Screenable;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
@@ -50,55 +50,22 @@ struct MusicPlayerInfo {
     mute: i32,
 }
 
+impl Screenable for MediaInfoScreen {
+    fn get_screen(&mut self) -> &mut Screen {
+        &mut self.screen
+    }
+}
+
 impl BasicScreen for MediaInfoScreen {
-    fn description(&self) -> &String {
-        &self.screen.description
-    }
-
-    fn current_image(&self) -> &Vec<u8> {
-        self.screen.current_image()
-    }
-
     fn update(&mut self) {
-        self.update();
-    }
-
-    fn set_mode_for_short(&mut self, mode: u32) {
-        self.set_mode(mode);
-    }
-
-    fn start(&self) {
-        self.screen.start_worker();
-    }
-
-    fn stop(&self) {
-        self.screen.stop_worker();
-    }
-
-    fn key(&self) -> &String {
-        &self.screen.key()
-    }
-
-    fn initial_update_called(&mut self) -> bool {
-        self.screen.initial_update_called()
-    }
-
-    fn enabled(&self) -> bool {
-        self.screen
-            .config_manager
-            .read()
-            .unwrap()
-            .config
-            .media_screen_active
-    }
-
-    fn set_status(&self, status: bool) {
-        self.screen
-            .config_manager
-            .write()
-            .unwrap()
-            .config
-            .media_screen_active = status;
+        let music_player_info = self.receiver.try_recv();
+        match music_player_info {
+            Ok(music_player_info) => {
+                self.draw_screen(&music_player_info);
+                self.music_player_info = music_player_info;
+            }
+            Err(_) => {}
+        }
     }
 }
 
@@ -392,22 +359,6 @@ impl MediaInfoScreen {
             self.draw_intro(&mut image, scale);
         }
         self.screen.bytes = image.into_vec();
-    }
-
-    fn update(&mut self) {
-        let music_player_info = self.receiver.try_recv();
-        match music_player_info {
-            Ok(music_player_info) => {
-                self.draw_screen(&music_player_info);
-                self.music_player_info = music_player_info;
-            }
-            Err(_) => {}
-        }
-    }
-
-    fn set_mode(&mut self, mode: u32) {
-        self.screen.mode_timeout = Some(Instant::now());
-        self.screen.mode = mode;
     }
 
     #[cfg(windows)]

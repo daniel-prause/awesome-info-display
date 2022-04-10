@@ -18,9 +18,9 @@ impl ScreenManager {
             last_screen: 0,
             switch_in_progress: false,
         };
-        // find first enabled screen
+
         if !this.screens[this.current].enabled() {
-            match this.screens.iter().position(|r| r.enabled()) {
+            match this.screens.iter_mut().position(|r| r.enabled()) {
                 Some(idx) => {
                     this.current = idx;
                     this.last_screen = idx;
@@ -69,7 +69,7 @@ impl ScreenManager {
 
     pub fn set_screen_for_short(&mut self, key: String, mode: u32) {
         let index: usize;
-        match self.screens.iter().position(|r| *r.key() == key) {
+        match self.screens.iter_mut().position(|r| *r.key() == key) {
             Some(idx) => index = idx,
             None => return,
         };
@@ -83,7 +83,7 @@ impl ScreenManager {
             self.last_screen = self.current;
         }
         self.current = index;
-        self.current_screen().set_mode_for_short(mode); // right now, volume mode for 3 seconds for media screen
+        self.current_screen().set_mode(mode); // right now, volume mode for 3 seconds for media screen
         self.current_screen().start();
         self.switch_in_progress = true;
     }
@@ -113,7 +113,7 @@ impl ScreenManager {
     pub fn set_status_for_screen(&mut self, key: &String, status: bool) {
         self.switch_in_progress = false;
 
-        for screen in self.screens.iter() {
+        for screen in self.screens.iter_mut() {
             if *screen.key() == *key {
                 screen.set_status(status)
             }
@@ -123,10 +123,10 @@ impl ScreenManager {
         }
     }
 
-    pub fn screen_deactivatable(&self, key: &String) -> bool {
+    pub fn screen_deactivatable(&mut self, key: &String) -> bool {
         let mut count = 0;
 
-        for screen in self.screens.iter() {
+        for screen in self.screens.iter_mut() {
             if screen.enabled() && *key != *screen.key() {
                 count += 1
             }
@@ -137,10 +137,10 @@ impl ScreenManager {
         count >= 1
     }
 
-    pub fn descriptions_and_keys_and_state(&self) -> Vec<(&String, &String, bool)> {
-        let mut result = Vec::<(&String, &String, bool)>::new();
-        for screen in self.screens.iter() {
-            result.push((&screen.description(), &screen.key(), screen.enabled()))
+    pub fn descriptions_and_keys_and_state(&mut self) -> Vec<(String, String, bool)> {
+        let mut result = Vec::<(String, String, bool)>::new();
+        for screen in self.screens.iter_mut() {
+            result.push((screen.description(), screen.key(), screen.enabled()))
         }
         return result;
     }
