@@ -5,6 +5,7 @@ use iced::{
     Container, Element, HorizontalAlignment, Image, Length, Row, Settings, Slider, Subscription,
     Text,
 };
+use std::time::Duration;
 mod config;
 mod config_manager;
 mod display_serial_com;
@@ -64,6 +65,8 @@ lazy_static! {
     static ref LAST_KEY: Mutex<bool> = Mutex::new(false);
     static ref LAST_KEY_VALUE: Mutex<u32> = Mutex::new(0);
     static ref SERIAL_PORT: Mutex<Option<Box<dyn serialport::SerialPort>>> = Mutex::new(None);
+    static ref CLOSE_REQUESTED: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
 }
 pub fn main() -> iced::Result {
     unsafe {
@@ -208,11 +211,17 @@ impl Application for AwesomeDisplay {
             if SERIAL_PORT.lock().unwrap().is_none() {
                 *SERIAL_PORT.lock().unwrap() = init_serial();
                 if SERIAL_PORT.lock().unwrap().is_some() {
-                    reset_display(&mut *SERIAL_PORT.lock().unwrap());
+                    reset_display(
+                        &mut *SERIAL_PORT.lock().unwrap(),
+                        Duration::from_millis(500),
+                    );
                 }
             } else {
                 match buf {
                     Ok(b) => {
+                        if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
+                            return;
+                        }
                         if !write_screen_buffer(&mut *SERIAL_PORT.lock().unwrap(), &b) {
                             *SERIAL_PORT.lock().unwrap() = None;
                         }
@@ -325,6 +334,10 @@ impl Application for AwesomeDisplay {
                 if let iced_native::Event::Window(iced_native::window::Event::CloseRequested) =
                     event
                 {
+                    CLOSE_REQUESTED.store(true, std::sync::atomic::Ordering::Release);
+                    if SERIAL_PORT.lock().unwrap().is_some() {
+                        reset_display(&mut *SERIAL_PORT.lock().unwrap(), Duration::from_millis(0));
+                    }
                     self.config_manager.write().unwrap().save();
                     self.should_exit = true;
                 }

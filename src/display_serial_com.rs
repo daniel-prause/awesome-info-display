@@ -33,9 +33,12 @@ pub fn init_serial() -> Option<std::boxed::Box<dyn serialport::SerialPort>> {
     return None;
 }
 
-pub fn reset_display(port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>) {
+pub fn reset_display(
+    port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
+    duration: Duration,
+) {
     port.as_deref_mut().unwrap().write(&hex!("11")).unwrap();
-    thread::sleep(Duration::from_millis(500));
+    thread::sleep(duration);
 }
 
 pub fn convert_to_gray_scale(bytes: &Vec<u8>) -> Vec<u8> {
