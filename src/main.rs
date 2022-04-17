@@ -409,8 +409,8 @@ impl Application for AwesomeDisplay {
 
         let convert_brightness = |value: u16| {
             let old_range = 100f32 - 20f32;
-            let new_range = 100f32 - 0f32;
-            let new_value = (((value as f32 - 20f32) * new_range) / old_range) + 0f32;
+            let new_range = 100f32;
+            let new_value = ((value as f32 - 20f32) * new_range) / old_range;
             return new_value;
         };
 
