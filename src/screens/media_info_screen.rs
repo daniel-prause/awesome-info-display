@@ -64,10 +64,7 @@ impl BasicScreen for MediaInfoScreen {
                 self.draw_screen(&music_player_info);
                 self.music_player_info = music_player_info;
             }
-            Err(_) => {
-                let music_player_info: MusicPlayerInfo = Default::default();
-                self.draw_screen(&music_player_info);
-            }
+            Err(_) => {}
         }
     }
 }
@@ -465,9 +462,7 @@ impl MediaInfoScreen {
                                 if title_length == 0
                                     || !match_correct_artist_and_title_format.is_match(&data)
                                 {
-                                    thread::sleep(Duration::from_millis(200));
                                     music_player_info.player_active = false;
-                                    continue;
                                 } else {
                                     music_player_info.player_active = true;
                                 }
@@ -510,8 +505,6 @@ impl MediaInfoScreen {
                                                     }
                                                     None => {
                                                         music_player_info.player_active = false;
-                                                        thread::sleep(Duration::from_millis(200));
-                                                        continue;
                                                     }
                                                 }
                                             }
@@ -519,15 +512,11 @@ impl MediaInfoScreen {
                                     }
                                     None => {
                                         music_player_info.player_active = false;
-                                        thread::sleep(Duration::from_millis(200));
-                                        continue;
                                     }
                                 }
                             }
                         } else {
                             music_player_info.player_active = false;
-                            thread::sleep(Duration::from_millis(200));
-                            continue;
                         }
 
                         let volume_data = get_master_volume(false);
