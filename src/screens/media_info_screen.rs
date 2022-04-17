@@ -45,7 +45,7 @@ struct MusicPlayerInfo {
     track_length: isize,
     title: String,
     artist: String,
-    editor_active: bool,
+    player_active: bool,
     system_volume: f32,
     mute: i32,
 }
@@ -64,7 +64,10 @@ impl BasicScreen for MediaInfoScreen {
                 self.draw_screen(&music_player_info);
                 self.music_player_info = music_player_info;
             }
-            Err(_) => {}
+            Err(_) => {
+                let music_player_info: MusicPlayerInfo = Default::default();
+                self.draw_screen(&music_player_info);
+            }
         }
     }
 }
@@ -333,7 +336,7 @@ impl MediaInfoScreen {
             self.artist_x = 0;
         }
 
-        if music_player_info.editor_active {
+        if music_player_info.player_active {
             self.draw_artist(&music_player_info.artist, &mut image, scale);
             self.draw_title(&music_player_info.title, &mut image, scale);
             self.draw_mute_speaker(music_player_info.mute, &mut image);
@@ -387,6 +390,7 @@ impl MediaInfoScreen {
                     let active = active.clone();
                     let match_correct_artist_and_title_format;
                     let match_artist_and_title;
+                    let match_artist_or_title;
                     match regex::Regex::new(r"\s(.*)-") {
                         Ok(regex) => {
                             match_correct_artist_and_title_format = regex;
@@ -399,6 +403,16 @@ impl MediaInfoScreen {
                     match regex::Regex::new(r"(.*) - (.*)") {
                         Ok(regex) => {
                             match_artist_and_title = regex;
+                        }
+                        Err(err) => {
+                            println!("REGEX ERROR: {:?}", err);
+                            return;
+                        }
+                    }
+
+                    match regex::Regex::new(r"\s(.*?)\s") {
+                        Ok(regex) => {
+                            match_artist_or_title = regex;
                         }
                         Err(err) => {
                             println!("REGEX ERROR: {:?}", err);
@@ -451,11 +465,11 @@ impl MediaInfoScreen {
                                 if title_length == 0
                                     || !match_correct_artist_and_title_format.is_match(&data)
                                 {
-                                    music_player_info.editor_active = false;
                                     thread::sleep(Duration::from_millis(200));
+                                    music_player_info.player_active = false;
                                     continue;
                                 } else {
-                                    music_player_info.editor_active = true;
+                                    music_player_info.player_active = true;
                                 }
 
                                 let caps = match_correct_artist_and_title_format.captures(&data);
@@ -481,19 +495,39 @@ impl MediaInfoScreen {
                                                 music_player_info.title = title.to_string();
                                             }
                                             None => {
-                                                music_player_info.editor_active = false;
-                                                continue;
+                                                // check, if only artist OR title are there
+                                                let artist_or_title_caps =
+                                                    match_artist_or_title.captures(&data);
+
+                                                match artist_or_title_caps {
+                                                    Some(artist_or_title_caps) => {
+                                                        let title = artist_or_title_caps
+                                                            .get(1)
+                                                            .map_or("", |m| m.as_str())
+                                                            .trim();
+                                                        music_player_info.title = title.to_string();
+                                                        music_player_info.artist = "".into();
+                                                    }
+                                                    None => {
+                                                        music_player_info.player_active = false;
+                                                        thread::sleep(Duration::from_millis(200));
+                                                        continue;
+                                                    }
+                                                }
                                             }
                                         }
                                     }
                                     None => {
-                                        music_player_info.editor_active = false;
+                                        music_player_info.player_active = false;
+                                        thread::sleep(Duration::from_millis(200));
                                         continue;
                                     }
                                 }
                             }
                         } else {
-                            music_player_info.editor_active = false;
+                            music_player_info.player_active = false;
+                            thread::sleep(Duration::from_millis(200));
+                            continue;
                         }
 
                         let volume_data = get_master_volume(false);
