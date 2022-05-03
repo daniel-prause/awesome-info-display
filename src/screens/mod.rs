@@ -94,20 +94,21 @@ pub trait BasicScreen: Screenable {
     }
 
     fn enabled(&mut self) -> bool {
-        self.get_screen()
-            .config_manager
-            .read()
-            .unwrap()
-            .config
-            .bitpanda_screen_active
-    }
+        let screen = self.get_screen();
 
-    fn set_status(&mut self, status: bool) {
-        self.get_screen()
+        return screen
             .config_manager
             .write()
             .unwrap()
-            .config
-            .bitpanda_screen_active = status;
+            .screen_enabled(screen.key.clone());
+    }
+
+    fn set_status(&mut self, status: bool) {
+        let screen = self.get_screen();
+        screen
+            .config_manager
+            .write()
+            .unwrap()
+            .set_screen_status(screen.key.clone(), status)
     }
 }

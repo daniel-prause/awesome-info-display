@@ -61,4 +61,48 @@ impl ConfigManager {
             }
         }
     }
+
+    pub fn screen_enabled(&mut self, screen: String) -> bool {
+        let screen = &*screen;
+        match screen {
+            "bitpanda_screen" => {
+                return self.config.bitpanda_screen_active;
+            }
+            "weather_screen" => {
+                return self.config.weather_screen_active;
+            }
+            "media_info_screen" => {
+                return self.config.media_screen_active;
+            }
+            "system_info_screen" => {
+                return self.config.system_info_screen_active;
+            }
+            "current_date_screen" => {
+                return self.config.current_date_screen_active;
+            }
+            _ => false,
+        }
+    }
+
+    pub fn set_screen_status(&mut self, screen: String, enabled: bool) {
+        let screen = &*screen;
+        match screen {
+            "bitpanda_screen" => {
+                self.config.bitpanda_screen_active = enabled;
+            }
+            "weather_screen" => {
+                self.config.weather_screen_active = enabled;
+            }
+            "media_info_screen" => {
+                self.config.media_screen_active = enabled;
+            }
+            "system_info_screen" => {
+                self.config.system_info_screen_active = enabled;
+            }
+            "current_date_screen" => {
+                self.config.current_date_screen_active = enabled;
+            }
+            _ => {}
+        }
+    }
 }
