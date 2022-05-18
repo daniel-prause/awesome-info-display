@@ -1,8 +1,6 @@
 #![windows_subsystem = "windows"]
-use iced::text_input::{self, TextInput};
 use iced::{
-    button, executor, slider, time, window, Align, Application, Button, Checkbox, Column, Command,
-    Container, Element, HorizontalAlignment, Image, Length, Row, Settings, Slider, Subscription,
+    executor, time, window, Application, Command, Element, Image, Length, Settings, Subscription,
     Text,
 };
 use std::time::Duration;
@@ -104,17 +102,11 @@ pub fn main() -> iced::Result {
 }
 
 struct AwesomeDisplay {
+    state: iced::pure::State,
     theme: style::Theme,
-    next_screen: button::State,
-    previous_screen: button::State,
-    save_config_button: button::State,
     screens: screen_manager::ScreenManager,
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
     should_exit: bool,
-    bitpanda_api_key_input: text_input::State,
-    openweather_api_key_input: text_input::State,
-    openweather_location_input: text_input::State,
-    slider: slider::State,
     sender: Sender<Vec<u8>>,
 }
 
@@ -182,17 +174,11 @@ impl Application for AwesomeDisplay {
         ));
         let (tx, rx): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         let this = AwesomeDisplay {
-            next_screen: button::State::new(),
-            previous_screen: button::State::new(),
-            save_config_button: button::State::new(),
+            state: iced::pure::State::new(),
             theme: style::Theme::Dark,
             screens: screen_manager::ScreenManager::new(screens),
             config_manager: config_manager.clone(),
             should_exit: false,
-            bitpanda_api_key_input: text_input::State::new(),
-            openweather_api_key_input: text_input::State::new(),
-            openweather_location_input: text_input::State::new(),
-            slider: slider::State::new(),
             sender: tx,
         };
 
@@ -290,7 +276,7 @@ impl Application for AwesomeDisplay {
         )
     }
 
-    fn update(&mut self, message: Message, _clipboard: &mut iced::Clipboard) -> Command<Message> {
+    fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::SaveConfig => {
                 self.config_manager.write().unwrap().save();
@@ -415,25 +401,27 @@ impl Application for AwesomeDisplay {
         };
 
         let mut column_parts = vec![
-            button(
-                "Next screen",
-                &mut self.next_screen,
-                self.theme,
-                Message::NextScreen,
-            ),
-            button(
-                "Previous Screen",
-                &mut self.previous_screen,
-                self.theme,
-                Message::PreviousScreen,
-            ),
-            Text::new(format!(
+            iced::pure::button(
+                Text::new("Next screen").horizontal_alignment(iced::alignment::Horizontal::Center),
+            )
+            .on_press(Message::NextScreen)
+            .style(self.theme)
+            .width(Length::Units(200))
+            .into(),
+            iced::pure::button(
+                Text::new("Previous screen")
+                    .horizontal_alignment(iced::alignment::Horizontal::Center),
+            )
+            .on_press(Message::PreviousScreen)
+            .style(self.theme)
+            .width(Length::Units(200))
+            .into(),
+            iced::pure::text(format!(
                 "Brightness: {:.2}",
                 convert_brightness(self.config_manager.read().unwrap().config.brightness) as u16
             ))
             .into(),
-            Slider::new(
-                &mut self.slider,
+            iced::pure::widget::Slider::new(
                 20.0..=100.0,
                 self.config_manager.read().unwrap().config.brightness as f32,
                 Message::SliderChanged,
@@ -445,11 +433,11 @@ impl Application for AwesomeDisplay {
 
         // insert screens into left column menu
         for screen in self.screens.descriptions_and_keys_and_state().into_iter() {
-            column_parts.push(checkbox(screen.2, screen.1.into(), screen.0.into()));
+            column_parts.push(special_checkbox(screen.2, screen.1.into(), screen.0.into()).into());
         }
-        let mut left_column_after_screens = vec![
-            TextInput::new(
-                &mut self.bitpanda_api_key_input,
+
+        let mut left_column_after_screens: Vec<iced::pure::Element<Message>> = vec![
+            iced::pure::text_input(
                 "Bitpanda Api Key",
                 &self.config_manager.read().unwrap().config.bitpanda_api_key,
                 Message::BitpandaApiKeyChanged,
@@ -457,8 +445,7 @@ impl Application for AwesomeDisplay {
             .password()
             .width(Length::Units(200))
             .into(),
-            TextInput::new(
-                &mut self.openweather_api_key_input,
+            iced::pure::widget::TextInput::new(
                 "Openweather Api Key",
                 &self
                     .config_manager
@@ -471,8 +458,7 @@ impl Application for AwesomeDisplay {
             .password()
             .width(Length::Units(200))
             .into(),
-            TextInput::new(
-                &mut self.openweather_location_input,
+            iced::pure::widget::TextInput::new(
                 "Openweather Location",
                 &self
                     .config_manager
@@ -484,32 +470,40 @@ impl Application for AwesomeDisplay {
             )
             .width(Length::Units(200))
             .into(),
-            button(
-                "Save config",
-                &mut self.save_config_button,
-                self.theme,
-                Message::SaveConfig,
-            ),
+            iced::pure::button(
+                Text::new("Save config").horizontal_alignment(iced::alignment::Horizontal::Center),
+            )
+            .style(self.theme)
+            .width(Length::Units(200))
+            .on_press(Message::SaveConfig)
+            .into(),
         ];
+
         column_parts.append(&mut left_column_after_screens);
-        let col1 = Column::with_children(column_parts)
+
+        let col1 = iced::pure::widget::Column::with_children(column_parts)
             .padding(20)
-            .align_items(Align::Center)
+            .align_items(iced::Alignment::Center)
             .spacing(10);
 
-        let col2 = Column::new()
+        let col2: iced::pure::widget::Column<Message> = iced::pure::widget::Column::new()
             .padding(20)
-            .align_items(Align::Center)
+            .align_items(iced::Alignment::Center)
             .width(Length::Fill)
-            .push(Text::new("Current screen").size(50))
-            .push(Text::new(self.screens.current_screen().description()).size(25))
+            .push(iced::pure::text("Current screen").size(50))
+            .push(iced::pure::text(self.screens.current_screen().description()).size(25))
             .push(image.width(Length::Units(256)).height(Length::Units(64)));
 
-        Container::new(Row::new().push(col1).push(col2))
+        iced::pure::Pure::new(
+            &mut self.state,
+            iced::pure::widget::Container::new(
+                iced::pure::widget::Row::new().push(col1).push(col2),
+            )
             .width(Length::Fill)
             .height(Length::Fill)
-            .style(self.theme)
-            .into()
+            .style(self.theme),
+        )
+        .into()
     }
 }
 
@@ -559,14 +553,19 @@ fn callback(event: Event) -> Option<Event> {
     }
 }
 
-fn checkbox<'a>(checked: bool, key: String, description: String) -> Element<'a, Message> {
-    Checkbox::new(checked, description, move |value: bool| {
+fn special_checkbox<'a>(
+    checked: bool,
+    key: String,
+    description: String,
+) -> iced::pure::Element<'a, Message> {
+    iced::pure::checkbox(description, checked, move |value: bool| {
         Message::ScreenStatusChanged(value, key.clone())
     })
     .width(Length::Units(200))
     .into()
 }
 
+/*
 fn button<'a>(
     label: &str,
     button_state: &'a mut button::State,
@@ -575,10 +574,11 @@ fn button<'a>(
 ) -> Element<'a, Message> {
     Button::new(
         button_state,
-        Text::new(label).horizontal_alignment(HorizontalAlignment::Center),
+        Text::new(label).horizontal_alignment(iced::alignment::Horizontal::Center),
     )
     .style(theme)
     .width(Length::Units(200))
     .on_press(msg)
     .into()
 }
+*/
