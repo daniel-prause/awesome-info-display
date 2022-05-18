@@ -18,8 +18,8 @@ hex-literal = "0.3"
 iced = {version = "0.4", features = ["canvas", "tokio", "image", "debug", "pure"]}
 iced_futures = "0.4"
 iced_native = "0.5"
-image = {version = "0.23", default-features = false, features = ["ico"]}
-imageproc = "0.22"
+image = {version = "0.24", default-features = false, features = ["ico"]}
+imageproc = "0.23"
 lazy_static = "1.4"
 openweathermap = "0"
 rdev = {version = "0.5", features = ["unstable_grab"]}

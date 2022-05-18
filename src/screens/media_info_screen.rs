@@ -114,7 +114,7 @@ impl MediaInfoScreen {
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
-            position_artist as u32,
+            position_artist as i32,
             0,
             scale,
             &self.screen.font,
@@ -146,7 +146,7 @@ impl MediaInfoScreen {
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
-            position_title as u32,
+            position_title as i32,
             16,
             scale,
             &self.screen.font,
