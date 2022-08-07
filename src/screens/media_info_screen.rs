@@ -461,13 +461,8 @@ impl MediaInfoScreen {
                                 );
                                 let data = String::from_utf16_lossy(&buffer);
 
-                                if title_length == 0
-                                    || !match_correct_artist_and_title_format.is_match(&data)
-                                {
-                                    music_player_info.player_active = false;
-                                } else {
-                                    music_player_info.player_active = true;
-                                }
+                                music_player_info.player_active = title_length > 0
+                                    && match_correct_artist_and_title_format.is_match(&data);
 
                                 let caps = match_correct_artist_and_title_format.captures(&data);
                                 match caps {
