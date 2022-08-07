@@ -564,21 +564,3 @@ fn special_checkbox<'a>(
     .width(Length::Units(200))
     .into()
 }
-
-/*
-fn button<'a>(
-    label: &str,
-    button_state: &'a mut button::State,
-    theme: style::Theme,
-    msg: Message,
-) -> Element<'a, Message> {
-    Button::new(
-        button_state,
-        Text::new(label).horizontal_alignment(iced::alignment::Horizontal::Center),
-    )
-    .style(theme)
-    .width(Length::Units(200))
-    .on_press(msg)
-    .into()
-}
-*/
