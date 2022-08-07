@@ -1,4 +1,5 @@
 #![windows_subsystem = "windows"]
+extern crate winapi;
 use iced::{
     executor, time, window, Application, Command, Element, Image, Length, Settings, Subscription,
     Text,
@@ -7,12 +8,14 @@ use std::time::Duration;
 mod config;
 mod config_manager;
 mod display_serial_com;
+mod helpers;
 mod screen_manager;
 mod screens;
 mod style;
 use crate::display_serial_com::{
     convert_to_gray_scale, init_serial, reset_display, write_screen_buffer,
 };
+use crate::helpers::power::register_power_broadcast;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use lazy_static::lazy_static;
@@ -24,6 +27,9 @@ use std::fmt;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
+use winapi::shared::minwindef::*;
+use winapi::shared::windef::*;
+use winapi::um::winuser::*;
 
 #[derive(Debug)]
 struct SuperError {
@@ -65,6 +71,7 @@ lazy_static! {
     static ref SERIAL_PORT: Mutex<Option<Box<dyn serialport::SerialPort>>> = Mutex::new(None);
     static ref CLOSE_REQUESTED: std::sync::atomic::AtomicBool =
         std::sync::atomic::AtomicBool::new(false);
+    static ref HIBERNATING: Mutex<bool> = Mutex::new(false);
 }
 pub fn main() -> iced::Result {
     unsafe {
@@ -79,6 +86,9 @@ pub fn main() -> iced::Result {
                 get_super_error(),
             )))
         } else {
+            // register power callback
+            register_power_broadcast(window_proc);
+
             let settings = Settings {
                 exit_on_close_request: false,
                 window: window::Settings {
@@ -205,10 +215,14 @@ impl Application for AwesomeDisplay {
             } else {
                 match buf {
                     Ok(b) => {
+                        let mut screen_buffer = b;
                         if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
                             return;
                         }
-                        if !write_screen_buffer(&mut *SERIAL_PORT.lock().unwrap(), &b) {
+                        if *HIBERNATING.lock().unwrap() {
+                            screen_buffer = vec![0; screen_buffer.len() as usize];
+                        }
+                        if !write_screen_buffer(&mut *SERIAL_PORT.lock().unwrap(), &screen_buffer) {
                             *SERIAL_PORT.lock().unwrap() = None;
                         }
                     }
@@ -563,4 +577,22 @@ fn special_checkbox<'a>(
     })
     .width(Length::Units(200))
     .into()
+}
+
+pub unsafe extern "system" fn window_proc(
+    hwnd: HWND,
+    msg: UINT,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    if msg == WM_POWERBROADCAST {
+        *HIBERNATING.lock().unwrap() = wparam == PBT_APMSUSPEND;
+    }
+
+    if msg == WM_DESTROY {
+        PostQuitMessage(0);
+        return 0;
+    }
+
+    return DefWindowProcW(hwnd, msg, wparam, lparam);
 }
