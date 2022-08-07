@@ -417,6 +417,10 @@ impl MediaInfoScreen {
                         }
                     }
 
+                    unsafe {
+                        winapi::um::objbase::CoInitialize(std::ptr::null_mut());
+                    }
+
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
@@ -519,7 +523,7 @@ impl MediaInfoScreen {
                             music_player_info.player_active = false;
                         }
 
-                        let volume_data = get_master_volume(false);
+                        let volume_data = get_master_volume();
                         music_player_info.system_volume = volume_data.0;
                         music_player_info.mute = volume_data.1;
                         sender.try_send(music_player_info).unwrap_or_default();
@@ -554,13 +558,10 @@ pub fn rotate(str: &str, direction: Direction, count: usize) -> String {
 }
 
 // TODO: disable for non-windows OS and find another way.
-pub fn get_master_volume(init: bool) -> (f32, i32) {
+pub fn get_master_volume() -> (f32, i32) {
     let mut current_volume = 0.0 as f32;
     let mut mute = 0;
     unsafe {
-        if init {
-            winapi::um::objbase::CoInitialize(std::ptr::null_mut());
-        }
         let mut device_enumerator: *mut winapi::um::mmdeviceapi::IMMDeviceEnumerator =
             std::ptr::null_mut();
         winapi::um::combaseapi::CoCreateInstance(
