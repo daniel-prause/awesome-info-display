@@ -69,7 +69,6 @@ impl BasicScreen for MediaInfoScreen {
     }
 }
 
-#[cfg(windows)]
 impl MediaInfoScreen {
     fn draw_intro(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
         draw_text_mut(
@@ -361,7 +360,6 @@ impl MediaInfoScreen {
         self.screen.bytes = image.into_vec();
     }
 
-    #[cfg(windows)]
     pub fn new(
         description: String,
         key: String,
