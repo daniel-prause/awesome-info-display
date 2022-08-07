@@ -157,13 +157,16 @@ impl BitpandaScreen {
                             .config
                             .bitpanda_api_key
                             .clone();
-                        calculate_wallet(
+                        match calculate_wallet(
                             &mut last_update,
                             &mut initial_tryout,
                             bitpanda_api_key,
                             &mut wallet_value,
                             sender.clone(),
-                        );
+                        ) {
+                            Ok(_) => {}
+                            Err(e) => eprintln!("Error: {}", e),
+                        }
                         thread::sleep(Duration::from_millis(1000));
                     }
                 })),
@@ -183,101 +186,50 @@ fn calculate_wallet(
     bitpanda_api_key: String,
     wallet_value: &mut f64,
     sender: Sender<WalletInfo>,
-) {
-    match last_update.elapsed() {
-        Ok(duration) => {
-            if (duration.as_secs() > 60 || duration.as_secs() < 60 && !*initial_tryout)
-                && bitpanda_api_key.len() > 0
-            {
-                *initial_tryout = true;
-                // 1. get current values for crypto coins
-                let body = reqwest::blocking::get("https://api.bitpanda.com/v1/ticker");
-                match body {
-                    Ok(text) => {
-                        match text.text() {
-                            Ok(asset_values) => {
-                                // 2. get wallet values
-                                let client = reqwest::blocking::Client::new();
-                                let wallet_values = client
-                                    .get("https://api.bitpanda.com/v1/wallets")
-                                    .header("X-API-KEY", bitpanda_api_key)
-                                    .send();
-                                match wallet_values {
-                                    Ok(res) => match res.text() {
-                                        Ok(wallet_response) => {
-                                            let try_wallet_json =
-                                                serde_json::from_str(&wallet_response);
-                                            match try_wallet_json {
-                                                Ok(wallet_json) => {
-                                                    let wallet_json: Value = wallet_json;
-                                                    let wallets: Vec<Value> = serde_json::from_str(
-                                                        &wallet_json["data"].to_string(),
-                                                    )
-                                                    .unwrap_or_default();
-                                                    let assets: Value =
-                                                        serde_json::from_str(&asset_values)
-                                                            .unwrap_or_default();
-                                                    let mut sum = 0.0;
-                                                    for wallet in wallets {
-                                                        let asset_key = wallet["attributes"]
-                                                            ["cryptocoin_symbol"]
-                                                            .as_str()
-                                                            .unwrap();
-                                                        if wallet["attributes"]["balance"]
-                                                            != "0.00000000"
-                                                        {
-                                                            let amount_of_eur = assets[asset_key]
-                                                                ["EUR"]
-                                                                .as_str()
-                                                                .unwrap()
-                                                                .parse::<f64>()
-                                                                .unwrap();
-                                                            let amount_of_crypto = wallet
-                                                                ["attributes"]["balance"]
-                                                                .as_str()
-                                                                .unwrap()
-                                                                .parse::<f64>()
-                                                                .unwrap();
+) -> core::result::Result<bool, Box<dyn std::error::Error>> {
+    if last_update.elapsed()?.as_secs() > 60
+        || last_update.elapsed()?.as_secs() < 60 && !*initial_tryout && bitpanda_api_key.len() > 0
+    {
+        *initial_tryout = true;
+        // 1. get current values for crypto coins
+        let body = reqwest::blocking::get("https://api.bitpanda.com/v1/ticker");
 
-                                                            sum += amount_of_crypto * amount_of_eur;
-                                                        }
-                                                    }
+        let client = reqwest::blocking::Client::new();
+        let asset_values = body?.text();
+        let wallet_values = client
+            .get("https://api.bitpanda.com/v1/wallets")
+            .header("X-API-KEY", bitpanda_api_key)
+            .send();
 
-                                                    *wallet_value = (sum * 100.0).round() / 100.0;
-                                                }
-                                                Err(e) => {
-                                                    eprintln!("Error: {:?}", e);
-                                                }
-                                            }
-                                        }
-                                        Err(e) => {
-                                            eprintln!("Error: {:?}", e);
-                                        }
-                                    },
-                                    Err(e) => {
-                                        eprintln!("Error: {:?}", e);
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                eprintln!("Error: {:?}", e);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Error: {:?}", e);
-                    }
-                }
-                *last_update = SystemTime::now();
-                let wallet_info: WalletInfo = WalletInfo {
-                    wallet_value: *wallet_value,
-                    last_update: *last_update,
-                };
-                sender.try_send(wallet_info).unwrap_or_default();
+        let wallet_json: Value = serde_json::from_str(wallet_values?.text()?.as_str())?;
+        let wallets: Vec<Value> = serde_json::from_str(&wallet_json["data"].to_string())?;
+        let assets: Value = serde_json::from_str(&asset_values?.as_str())?;
+        let mut sum = 0.0;
+        for wallet in wallets {
+            let asset_key = wallet["attributes"]["cryptocoin_symbol"]
+                .as_str()
+                .unwrap_or_default();
+            if wallet["attributes"]["balance"] != "0.00000000" {
+                let amount_of_eur = assets[asset_key]["EUR"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .parse::<f64>()?;
+                let amount_of_crypto = wallet["attributes"]["balance"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .parse::<f64>()?;
+
+                sum += amount_of_crypto * amount_of_eur;
             }
         }
-        Err(e) => {
-            eprintln!("Error: {:?}", e);
-        }
+
+        *wallet_value = (sum * 100.0).round() / 100.0;
+        *last_update = SystemTime::now();
+        let wallet_info: WalletInfo = WalletInfo {
+            wallet_value: *wallet_value,
+            last_update: *last_update,
+        };
+        sender.try_send(wallet_info)?;
     }
+    Ok(true)
 }
