@@ -186,7 +186,7 @@ impl Application for AwesomeDisplay {
         thread::spawn({
             move || loop {
                 if let Err(error) = grab(callback) {
-                    println!("Error: {:?}", error)
+                    eprintln!("Error: {:?}", error)
                 }
             }
         });

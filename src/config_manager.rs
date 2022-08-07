@@ -36,7 +36,7 @@ impl ConfigManager {
                 this.config = serde_json::from_str(&config).unwrap_or(this.config);
             }
             Err(e) => {
-                println!("Error: {:?}", e);
+                eprintln!("Error: {:?}", e);
             }
         }
         return this;
@@ -51,13 +51,13 @@ impl ConfigManager {
                     match result {
                         Ok(_) => {}
                         Err(e) => {
-                            println!("Error: {:?}", e);
+                            eprintln!("Error: {:?}", e);
                         }
                     }
                 }
             }
             Err(e) => {
-                println!("Error: {:?}", e);
+                eprintln!("Error: {:?}", e);
             }
         }
     }

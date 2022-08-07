@@ -393,7 +393,7 @@ impl MediaInfoScreen {
                             match_correct_artist_and_title_format = regex;
                         }
                         Err(err) => {
-                            println!("REGEX ERROR: {:?}", err);
+                            eprintln!("REGEX ERROR: {:?}", err);
                             return;
                         }
                     }
@@ -402,7 +402,7 @@ impl MediaInfoScreen {
                             match_artist_and_title = regex;
                         }
                         Err(err) => {
-                            println!("REGEX ERROR: {:?}", err);
+                            eprintln!("REGEX ERROR: {:?}", err);
                             return;
                         }
                     }
@@ -412,7 +412,7 @@ impl MediaInfoScreen {
                             match_artist_or_title = regex;
                         }
                         Err(err) => {
-                            println!("REGEX ERROR: {:?}", err);
+                            eprintln!("REGEX ERROR: {:?}", err);
                             return;
                         }
                     }

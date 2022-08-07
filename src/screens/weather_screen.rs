@@ -154,7 +154,7 @@ impl WeatherScreen {
                                     format!("{},{}", &current.name, &current.sys.country);
                                 sender.try_send(weather_info).unwrap_or_default();
                             }
-                            Err(e) => println!("Could not fetch weather because: {}", e),
+                            Err(e) => eprintln!("Could not fetch weather because: {}", e),
                         }
                         // TODO: think about whether we want to solve this like in bitpanda screen with last_update...
                         thread::sleep(Duration::from_millis(60000));

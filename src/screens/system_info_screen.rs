@@ -175,7 +175,7 @@ impl SystemInfoScreen {
                                 // it is ok, if screen infos get lost
                                 sender.try_send(system_info).unwrap_or_default();
                             }
-                            Err(x) => println!("\nMemory: error: {}", x),
+                            Err(x) => eprintln!("\nMemory: error: {}", x),
                         }
                     }
                 })),

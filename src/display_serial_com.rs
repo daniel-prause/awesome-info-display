@@ -37,7 +37,13 @@ pub fn reset_display(
     port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
     duration: Duration,
 ) {
-    port.as_deref_mut().unwrap().write(&hex!("11")).unwrap();
+    match port.as_deref_mut() {
+        Some(deref_port) => match deref_port.write(&hex!("11")) {
+            Ok(_) => 0usize,
+            Err(_) => 0usize,
+        },
+        None => 0usize,
+    };
     thread::sleep(duration);
 }
 

@@ -234,26 +234,26 @@ impl BitpandaScreen {
                                                                                 / 100.0;
                                                                     }
                                                                     Err(e) => {
-                                                                        println!("Error: {:?}", e);
+                                                                        eprintln!("Error: {:?}", e);
                                                                     }
                                                                 }
                                                             }
                                                             Err(e) => {
-                                                                println!("Error: {:?}", e);
+                                                                eprintln!("Error: {:?}", e);
                                                             }
                                                         },
                                                         Err(e) => {
-                                                            println!("Error: {:?}", e);
+                                                            eprintln!("Error: {:?}", e);
                                                         }
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    println!("Error: {:?}", e);
+                                                    eprintln!("Error: {:?}", e);
                                                 }
                                             }
                                         }
                                         Err(e) => {
-                                            println!("Error: {:?}", e);
+                                            eprintln!("Error: {:?}", e);
                                         }
                                     }
                                     last_update = SystemTime::now();
@@ -265,7 +265,7 @@ impl BitpandaScreen {
                                 }
                             }
                             Err(e) => {
-                                println!("Error: {:?}", e);
+                                eprintln!("Error: {:?}", e);
                             }
                         }
                     }
