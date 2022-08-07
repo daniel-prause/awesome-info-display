@@ -2,7 +2,7 @@ use crate::config_manager::ConfigManager;
 use crate::screens::BasicScreen;
 use crate::screens::Screen;
 use crate::screens::Screenable;
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Local};
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use error_chain::error_chain;
@@ -10,7 +10,7 @@ use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use rusttype::Font;
 use rusttype::Scale;
-use std::alloc::System;
+
 use std::rc::Rc;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
 use std::thread;
@@ -157,19 +157,21 @@ impl BitpandaScreen {
                             .bitpanda_api_key
                             .clone();
 
-                        match is_overdue(last_update) {
-                            Ok(overdue) => {
-                                if overdue {
-                                    last_update = SystemTime::now();
-                                    match calculate_wallet(last_update, bitpanda_api_key) {
-                                        Ok(wallet_info) => {
-                                            sender.try_send(wallet_info).unwrap_or_default();
+                        if !bitpanda_api_key.is_empty() {
+                            match is_overdue(last_update) {
+                                Ok(overdue) => {
+                                    if overdue {
+                                        last_update = SystemTime::now();
+                                        match calculate_wallet(last_update, bitpanda_api_key) {
+                                            Ok(wallet_info) => {
+                                                sender.try_send(wallet_info).unwrap_or_default();
+                                            }
+                                            Err(e) => eprintln!("Error: {}", e),
                                         }
-                                        Err(e) => eprintln!("Error: {}", e),
                                     }
                                 }
+                                Err(e) => eprintln!("Error: {}", e),
                             }
-                            Err(e) => eprintln!("Error: {}", e),
                         }
 
                         thread::sleep(Duration::from_millis(1000));
