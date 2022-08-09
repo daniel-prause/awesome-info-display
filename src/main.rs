@@ -182,6 +182,12 @@ impl Application for AwesomeDisplay {
                 Arc::clone(&config_manager),
             ),
         ));
+        screens.push(Box::new(screens::ice_screen::IceScreen::new(
+            String::from("Ice Sorts"),
+            String::from("ice_screen"),
+            Rc::clone(&font),
+            Arc::clone(&config_manager),
+        )));
         let (tx, rx): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         let this = AwesomeDisplay {
             state: iced::pure::State::new(),

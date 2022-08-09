@@ -20,6 +20,7 @@ impl ConfigManager {
             openweather_location: String::new(),
             media_screen_active: true,
             weather_screen_active: true,
+            ice_screen_active: true,
             system_info_screen_active: true,
             current_date_screen_active: true,
             brightness: 100,
@@ -80,6 +81,9 @@ impl ConfigManager {
             "current_date_screen" => {
                 return self.config.current_date_screen_active;
             }
+            "ice_screen" => {
+                return self.config.ice_screen_active;
+            }
             _ => false,
         }
     }
@@ -101,6 +105,9 @@ impl ConfigManager {
             }
             "current_date_screen" => {
                 self.config.current_date_screen_active = enabled;
+            }
+            "ice_screen" => {
+                self.config.ice_screen_active = enabled;
             }
             _ => {}
         }
