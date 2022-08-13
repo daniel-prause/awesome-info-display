@@ -76,7 +76,7 @@ impl IceScreen {
             image,
             Rgb([255u8, 255u8, 255u8]),
             position_title as i32,
-            16,
+            24,
             Scale { x: 16.0, y: 16.0 },
             &self.screen.font,
             &rotate(&[&sorts, "   "].join(""), start),
