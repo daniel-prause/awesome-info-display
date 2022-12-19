@@ -12,6 +12,7 @@ mod display_serial_com;
 mod helpers;
 mod screen_manager;
 mod screens;
+mod style;
 
 use crate::display_serial_com::{
     convert_to_gray_scale, init_serial, reset_display, write_screen_buffer,
@@ -387,6 +388,7 @@ impl Application for AwesomeDisplay {
 
     fn theme(&self) -> iced::Theme {
         //return iced::Theme::Dark;
+
         return iced::Theme::custom(iced::theme::Palette {
             background: iced::Color::from_rgb(0.21, 0.22, 0.247),
             text: iced::Color::WHITE,
@@ -464,7 +466,7 @@ impl Application for AwesomeDisplay {
                 self.config_manager.read().unwrap().config.brightness as f32,
                 Message::SliderChanged,
             )
-            .width(Length::Units(200))
+            .width(Length::Units(190))
             .step(0.1)
             .into(),
         ];
@@ -481,7 +483,10 @@ impl Application for AwesomeDisplay {
                 Message::BitpandaApiKeyChanged,
             )
             .password()
-            .width(Length::Units(200))
+            .width(Length::Units(190))
+            .style(iced::theme::TextInput::Custom(Box::new(
+                style::TextInput {},
+            )))
             .into(),
             iced::widget::TextInput::new(
                 "Openweather Api Key",
@@ -493,8 +498,11 @@ impl Application for AwesomeDisplay {
                     .openweather_api_key,
                 Message::OpenWeatherApiKeyChanged,
             )
+            .style(iced::theme::TextInput::Custom(Box::new(
+                style::TextInput {},
+            )))
+            .width(Length::Units(190))
             .password()
-            .width(Length::Units(200))
             .into(),
             iced::widget::TextInput::new(
                 "Openweather Location",
@@ -506,7 +514,10 @@ impl Application for AwesomeDisplay {
                     .openweather_location,
                 Message::OpenWeatherLocationChanged,
             )
-            .width(Length::Units(200))
+            .style(iced::theme::TextInput::Custom(Box::new(
+                style::TextInput {},
+            )))
+            .width(Length::Units(190))
             .into(),
             iced::widget::button(
                 Text::new("Save config").horizontal_alignment(iced::alignment::Horizontal::Center),
@@ -589,6 +600,7 @@ fn special_checkbox<'a>(
     iced::widget::checkbox(description, checked, move |value: bool| {
         Message::ScreenStatusChanged(value, key.clone())
     })
+    .style(iced::theme::Checkbox::Custom(Box::new(style::Checkbox {})))
     .width(Length::Units(200))
     .into()
 }

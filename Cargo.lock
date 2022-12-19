@@ -140,6 +140,7 @@ dependencies = [
  "iced",
  "iced_futures",
  "iced_native",
+ "iced_style",
  "image",
  "imageproc",
  "lazy_static",
