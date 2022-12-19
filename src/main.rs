@@ -1,9 +1,10 @@
 #![windows_subsystem = "windows"]
 extern crate winapi;
-use iced::{
-    executor, time, window, Application, Command, Element, Image, Length, Settings, Subscription,
-    Text,
-};
+
+use iced::widget::Image;
+use iced::widget::Text;
+use iced::{executor, time, window, Application, Command, Element, Length, Settings, Subscription};
+
 use std::time::Duration;
 mod config;
 mod config_manager;
@@ -11,7 +12,7 @@ mod display_serial_com;
 mod helpers;
 mod screen_manager;
 mod screens;
-mod style;
+
 use crate::display_serial_com::{
     convert_to_gray_scale, init_serial, reset_display, write_screen_buffer,
 };
@@ -112,12 +113,12 @@ pub fn main() -> iced::Result {
 }
 
 struct AwesomeDisplay {
-    state: iced::pure::State,
-    theme: style::Theme,
     screens: screen_manager::ScreenManager,
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
     should_exit: bool,
     sender: Sender<Vec<u8>>,
+    current_screen: crate::screens::Screen,
+    screen_descriptions: Vec<(String, String, bool)>,
 }
 
 #[derive(Debug, Clone)]
@@ -139,6 +140,7 @@ impl Application for AwesomeDisplay {
     type Executor = executor::Default;
     type Message = Message;
     type Flags = ();
+    type Theme = iced::Theme;
     fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
         let font = Rc::new(
             Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8])).unwrap(),
@@ -189,13 +191,15 @@ impl Application for AwesomeDisplay {
             Arc::clone(&config_manager),
         )));
         let (tx, rx): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
+        let mut screen_manager = screen_manager::ScreenManager::new(screens);
+        let screen_descriptions = screen_manager.descriptions_and_keys_and_state();
         let this = AwesomeDisplay {
-            state: iced::pure::State::new(),
-            theme: style::Theme::Dark,
-            screens: screen_manager::ScreenManager::new(screens),
+            screens: screen_manager,
             config_manager: config_manager.clone(),
             should_exit: false,
             sender: tx,
+            current_screen: crate::screens::Screen::default(),
+            screen_descriptions: screen_descriptions,
         };
 
         // global key press listener
@@ -374,15 +378,27 @@ impl Application for AwesomeDisplay {
                     .openweather_location = message;
             }
         }
+
+        self.current_screen.description = self.screens.current_screen().description().clone();
+        self.current_screen.bytes = self.screens.current_screen().current_image().clone();
+        self.screen_descriptions = self.screens.descriptions_and_keys_and_state().clone();
         Command::none()
     }
 
-    fn view(&mut self) -> Element<Message> {
-        if !self.screens.current_screen().initial_update_called() {
-            self.screens.update_current_screen();
-        }
+    fn theme(&self) -> iced::Theme {
+        //return iced::Theme::Dark;
+        return iced::Theme::custom(iced::theme::Palette {
+            background: iced::Color::from_rgb(0.21, 0.22, 0.247),
+            text: iced::Color::WHITE,
+            primary: iced::Color::from_rgb(114.0 / 255.0, 137.0 / 255.0, 218.0 / 255.0),
+            success: iced::Color::from_rgb(0.0, 1.0, 0.0),
+            danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
+        });
+    }
+
+    fn view(&self) -> Element<Message> {
         // RENDER IN APP
-        let screen_buffer = self.screens.current_screen().current_image();
+        let screen_buffer = self.current_screen.bytes.clone();
         let mut converted_sb_rgba = Vec::with_capacity(65536);
         let mut converted_sb_rgb = Vec::with_capacity(49152);
         let set_brightness = |chunk_param: u8| {
@@ -404,7 +420,11 @@ impl Application for AwesomeDisplay {
             converted_sb_rgb.push(chunk_one);
             converted_sb_rgb.push(chunk_zero);
         }
-        let image = Image::new(iced::image::Handle::from_pixels(256, 64, converted_sb_rgba));
+        let image = Image::new(iced::widget::image::Handle::from_pixels(
+            256,
+            64,
+            converted_sb_rgba,
+        ));
 
         // SEND TO DISPLAY
         let bytes = convert_to_gray_scale(&converted_sb_rgb);
@@ -420,28 +440,26 @@ impl Application for AwesomeDisplay {
             return new_value;
         };
 
-        let mut column_parts = vec![
-            iced::pure::button(
+        let mut column_parts: Vec<iced_native::Element<Message, iced::Renderer>> = vec![
+            iced::widget::button(
                 Text::new("Next screen").horizontal_alignment(iced::alignment::Horizontal::Center),
             )
             .on_press(Message::NextScreen)
-            .style(self.theme)
             .width(Length::Units(200))
             .into(),
-            iced::pure::button(
+            iced::widget::button(
                 Text::new("Previous screen")
                     .horizontal_alignment(iced::alignment::Horizontal::Center),
             )
             .on_press(Message::PreviousScreen)
-            .style(self.theme)
             .width(Length::Units(200))
             .into(),
-            iced::pure::text(format!(
+            iced::widget::text(format!(
                 "Brightness: {:.2}",
                 convert_brightness(self.config_manager.read().unwrap().config.brightness) as u16
             ))
             .into(),
-            iced::pure::widget::Slider::new(
+            iced::widget::Slider::new(
                 20.0..=100.0,
                 self.config_manager.read().unwrap().config.brightness as f32,
                 Message::SliderChanged,
@@ -452,12 +470,12 @@ impl Application for AwesomeDisplay {
         ];
 
         // insert screens into left column menu
-        for screen in self.screens.descriptions_and_keys_and_state().into_iter() {
+        for screen in self.screen_descriptions.clone().into_iter() {
             column_parts.push(special_checkbox(screen.2, screen.1.into(), screen.0.into()).into());
         }
 
-        let mut left_column_after_screens: Vec<iced::pure::Element<Message>> = vec![
-            iced::pure::text_input(
+        let mut left_column_after_screens: Vec<iced_native::Element<Message, iced::Renderer>> = vec![
+            iced::widget::text_input(
                 "Bitpanda Api Key",
                 &self.config_manager.read().unwrap().config.bitpanda_api_key,
                 Message::BitpandaApiKeyChanged,
@@ -465,7 +483,7 @@ impl Application for AwesomeDisplay {
             .password()
             .width(Length::Units(200))
             .into(),
-            iced::pure::widget::TextInput::new(
+            iced::widget::TextInput::new(
                 "Openweather Api Key",
                 &self
                     .config_manager
@@ -478,7 +496,7 @@ impl Application for AwesomeDisplay {
             .password()
             .width(Length::Units(200))
             .into(),
-            iced::pure::widget::TextInput::new(
+            iced::widget::TextInput::new(
                 "Openweather Location",
                 &self
                     .config_manager
@@ -490,10 +508,9 @@ impl Application for AwesomeDisplay {
             )
             .width(Length::Units(200))
             .into(),
-            iced::pure::button(
+            iced::widget::button(
                 Text::new("Save config").horizontal_alignment(iced::alignment::Horizontal::Center),
             )
-            .style(self.theme)
             .width(Length::Units(200))
             .on_press(Message::SaveConfig)
             .into(),
@@ -501,29 +518,20 @@ impl Application for AwesomeDisplay {
 
         column_parts.append(&mut left_column_after_screens);
 
-        let col1 = iced::pure::widget::Column::with_children(column_parts)
+        let col1 = iced_native::widget::Column::with_children(column_parts)
             .padding(20)
             .align_items(iced::Alignment::Center)
             .spacing(10);
 
-        let col2: iced::pure::widget::Column<Message> = iced::pure::widget::Column::new()
+        let col2: iced::widget::Column<Message> = iced::widget::Column::new()
             .padding(20)
             .align_items(iced::Alignment::Center)
             .width(Length::Fill)
-            .push(iced::pure::text("Current screen").size(50))
-            .push(iced::pure::text(self.screens.current_screen().description()).size(25))
+            .push(iced::widget::text("Current screen").size(50))
+            .push(iced::widget::text(self.current_screen.description.clone()).size(25))
             .push(image.width(Length::Units(256)).height(Length::Units(64)));
 
-        iced::pure::Pure::new(
-            &mut self.state,
-            iced::pure::widget::Container::new(
-                iced::pure::widget::Row::new().push(col1).push(col2),
-            )
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .style(self.theme),
-        )
-        .into()
+        iced_native::widget::Row::new().push(col1).push(col2).into()
     }
 }
 
@@ -577,8 +585,8 @@ fn special_checkbox<'a>(
     checked: bool,
     key: String,
     description: String,
-) -> iced::pure::Element<'a, Message> {
-    iced::pure::checkbox(description, checked, move |value: bool| {
+) -> iced_native::Element<'a, Message, iced::Renderer> {
+    iced::widget::checkbox(description, checked, move |value: bool| {
         Message::ScreenStatusChanged(value, key.clone())
     })
     .width(Length::Units(200))
