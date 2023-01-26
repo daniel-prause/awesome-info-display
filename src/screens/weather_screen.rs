@@ -26,6 +26,8 @@ struct WeatherInfo {
     weather_icon: String,
     city: String,
     temperature: f64,
+    wind: f64,
+    wind_direction: String,
 }
 
 impl Screenable for WeatherScreen {
@@ -90,6 +92,38 @@ impl WeatherScreen {
             &self.screen.font,
             weather_info.city.as_str(),
         );
+
+        // wind symbol
+        draw_text_mut(
+            image,
+            Rgb([255u8, 255u8, 255u8]),
+            160,
+            20,
+            Scale { x: 14.0, y: 14.0 },
+            &self.symbols.as_ref().unwrap(),
+            format!("\u{f72e}").as_str(),
+        );
+        // wind speed
+        draw_text_mut(
+            image,
+            Rgb([255u8, 255u8, 255u8]),
+            178,
+            20,
+            Scale { x: 14.0, y: 14.0 },
+            &self.screen.font,
+            format!("{} km/h", ((weather_info.wind) * 3.6).round()).as_str(),
+        );
+
+        // wind direction
+        draw_text_mut(
+            image,
+            Rgb([255u8, 255u8, 255u8]),
+            178,
+            36,
+            Scale { x: 14.0, y: 14.0 },
+            &self.screen.font,
+            format!("{}", weather_info.wind_direction).as_str(),
+        );
     }
 
     fn get_weather_icon(code: String) -> String {
@@ -125,6 +159,14 @@ impl WeatherScreen {
                 active: active.clone(),
                 handle: Some(thread::spawn(move || {
                     let sender = tx.to_owned();
+                    let deg_to_dir = |deg: f64| {
+                        let val = ((deg / 22.5) + 0.5).floor();
+                        let arr = [
+                            "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW",
+                            "WSW", "W", "WNW", "NW", "NNW",
+                        ];
+                        return arr[(val % 16 as f64) as usize];
+                    };
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
@@ -150,6 +192,9 @@ impl WeatherScreen {
                                 weather_info.weather_icon = current.weather[0].icon.clone();
 
                                 weather_info.temperature = current.main.temp;
+                                weather_info.wind = current.wind.speed;
+                                weather_info.wind_direction =
+                                    deg_to_dir(current.wind.deg).to_string();
                                 weather_info.city =
                                     format!("{},{}", &current.name, &current.sys.country);
                                 sender.try_send(weather_info).unwrap_or_default();
