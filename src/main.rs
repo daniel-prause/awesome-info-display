@@ -247,10 +247,6 @@ impl Application for AwesomeDisplay {
         String::from("AwesomeInfoDisplay")
     }
 
-    fn should_exit(&self) -> bool {
-        self.should_exit
-    }
-
     fn subscription(&self) -> Subscription<Message> {
         iced_futures::subscription::Subscription::batch(
             vec![
@@ -300,7 +296,6 @@ impl Application for AwesomeDisplay {
             .into_iter(),
         )
     }
-
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::SaveConfig => {
@@ -383,6 +378,9 @@ impl Application for AwesomeDisplay {
         self.current_screen.description = self.screens.current_screen().description().clone();
         self.current_screen.bytes = self.screens.current_screen().current_image().clone();
         self.screen_descriptions = self.screens.descriptions_and_keys_and_state().clone();
+        if self.should_exit {
+            return window::close();
+        }
         Command::none()
     }
 
