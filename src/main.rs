@@ -3,7 +3,9 @@ extern crate winapi;
 
 use iced::widget::Image;
 use iced::widget::Text;
-use iced::{executor, time, window, Application, Command, Element, Length, Settings, Subscription};
+use iced::{
+    executor, time, window, Application, Command, Element, Font, Length, Settings, Subscription,
+};
 
 use std::time::Duration;
 mod config;
@@ -22,7 +24,7 @@ use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use lazy_static::lazy_static;
 use rdev::{grab, Event, EventType, Key};
-use rusttype::Font;
+use rusttype::Font as ft;
 use std::error::Error;
 use std::ffi::CString;
 use std::fmt;
@@ -67,10 +69,16 @@ fn get_super_error() -> SuperError {
     }
 }
 
+const ICONS: Font = Font::External {
+    name: "Icons",
+    bytes: include_bytes!("symbols.otf"),
+};
+
 lazy_static! {
     static ref LAST_KEY: Mutex<bool> = Mutex::new(false);
     static ref LAST_KEY_VALUE: Mutex<u32> = Mutex::new(0);
     static ref SERIAL_PORT: Mutex<Option<Box<dyn serialport::SerialPort>>> = Mutex::new(None);
+    static ref TEENSY_CONNECTED: Mutex<bool> = Mutex::new(false);
     static ref CLOSE_REQUESTED: std::sync::atomic::AtomicBool =
         std::sync::atomic::AtomicBool::new(false);
     static ref HIBERNATING: Mutex<bool> = Mutex::new(false);
@@ -144,7 +152,7 @@ impl Application for AwesomeDisplay {
     type Theme = iced::Theme;
     fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
         let font = Rc::new(
-            Font::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8])).unwrap(),
+            ft::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8])).unwrap(),
         );
 
         let config_manager =
@@ -216,8 +224,10 @@ impl Application for AwesomeDisplay {
         thread::spawn(move || loop {
             let buf = rx.recv();
             if SERIAL_PORT.lock().unwrap().is_none() {
+                *TEENSY_CONNECTED.lock().unwrap() = false;
                 *SERIAL_PORT.lock().unwrap() = init_serial();
                 if SERIAL_PORT.lock().unwrap().is_some() {
+                    *TEENSY_CONNECTED.lock().unwrap() = true;
                     reset_display(
                         &mut *SERIAL_PORT.lock().unwrap(),
                         Duration::from_millis(500),
@@ -522,6 +532,13 @@ impl Application for AwesomeDisplay {
             )
             .width(Length::Units(200))
             .on_press(Message::SaveConfig)
+            .into(),
+            iced::widget::Text::new(if *TEENSY_CONNECTED.lock().unwrap() {
+                String::from("\u{f26c} \u{f058}")
+            } else {
+                String::from("\u{f26c} \u{f057}")
+            })
+            .font(ICONS)
             .into(),
         ];
 
