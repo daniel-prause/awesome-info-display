@@ -113,7 +113,7 @@ impl IceScreen {
                                 Ok(response) => {
                                     let fragment = Html::parse_fragment(&response.text().unwrap());
                                     let selector =
-                                        Selector::parse(".fusion-text-12 .tlp-content a").unwrap();
+                                        Selector::parse(".fusion-text-14 .tlp-content a").unwrap();
 
                                     let mut sorts: Vec<String> = Vec::new();
                                     for element in fragment.select(&selector) {
