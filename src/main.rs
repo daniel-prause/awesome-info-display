@@ -154,7 +154,8 @@ impl Application for AwesomeDisplay {
         let font = Rc::new(
             ft::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8])).unwrap(),
         );
-
+        let symbols =
+            Rc::new(ft::try_from_vec(Vec::from(include_bytes!("symbols.otf") as &[u8])).unwrap());
         let config_manager =
             std::sync::Arc::new(RwLock::new(config_manager::ConfigManager::new(None)));
         let mut screens: Vec<Box<dyn screens::BasicScreen>> = Vec::new();
@@ -171,6 +172,7 @@ impl Application for AwesomeDisplay {
             String::from("Media Info"),
             String::from("media_info_screen"),
             Rc::clone(&font),
+            Rc::clone(&symbols),
             Arc::clone(&config_manager),
         )));
         screens.push(Box::new(screens::bitpanda_screen::BitpandaScreen::new(
@@ -183,6 +185,7 @@ impl Application for AwesomeDisplay {
             String::from("Weather Info"),
             String::from("weather_screen"),
             Rc::clone(&font),
+            Rc::clone(&symbols),
             Arc::clone(&config_manager),
         )));
         screens.push(Box::new(

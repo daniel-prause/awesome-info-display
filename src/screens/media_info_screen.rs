@@ -32,7 +32,7 @@ use winapi::Interface;
 pub struct MediaInfoScreen {
     screen: Screen,
     receiver: Receiver<MusicPlayerInfo>,
-    symbols: Option<Font<'static>>,
+    symbols: Rc<Font<'static>>,
     title_x: u32,
     artist_x: u32,
     music_player_info: MusicPlayerInfo,
@@ -176,7 +176,7 @@ impl MediaInfoScreen {
             4,
             37,
             Scale { x: 10.0, y: 10.0 },
-            self.symbols.as_ref().unwrap(),
+            self.symbols.as_ref(),
             button,
         );
     }
@@ -265,7 +265,7 @@ impl MediaInfoScreen {
                 118,
                 38,
                 Scale { x: 10.0, y: 10.0 },
-                self.symbols.as_ref().unwrap(),
+                self.symbols.as_ref(),
                 mute_speaker,
             );
         }
@@ -292,7 +292,7 @@ impl MediaInfoScreen {
             16,
             38,
             Scale { x: 10.0, y: 10.0 },
-            self.symbols.as_ref().unwrap(),
+            self.symbols.as_ref(),
             small_speaker,
         );
 
@@ -302,7 +302,7 @@ impl MediaInfoScreen {
             240,
             37,
             Scale { x: 10.0, y: 10.0 },
-            self.symbols.as_ref().unwrap(),
+            self.symbols.as_ref(),
             big_speaker,
         );
         draw_filled_rect_mut(
@@ -364,6 +364,7 @@ impl MediaInfoScreen {
         description: String,
         key: String,
         font: Rc<Font<'static>>,
+        symbols: Rc<Font<'static>>,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> MediaInfoScreen {
         let (tx, rx): (Sender<MusicPlayerInfo>, Receiver<MusicPlayerInfo>) = bounded(1);
@@ -526,7 +527,7 @@ impl MediaInfoScreen {
                 ..Default::default()
             },
             music_player_info: Default::default(),
-            symbols: Font::try_from_vec(Vec::from(include_bytes!("../symbols.otf") as &[u8])),
+            symbols: Rc::clone(&symbols),
             title_x: 0,
             artist_x: 0,
             receiver: rx,

@@ -17,7 +17,7 @@ use std::time::Duration;
 
 pub struct WeatherScreen {
     screen: Screen,
-    symbols: Option<Font<'static>>,
+    symbols: Rc<Font<'static>>,
     receiver: Receiver<WeatherInfo>,
 }
 
@@ -67,7 +67,7 @@ impl WeatherScreen {
             6,
             6,
             Scale { x: 40.0, y: 40.0 },
-            self.symbols.as_ref().unwrap(),
+            self.symbols.as_ref(),
             WeatherScreen::get_weather_icon(weather_info.weather_icon).as_str(),
         );
 
@@ -100,7 +100,7 @@ impl WeatherScreen {
             160,
             20,
             Scale { x: 14.0, y: 14.0 },
-            &self.symbols.as_ref().unwrap(),
+            &self.symbols.as_ref(),
             format!("\u{f72e}").as_str(),
         );
         // wind speed
@@ -146,6 +146,7 @@ impl WeatherScreen {
         description: String,
         key: String,
         font: Rc<Font<'static>>,
+        symbols: Rc<Font<'static>>,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> WeatherScreen {
         let (tx, rx): (Sender<WeatherInfo>, Receiver<WeatherInfo>) = bounded(1);
@@ -207,7 +208,7 @@ impl WeatherScreen {
                 })),
                 ..Default::default()
             },
-            symbols: Font::try_from_vec(Vec::from(include_bytes!("../symbols.otf") as &[u8])),
+            symbols: Rc::clone(&symbols),
             receiver: rx,
         };
 
