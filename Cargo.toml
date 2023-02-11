@@ -37,4 +37,5 @@ unicode-segmentation = "1.7"
 [target.'cfg(windows)'.dependencies]
 winapi = {version = "0.3", features = ["winuser", "mmdeviceapi", "combaseapi", "objbase", "endpointvolume"]}
 [build-dependencies]
+static_vcruntime = "2.0"
 winres = "0.1"
