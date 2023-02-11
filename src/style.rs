@@ -1,10 +1,10 @@
-use iced::{application::Appearance, widget::canvas::Text, Color};
-use iced_style::checkbox::*;
+use iced::Color;
 #[derive(Debug, Clone, Copy)]
 
 pub struct Checkbox {}
 pub struct TextInput {}
 
+/*
 const SURFACE: Color = Color::from_rgb(
     0x40 as f32 / 255.0,
     0x44 as f32 / 255.0,
@@ -22,7 +22,7 @@ const ACTIVE: Color = Color::from_rgb(
     0x89 as f32 / 255.0,
     0xDA as f32 / 255.0,
 );
-
+ */
 const HOVERED: Color = Color::from_rgb(
     0x67 as f32 / 255.0,
     0x7B as f32 / 255.0,
@@ -32,7 +32,11 @@ const HOVERED: Color = Color::from_rgb(
 impl iced::widget::checkbox::StyleSheet for Checkbox {
     type Style = iced::Theme;
 
-    fn active(&self, style: &Self::Style, is_checked: bool) -> iced::widget::checkbox::Appearance {
+    fn active(
+        &self,
+        _style: &Self::Style,
+        _is_checked: bool,
+    ) -> iced::widget::checkbox::Appearance {
         iced::widget::checkbox::Appearance {
             background: iced::Color::WHITE.into(),
             checkmark_color: iced::Color::BLACK,
@@ -43,7 +47,11 @@ impl iced::widget::checkbox::StyleSheet for Checkbox {
         }
     }
 
-    fn hovered(&self, style: &Self::Style, is_checked: bool) -> iced::widget::checkbox::Appearance {
+    fn hovered(
+        &self,
+        _style: &Self::Style,
+        _is_checked: bool,
+    ) -> iced::widget::checkbox::Appearance {
         iced::widget::checkbox::Appearance {
             background: iced::Background::Color(iced::Color {
                 a: 0.8,
@@ -61,7 +69,7 @@ impl iced::widget::checkbox::StyleSheet for Checkbox {
 impl iced::widget::text_input::StyleSheet for TextInput {
     type Style = iced::Theme;
 
-    fn active(&self, style: &Self::Style) -> iced::widget::text_input::Appearance {
+    fn active(&self, _style: &Self::Style) -> iced::widget::text_input::Appearance {
         iced::widget::text_input::Appearance {
             background: iced::Color::WHITE.into(),
             border_radius: 0f32,
@@ -70,12 +78,12 @@ impl iced::widget::text_input::StyleSheet for TextInput {
         }
     }
 
-    fn value_color(&self, style: &Self::Style) -> Color {
+    fn value_color(&self, _style: &Self::Style) -> Color {
         iced::Color::BLACK.into()
     }
 
     /// Produces the style of a focused text input.
-    fn focused(&self, style: &Self::Style) -> iced::widget::text_input::Appearance {
+    fn focused(&self, _style: &Self::Style) -> iced::widget::text_input::Appearance {
         iced::widget::text_input::Appearance {
             background: iced::Color::WHITE.into(),
             border_radius: 0f32,
@@ -85,12 +93,12 @@ impl iced::widget::text_input::StyleSheet for TextInput {
     }
 
     /// Produces the [`Color`] of the placeholder of a text input.
-    fn placeholder_color(&self, style: &Self::Style) -> Color {
+    fn placeholder_color(&self, _style: &Self::Style) -> Color {
         iced::Color::BLACK.into()
     }
 
     /// Produces the [`Color`] of the selection of a text input.
-    fn selection_color(&self, style: &Self::Style) -> Color {
+    fn selection_color(&self, _style: &Self::Style) -> Color {
         let mut color = iced::Color::from(HOVERED);
         color.a = 0.5;
         color

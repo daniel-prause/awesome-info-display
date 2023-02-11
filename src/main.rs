@@ -69,9 +69,11 @@ fn get_super_error() -> SuperError {
     }
 }
 
+const FONT_BYTES: &[u8] = include_bytes!("Liberation.ttf");
+const SYMBOL_BYTES: &[u8] = include_bytes!("symbols.otf");
 const ICONS: Font = Font::External {
     name: "Icons",
-    bytes: include_bytes!("symbols.otf"),
+    bytes: SYMBOL_BYTES,
 };
 
 lazy_static! {
@@ -151,11 +153,8 @@ impl Application for AwesomeDisplay {
     type Flags = ();
     type Theme = iced::Theme;
     fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
-        let font = Rc::new(
-            ft::try_from_vec(Vec::from(include_bytes!("Liberation.ttf") as &[u8])).unwrap(),
-        );
-        let symbols =
-            Rc::new(ft::try_from_vec(Vec::from(include_bytes!("symbols.otf") as &[u8])).unwrap());
+        let font = Rc::new(ft::try_from_vec(Vec::from(FONT_BYTES as &[u8])).unwrap());
+        let symbols = Rc::new(ft::try_from_vec(Vec::from(SYMBOL_BYTES as &[u8])).unwrap());
         let config_manager =
             std::sync::Arc::new(RwLock::new(config_manager::ConfigManager::new(None)));
         let mut screens: Vec<Box<dyn screens::BasicScreen>> = Vec::new();
