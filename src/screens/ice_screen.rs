@@ -1,20 +1,19 @@
 extern crate encoding;
-use crate::config_manager::ConfigManager;
-use crate::screens::BasicScreen;
-use crate::screens::Screen;
-use crate::screens::Screenable;
-use crossbeam_channel::bounded;
-use crossbeam_channel::{Receiver, Sender};
+use crate::{
+    config_manager::ConfigManager,
+    screens::{BasicScreen, Screen, Screenable},
+};
+use crossbeam_channel::{bounded, Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
-use rusttype::Font;
-use rusttype::Scale;
+use rusttype::{Font, Scale};
 use scraper::{Html, Selector};
-use std::rc::Rc;
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
-use std::thread;
-use std::time::Duration;
-use std::time::SystemTime;
+use std::{
+    rc::Rc,
+    sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
+    thread,
+    time::{Duration, SystemTime},
+};
 use unicode_segmentation::UnicodeSegmentation;
 
 pub struct IceScreen {

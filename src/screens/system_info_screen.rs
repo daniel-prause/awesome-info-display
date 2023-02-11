@@ -1,20 +1,22 @@
 extern crate cpu_monitor;
-use crate::config_manager::ConfigManager;
-use crate::screens::BasicScreen;
-use crate::screens::Screen;
-use crate::screens::Screenable;
+use crate::{
+    config_manager::ConfigManager,
+    screens::{BasicScreen, Screen, Screenable},
+};
 use cpu_monitor::CpuInstant;
-use crossbeam_channel::bounded;
-use crossbeam_channel::{Receiver, Sender};
+use crossbeam_channel::{bounded, Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
-use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_mut};
-use imageproc::rect::Rect;
-use rusttype::Font;
-use rusttype::Scale;
-use std::rc::Rc;
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
-use std::thread;
-use std::time::Duration;
+use imageproc::{
+    drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_mut},
+    rect::Rect,
+};
+use rusttype::{Font, Scale};
+use std::{
+    rc::Rc,
+    sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
+    thread,
+    time::Duration,
+};
 use systemstat::{saturating_sub_bytes, Platform, System};
 
 pub struct SystemInfoScreen {

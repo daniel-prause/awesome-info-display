@@ -1,18 +1,17 @@
 use crate::config_manager::ConfigManager;
-use crate::screens::BasicScreen;
-use crate::screens::Screen;
-use crate::screens::Screenable;
+use crate::screens::{BasicScreen, Screen, Screenable};
 use chrono::{DateTime, Local};
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
-use rusttype::Font;
-use rusttype::Scale;
-use std::rc::Rc;
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
-use std::thread;
-use std::time::Duration;
+use rusttype::{Font, Scale};
+use std::{
+    rc::Rc,
+    sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
+    thread,
+    time::Duration,
+};
 
 pub struct CurrentDateScreen {
     screen: Screen,

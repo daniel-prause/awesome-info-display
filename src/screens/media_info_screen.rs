@@ -1,33 +1,35 @@
 extern crate winapi;
-use crate::config_manager::ConfigManager;
-use crate::screens::BasicScreen;
-use crate::screens::Screen;
-use crate::screens::Screenable;
-use crossbeam_channel::bounded;
-use crossbeam_channel::{Receiver, Sender};
+use crate::{
+    config_manager::ConfigManager,
+    screens::{BasicScreen, Screen, Screenable},
+};
+use crossbeam_channel::{bounded, Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{
     draw_filled_rect_mut, draw_hollow_rect_mut, draw_line_segment_mut, draw_text_mut,
 };
 use imageproc::rect::Rect;
 use regex;
-use rusttype::Font;
-use rusttype::Scale;
-use std::ffi::OsStr;
-use std::iter::once;
-use std::os::windows::ffi::OsStrExt;
-use std::ptr::null_mut;
-use std::rc::Rc;
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
-use std::thread;
-use std::time::Duration;
-use std::time::Instant;
+use rusttype::{Font, Scale};
+use std::{
+    ffi::OsStr,
+    iter::once,
+    os::windows::ffi::OsStrExt,
+    ptr::null_mut,
+    rc::Rc,
+    sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
+    thread,
+    time::{Duration, Instant},
+};
 use unicode_segmentation::UnicodeSegmentation;
-use winapi::shared::minwindef::LPARAM;
-use winapi::um::mmdeviceapi::*;
-use winapi::um::winuser::FindWindowW;
-use winapi::um::winuser::*;
-use winapi::Interface;
+use winapi::{
+    shared::minwindef::LPARAM,
+    um::{
+        mmdeviceapi::*,
+        winuser::{FindWindowW, *},
+    },
+    Interface,
+};
 
 pub struct MediaInfoScreen {
     screen: Screen,
