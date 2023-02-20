@@ -39,7 +39,7 @@ impl iced::widget::checkbox::StyleSheet for Checkbox {
     ) -> iced::widget::checkbox::Appearance {
         iced::widget::checkbox::Appearance {
             background: iced::Color::WHITE.into(),
-            checkmark_color: iced::Color::BLACK,
+            icon_color: iced::Color::BLACK,
             border_radius: 0f32,
             border_width: 1f32,
             border_color: iced::Color::BLACK,
@@ -57,7 +57,7 @@ impl iced::widget::checkbox::StyleSheet for Checkbox {
                 a: 0.8,
                 ..iced::Color::WHITE
             }),
-            checkmark_color: iced::Color::BLACK,
+            icon_color: iced::Color::BLACK,
             border_radius: 0f32,
             border_width: 1f32,
             border_color: iced::Color::BLACK,

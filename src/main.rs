@@ -457,14 +457,14 @@ impl Application for AwesomeDisplay {
                 Text::new("Next screen").horizontal_alignment(iced::alignment::Horizontal::Center),
             )
             .on_press(Message::NextScreen)
-            .width(Length::Units(200))
+            .width(Length::Fixed(200f32))
             .into(),
             iced::widget::button(
                 Text::new("Previous screen")
                     .horizontal_alignment(iced::alignment::Horizontal::Center),
             )
             .on_press(Message::PreviousScreen)
-            .width(Length::Units(200))
+            .width(Length::Fixed(200f32))
             .into(),
             iced::widget::text(format!(
                 "Brightness: {:.2}",
@@ -476,7 +476,7 @@ impl Application for AwesomeDisplay {
                 self.config_manager.read().unwrap().config.brightness as f32,
                 Message::SliderChanged,
             )
-            .width(Length::Units(190))
+            .width(Length::Fixed(190f32))
             .step(0.1)
             .into(),
         ];
@@ -493,7 +493,7 @@ impl Application for AwesomeDisplay {
                 Message::BitpandaApiKeyChanged,
             )
             .password()
-            .width(Length::Units(190))
+            .width(Length::Fixed(200f32))
             .style(iced::theme::TextInput::Custom(Box::new(
                 style::TextInput {},
             )))
@@ -511,7 +511,7 @@ impl Application for AwesomeDisplay {
             .style(iced::theme::TextInput::Custom(Box::new(
                 style::TextInput {},
             )))
-            .width(Length::Units(190))
+            .width(Length::Fixed(200f32))
             .password()
             .into(),
             iced::widget::TextInput::new(
@@ -527,12 +527,12 @@ impl Application for AwesomeDisplay {
             .style(iced::theme::TextInput::Custom(Box::new(
                 style::TextInput {},
             )))
-            .width(Length::Units(190))
+            .width(Length::Fixed(200f32))
             .into(),
             iced::widget::button(
                 Text::new("Save config").horizontal_alignment(iced::alignment::Horizontal::Center),
             )
-            .width(Length::Units(200))
+            .width(Length::Fixed(200f32))
             .on_press(Message::SaveConfig)
             .into(),
             iced::widget::Text::new(if *TEENSY_CONNECTED.lock().unwrap() {
@@ -557,7 +557,11 @@ impl Application for AwesomeDisplay {
             .width(Length::Fill)
             .push(iced::widget::text("Current screen").size(50))
             .push(iced::widget::text(self.current_screen.description.clone()).size(25))
-            .push(image.width(Length::Units(256)).height(Length::Units(64)));
+            .push(
+                image
+                    .width(Length::Fixed(256f32))
+                    .height(Length::Fixed(64f32)),
+            );
 
         iced_native::widget::Row::new().push(col1).push(col2).into()
     }
@@ -618,7 +622,7 @@ fn special_checkbox<'a>(
         Message::ScreenStatusChanged(value, key.clone())
     })
     .style(iced::theme::Checkbox::Custom(Box::new(style::Checkbox {})))
-    .width(Length::Units(200))
+    .width(Length::Fixed(200f32))
     .into()
 }
 
