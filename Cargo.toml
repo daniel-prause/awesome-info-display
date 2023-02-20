@@ -25,15 +25,15 @@ imageproc = "0.23"
 lazy_static = "1.4"
 openweathermap = "0"
 rdev = {version = "0.5", features = ["unstable_grab"]}
-regex = "1.4"
-reqwest = {version = "0.11.7", features = ["blocking"]}
+regex = "1"
+reqwest = {version = "0.11", features = ["blocking"]}
 rusttype = "0.9"
 scraper = "0.14.0"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 serialport = {git = "https://gitlab.com/susurrus/serialport-rs"}
-systemstat = "0.2.2"
-unicode-segmentation = "1.7"
+systemstat = "0.2.3"
+unicode-segmentation = "1"
 [target.'cfg(windows)'.dependencies]
 winapi = {version = "0.3", features = ["winuser", "mmdeviceapi", "combaseapi", "objbase", "endpointvolume"]}
 [build-dependencies]
