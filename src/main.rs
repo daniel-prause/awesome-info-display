@@ -91,6 +91,7 @@ pub fn main() -> iced::Result {
 
         let lp_text = CString::new("AwesomeInfoDisplay").unwrap();
         winapi::um::synchapi::CreateMutexA(std::ptr::null_mut(), 1, lp_text.as_ptr());
+        drop(lp_text);
         if winapi::um::errhandlingapi::GetLastError()
             == winapi::shared::winerror::ERROR_ALREADY_EXISTS
         {
