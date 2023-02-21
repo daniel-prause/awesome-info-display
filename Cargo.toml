@@ -34,6 +34,7 @@ serde_json = "1.0"
 serialport = {git = "https://gitlab.com/susurrus/serialport-rs"}
 systemstat = "0.2.3"
 unicode-segmentation = "1"
+winsafe = {version = "*", features = ['user', 'ole']}
 [target.'cfg(windows)'.dependencies]
 winapi = {version = "0.3", features = ["winuser", "mmdeviceapi", "combaseapi", "objbase", "endpointvolume"]}
 [build-dependencies]

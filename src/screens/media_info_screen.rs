@@ -12,10 +12,6 @@ use imageproc::rect::Rect;
 use regex;
 use rusttype::{Font, Scale};
 use std::{
-    ffi::OsStr,
-    iter::once,
-    os::windows::ffi::OsStrExt,
-    ptr::null_mut,
     rc::Rc,
     sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
     thread,
@@ -24,12 +20,10 @@ use std::{
 use unicode_segmentation::UnicodeSegmentation;
 use winapi::{
     shared::minwindef::LPARAM,
-    um::{
-        mmdeviceapi::*,
-        winuser::{FindWindowW, *},
-    },
+    um::{mmdeviceapi::*, winuser::*},
     Interface,
 };
+use winsafe::{co, msg::WndMsg, prelude::user_Hwnd};
 
 pub struct MediaInfoScreen {
     screen: Screen,
@@ -380,10 +374,6 @@ impl MediaInfoScreen {
                 key,
                 active: active.clone(),
                 handle: Some(thread::spawn(move || {
-                    let window: Vec<u16> = OsStr::new("Winamp v1.x")
-                        .encode_wide()
-                        .chain(once(0))
-                        .collect();
                     let sender = tx.to_owned();
                     let active = active.clone();
                     let match_correct_artist_and_title_format;
@@ -418,24 +408,33 @@ impl MediaInfoScreen {
                         }
                     }
 
-                    unsafe {
-                        winapi::um::objbase::CoInitialize(std::ptr::null_mut());
-                    }
+                    winsafe::CoInitializeEx(co::COINIT::APARTMENTTHREADED).unwrap();
 
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
                         }
                         let mut music_player_info: MusicPlayerInfo = Default::default();
-                        let hwnd = unsafe { FindWindowW(window.as_ptr(), null_mut()) };
-                        if hwnd != null_mut() {
-                            unsafe {
+
+                        match winsafe::HWND::FindWindow(
+                            Some(winsafe::AtomStr::from_str("Winamp v1.x")),
+                            None,
+                        ) {
+                            Ok(window) => {
                                 // 1 == playing, 3 == paused, anything else == stopped
-                                let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
+                                //let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
+                                let playback_status = window.SendMessage(WndMsg {
+                                    msg_id: WM_USER.into(),
+                                    wparam: 0,
+                                    lparam: 104,
+                                });
                                 music_player_info.playback_status = playback_status;
                                 // current position in msecs
-                                let mut current_track_position =
-                                    SendMessageW(hwnd, WM_USER, 0, 105);
+                                let mut current_track_position = window.SendMessage(WndMsg {
+                                    msg_id: WM_USER.into(),
+                                    wparam: 0,
+                                    lparam: 105,
+                                });
                                 if playback_status != 1 && playback_status != 3 {
                                     current_track_position = 0;
                                 }
@@ -443,12 +442,23 @@ impl MediaInfoScreen {
                                 music_player_info.current_track_position = current_track_position;
 
                                 // track length in seconds (multiply by thousand)
-                                let track_length = SendMessageW(hwnd, WM_USER, 1, 105);
+                                let track_length = window.SendMessage(WndMsg {
+                                    msg_id: WM_USER.into(),
+                                    wparam: 1,
+                                    lparam: 105,
+                                });
                                 music_player_info.track_length = track_length;
                                 // get title
-                                let current_index = SendMessageW(hwnd, WM_USER, 0, 125);
-                                let title_length =
-                                    SendMessageW(hwnd, WM_GETTEXTLENGTH, current_index as usize, 0);
+                                let current_index = window.SendMessage(WndMsg {
+                                    msg_id: WM_USER.into(),
+                                    wparam: 0,
+                                    lparam: 125,
+                                });
+                                let title_length = window.SendMessage(WndMsg {
+                                    msg_id: WM_GETTEXTLENGTH.into(),
+                                    wparam: current_index as usize,
+                                    lparam: 0,
+                                });
 
                                 // WINAMP VOLUME. NOT USED RIGHT NOW.
                                 // let mut volume = SendMessageW(hwnd, WM_USER, -666i32 as usize, 122);
@@ -456,12 +466,13 @@ impl MediaInfoScreen {
                                 let buffer_length = title_length + 1;
                                 let mut buffer = Vec::<u16>::with_capacity(buffer_length as usize);
                                 buffer.resize(buffer_length as usize, 0);
-                                SendMessageW(
-                                    hwnd,
-                                    WM_GETTEXT,
-                                    buffer_length as usize,
-                                    buffer.as_mut_ptr() as LPARAM,
-                                );
+
+                                window.SendMessage(WndMsg {
+                                    msg_id: WM_GETTEXT.into(),
+                                    wparam: buffer_length as usize,
+                                    lparam: buffer.as_mut_ptr() as LPARAM,
+                                });
+
                                 let data = String::from_utf16_lossy(&buffer);
 
                                 music_player_info.player_active = title_length > 0
@@ -518,8 +529,9 @@ impl MediaInfoScreen {
                                     }
                                 }
                             }
-                        } else {
-                            music_player_info.player_active = false;
+                            Err(_) => {
+                                music_player_info.player_active = false;
+                            }
                         }
 
                         let volume_data = get_master_volume();
@@ -560,9 +572,9 @@ pub fn rotate(str: &str, direction: Direction, count: usize) -> String {
 pub fn get_master_volume() -> (f32, i32) {
     let mut current_volume = 0.0 as f32;
     let mut mute = 0;
+    let mut device_enumerator: *mut winapi::um::mmdeviceapi::IMMDeviceEnumerator =
+        std::ptr::null_mut();
     unsafe {
-        let mut device_enumerator: *mut winapi::um::mmdeviceapi::IMMDeviceEnumerator =
-            std::ptr::null_mut();
         winapi::um::combaseapi::CoCreateInstance(
             &winapi::um::mmdeviceapi::CLSID_MMDeviceEnumerator,
             std::ptr::null_mut(),
@@ -598,12 +610,4 @@ pub fn get_master_volume() -> (f32, i32) {
         (*endpoint_volume).GetMute(&mut mute as *mut i32);
     }
     (current_volume, mute)
-}
-
-impl Drop for MediaInfoScreen {
-    fn drop(&mut self) {
-        unsafe {
-            winapi::um::combaseapi::CoUninitialize();
-        }
-    }
 }
