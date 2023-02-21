@@ -89,9 +89,8 @@ pub fn main() -> iced::Result {
     unsafe {
         let app_image = ::image::load_from_memory(include_bytes!("../icon.ico") as &[u8]);
 
-        let lp_text = CString::new("AwesomeInfoDisplay").unwrap();
+        let lp_text = CString::new("AwesomeInfoDisplay").unwrap_or_default();
         winapi::um::synchapi::CreateMutexA(std::ptr::null_mut(), 1, lp_text.as_ptr());
-        drop(lp_text);
         if winapi::um::errhandlingapi::GetLastError()
             == winapi::shared::winerror::ERROR_ALREADY_EXISTS
         {
