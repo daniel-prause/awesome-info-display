@@ -499,8 +499,6 @@ impl MediaInfoScreen {
 
                                                 music_player_info.artist = artist.to_string();
                                                 music_player_info.title = title.to_string();
-                                                drop(artist);
-                                                drop(title);
                                             }
                                             None => {
                                                 // check, if only artist OR title are there
@@ -514,7 +512,6 @@ impl MediaInfoScreen {
                                                             .map_or("", |m| m.as_str())
                                                             .trim();
                                                         music_player_info.title = title.to_string();
-                                                        drop(title);
                                                         music_player_info.artist = "".into();
                                                     }
                                                     None => {
