@@ -166,7 +166,7 @@ impl WeatherScreen {
                             "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW",
                             "WSW", "W", "WNW", "NW", "NNW",
                         ];
-                        return arr[(val % 16 as f64) as usize];
+                        return arr[(val as usize) % 16];
                     };
                     loop {
                         while !active.load(Ordering::Acquire) {
