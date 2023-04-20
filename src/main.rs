@@ -223,8 +223,8 @@ impl Application for AwesomeDisplay {
 
         // write to serial port ... since it is blocking, we'll just do this in a different thread
         thread::spawn(move || loop {
+            let buf = rx.recv();
             if TEENSY.is_connected() {
-                let buf = rx.recv();
                 match buf {
                     Ok(b) => {
                         let mut screen_buffer: Vec<u8> = b;
@@ -347,7 +347,7 @@ impl Application for AwesomeDisplay {
                 {
                     CLOSE_REQUESTED.store(true, std::sync::atomic::Ordering::Release);
                     if TEENSY.is_connected() {
-                        TEENSY.reset_display(500)
+                        TEENSY.reset_display(0)
                     }
                     self.config_manager.write().unwrap().save();
                     self.should_exit = true;
