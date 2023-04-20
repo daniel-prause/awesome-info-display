@@ -1,4 +1,5 @@
-use crate::display_serial_com::init_serial;
+use crate::display_serial_com::*;
+use std::time::Duration;
 pub struct Device {
     identifier: String,
     baud: u32,
@@ -24,12 +25,25 @@ impl Device {
         *self.connected.lock().unwrap() = status;
     }
 
-    pub fn set_port(&self, port: Option<std::boxed::Box<dyn serialport::SerialPort>>) {
-        self.set_connected(port.is_some());
+    pub fn set_port(&self, port: Option<std::boxed::Box<dyn serialport::SerialPort>>) -> bool {
+        let port_valid = port.is_some();
+        self.set_connected(port_valid);
         *self.port.lock().unwrap() = port;
+        return port_valid;
     }
 
-    pub fn connect(&self) {
-        self.set_port(init_serial(&self.identifier, self.baud))
+    pub fn connect(&self) -> bool {
+        return self.set_port(init_serial(&self.identifier, self.baud));
+    }
+
+    pub fn write_screen_buffer(&self, buffer: &[u8]) -> bool {
+        write_screen_buffer(&mut *self.port.lock().unwrap(), buffer)
+    }
+
+    pub fn reset_display(&self, duration: u64) {
+        reset_display(
+            &mut *self.port.lock().unwrap(),
+            Duration::from_millis(duration),
+        );
     }
 }

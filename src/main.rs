@@ -7,9 +7,9 @@ use iced::{
     executor, time, window, Application, Command, Element, Font, Length, Settings, Subscription,
 };
 
-use std::time::Duration;
 mod config;
 mod config_manager;
+mod convert_image;
 mod device;
 mod display_serial_com;
 mod helpers;
@@ -17,8 +17,8 @@ mod screen_manager;
 mod screens;
 mod style;
 
+use crate::convert_image::*;
 use crate::device::*;
-use crate::display_serial_com::{convert_to_gray_scale, reset_display, write_screen_buffer};
 use crate::helpers::power::register_power_broadcast;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
@@ -234,19 +234,15 @@ impl Application for AwesomeDisplay {
                         if *HIBERNATING.lock().unwrap() {
                             screen_buffer = vec![0; screen_buffer.len() as usize];
                         }
-                        if !write_screen_buffer(&mut *TEENSY.port.lock().unwrap(), &screen_buffer) {
-                            TEENSY.set_port(None)
+                        if !TEENSY.write_screen_buffer(&screen_buffer) {
+                            TEENSY.set_port(None);
                         }
                     }
                     Err(_) => {}
                 }
             } else {
-                TEENSY.connect();
-                if TEENSY.is_connected() {
-                    reset_display(
-                        &mut *TEENSY.port.lock().unwrap(),
-                        Duration::from_millis(500),
-                    );
+                if TEENSY.connect() {
+                    TEENSY.reset_display(500);
                 }
             }
         });
@@ -351,7 +347,7 @@ impl Application for AwesomeDisplay {
                 {
                     CLOSE_REQUESTED.store(true, std::sync::atomic::Ordering::Release);
                     if TEENSY.is_connected() {
-                        reset_display(&mut *TEENSY.port.lock().unwrap(), Duration::from_millis(0));
+                        TEENSY.reset_display(500)
                     }
                     self.config_manager.write().unwrap().save();
                     self.should_exit = true;
