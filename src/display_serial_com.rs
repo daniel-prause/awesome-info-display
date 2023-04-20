@@ -5,7 +5,10 @@ use std::io::Write;
 use std::thread;
 use std::time::Duration;
 
-pub fn init_serial() -> Option<std::boxed::Box<dyn serialport::SerialPort>> {
+pub fn init_serial(
+    device_string: &String,
+    baud: u32,
+) -> Option<std::boxed::Box<dyn serialport::SerialPort>> {
     let ports = serialport::available_ports().expect("No ports found!");
 
     if ports.len() == 0 {
@@ -15,9 +18,8 @@ pub fn init_serial() -> Option<std::boxed::Box<dyn serialport::SerialPort>> {
         match p.port_type {
             serialport::SerialPortType::UsbPort(info) => {
                 let comp = format!("{:04x}{:04x}", info.vid, info.pid);
-                // look for teensy 4.0 vendor and product id
-                if "16c00483".eq(&comp) {
-                    let port = match serialport::new(p.port_name, 4608000)
+                if device_string.eq(&comp) {
+                    let port = match serialport::new(p.port_name, baud)
                         .timeout(Duration::from_millis(1000))
                         .open()
                     {

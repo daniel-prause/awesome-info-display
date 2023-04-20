@@ -10,15 +10,15 @@ use iced::{
 use std::time::Duration;
 mod config;
 mod config_manager;
+mod device;
 mod display_serial_com;
 mod helpers;
 mod screen_manager;
 mod screens;
 mod style;
 
-use crate::display_serial_com::{
-    convert_to_gray_scale, init_serial, reset_display, write_screen_buffer,
-};
+use crate::device::*;
+use crate::display_serial_com::{convert_to_gray_scale, reset_display, write_screen_buffer};
 use crate::helpers::power::register_power_broadcast;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
@@ -79,11 +79,10 @@ const ICONS: Font = Font::External {
 lazy_static! {
     static ref LAST_KEY: Mutex<bool> = Mutex::new(false);
     static ref LAST_KEY_VALUE: Mutex<u32> = Mutex::new(0);
-    static ref SERIAL_PORT: Mutex<Option<Box<dyn serialport::SerialPort>>> = Mutex::new(None);
-    static ref TEENSY_CONNECTED: Mutex<bool> = Mutex::new(false);
     static ref CLOSE_REQUESTED: std::sync::atomic::AtomicBool =
         std::sync::atomic::AtomicBool::new(false);
     static ref HIBERNATING: Mutex<bool> = Mutex::new(false);
+    static ref TEENSY: Device = Device::new();
 }
 pub fn main() -> iced::Result {
     unsafe {
@@ -224,32 +223,30 @@ impl Application for AwesomeDisplay {
 
         // write to serial port ... since it is blocking, we'll just do this in a different thread
         thread::spawn(move || loop {
-            let buf = rx.recv();
-            if SERIAL_PORT.lock().unwrap().is_none() {
-                *TEENSY_CONNECTED.lock().unwrap() = false;
-                *SERIAL_PORT.lock().unwrap() = init_serial();
-                if SERIAL_PORT.lock().unwrap().is_some() {
-                    *TEENSY_CONNECTED.lock().unwrap() = true;
-                    reset_display(
-                        &mut *SERIAL_PORT.lock().unwrap(),
-                        Duration::from_millis(500),
-                    );
-                }
-            } else {
+            if TEENSY.is_connected() {
+                let buf = rx.recv();
                 match buf {
                     Ok(b) => {
-                        let mut screen_buffer = b;
+                        let mut screen_buffer: Vec<u8> = b;
                         if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
                             return;
                         }
                         if *HIBERNATING.lock().unwrap() {
                             screen_buffer = vec![0; screen_buffer.len() as usize];
                         }
-                        if !write_screen_buffer(&mut *SERIAL_PORT.lock().unwrap(), &screen_buffer) {
-                            *SERIAL_PORT.lock().unwrap() = None;
+                        if !write_screen_buffer(&mut *TEENSY.port.lock().unwrap(), &screen_buffer) {
+                            TEENSY.set_port(None)
                         }
                     }
                     Err(_) => {}
+                }
+            } else {
+                TEENSY.connect();
+                if TEENSY.is_connected() {
+                    reset_display(
+                        &mut *TEENSY.port.lock().unwrap(),
+                        Duration::from_millis(500),
+                    );
                 }
             }
         });
@@ -353,8 +350,8 @@ impl Application for AwesomeDisplay {
                     event
                 {
                     CLOSE_REQUESTED.store(true, std::sync::atomic::Ordering::Release);
-                    if SERIAL_PORT.lock().unwrap().is_some() {
-                        reset_display(&mut *SERIAL_PORT.lock().unwrap(), Duration::from_millis(0));
+                    if TEENSY.is_connected() {
+                        reset_display(&mut *TEENSY.port.lock().unwrap(), Duration::from_millis(0));
                     }
                     self.config_manager.write().unwrap().save();
                     self.should_exit = true;
@@ -535,7 +532,7 @@ impl Application for AwesomeDisplay {
             .width(Length::Fixed(200f32))
             .on_press(Message::SaveConfig)
             .into(),
-            iced::widget::Text::new(if *TEENSY_CONNECTED.lock().unwrap() {
+            iced::widget::Text::new(if TEENSY.is_connected() {
                 String::from("\u{f26c} \u{f058}")
             } else {
                 String::from("\u{f26c} \u{f057}")
