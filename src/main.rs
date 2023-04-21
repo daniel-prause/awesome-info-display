@@ -1,7 +1,6 @@
 #![windows_subsystem = "windows"]
 extern crate winapi;
 
-use iced::widget::Image;
 use iced::widget::Text;
 use iced::{
     executor, time, window, Application, Command, Element, Font, Length, Settings, Subscription,
@@ -406,36 +405,18 @@ impl Application for AwesomeDisplay {
     fn view(&self) -> Element<Message> {
         // RENDER IN APP
         let screen_buffer = self.current_screen.bytes.clone();
-        let mut converted_sb_rgba = Vec::with_capacity(65536);
-        let mut converted_sb_rgb = Vec::with_capacity(49152);
-        let set_brightness = |chunk_param: u8| {
-            (chunk_param as f32 * self.config_manager.read().unwrap().config.brightness as f32
-                / 100.0) as u8
-        };
 
-        for chunk in screen_buffer.chunks(3) {
-            let chunk_two = set_brightness(chunk[2]);
-            let chunk_one = set_brightness(chunk[1]);
-            let chunk_zero = set_brightness(chunk[0]);
-            // for preview
-            converted_sb_rgba.push(chunk[2]);
-            converted_sb_rgba.push(chunk[1]);
-            converted_sb_rgba.push(chunk[0]);
-            converted_sb_rgba.push(255);
-            // for display
-            converted_sb_rgb.push(chunk_two);
-            converted_sb_rgb.push(chunk_one);
-            converted_sb_rgb.push(chunk_zero);
-        }
-        let image = Image::new(iced::widget::image::Handle::from_pixels(
-            256,
-            64,
-            converted_sb_rgba,
+        // preview image
+        let image = rgb_bytes_to_rgba_image(&screen_buffer);
+
+        // convert to gray scale for display
+        let bytes = convert_to_gray_scale(&adjust_brightness_rgb(
+            &screen_buffer,
+            self.config_manager.read().unwrap().config.brightness as f32,
         ));
 
-        // SEND TO DISPLAY
-        let bytes = convert_to_gray_scale(&converted_sb_rgb);
-        match self.sender.try_send(bytes.clone()) {
+        // send to display
+        match self.sender.try_send(bytes) {
             Ok(_) => {}
             Err(_) => {}
         }
