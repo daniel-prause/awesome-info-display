@@ -50,6 +50,7 @@ pub trait Screenable {
 
 pub trait BasicScreen: Screenable {
     fn update(&mut self) -> ();
+
     fn description(&mut self) -> String {
         let screen = self.get_screen();
         screen.description.clone()
@@ -73,6 +74,7 @@ pub trait BasicScreen: Screenable {
         }
         true
     }
+
     fn start(&mut self) {
         let screen = self.get_screen();
         screen.active.store(true, Ordering::Release);

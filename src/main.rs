@@ -391,8 +391,6 @@ impl Application for AwesomeDisplay {
     }
 
     fn theme(&self) -> iced::Theme {
-        //return iced::Theme::Dark;
-
         return iced::Theme::custom(iced::theme::Palette {
             background: iced::Color::from_rgb(0.21, 0.22, 0.247),
             text: iced::Color::WHITE,
@@ -403,9 +401,7 @@ impl Application for AwesomeDisplay {
     }
 
     fn view(&self) -> Element<Message> {
-        // RENDER IN APP
-        let screen_buffer = self.current_screen.bytes.clone();
-
+        let screen_buffer = &self.current_screen.bytes;
         // preview image
         let image = rgb_bytes_to_rgba_image(&screen_buffer);
 
@@ -532,7 +528,7 @@ impl Application for AwesomeDisplay {
             .align_items(iced::Alignment::Center)
             .width(Length::Fill)
             .push(iced::widget::text("Current screen").size(50))
-            .push(iced::widget::text(self.current_screen.description.clone()).size(25))
+            .push(iced::widget::text(&self.current_screen.description).size(25))
             .push(
                 image
                     .width(Length::Fixed(256f32))
