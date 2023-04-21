@@ -75,6 +75,7 @@ impl iced::widget::text_input::StyleSheet for TextInput {
             border_radius: 0f32,
             border_width: 1f32,
             border_color: iced::Color::BLACK,
+            icon_color: iced::Color::BLACK,
         }
     }
 
@@ -89,6 +90,7 @@ impl iced::widget::text_input::StyleSheet for TextInput {
             border_radius: 0f32,
             border_width: 1f32,
             border_color: iced::Color::BLACK,
+            icon_color: iced::Color::WHITE,
         }
     }
 
@@ -102,5 +104,19 @@ impl iced::widget::text_input::StyleSheet for TextInput {
         let mut color = iced::Color::from(HOVERED);
         color.a = 0.5;
         color
+    }
+
+    fn disabled_color(&self, _style: &Self::Style) -> Color {
+        iced::Color::from_rgb8(235, 235, 228)
+    }
+
+    fn disabled(&self, style: &Self::Style) -> iced_style::text_input::Appearance {
+        iced::widget::text_input::Appearance {
+            background: self.disabled_color(style).into(),
+            border_radius: 0f32,
+            border_width: 1f32,
+            border_color: iced::Color::BLACK,
+            icon_color: iced::Color::WHITE,
+        }
     }
 }

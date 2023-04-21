@@ -83,6 +83,7 @@ lazy_static! {
         std::sync::atomic::AtomicBool::new(false);
     static ref HIBERNATING: Mutex<bool> = Mutex::new(false);
     static ref TEENSY: Device = Device::new();
+    static ref ESP32: Device = Device::new();
 }
 pub fn main() -> iced::Result {
     unsafe {
@@ -106,7 +107,7 @@ pub fn main() -> iced::Result {
                     resizable: false,
                     decorations: true,
                     icon: Some(
-                        iced::window::icon::Icon::from_rgba(
+                        iced::window::icon::from_rgba(
                             app_image.unwrap().to_rgba8().to_vec(),
                             256,
                             256,
@@ -221,6 +222,7 @@ impl Application for AwesomeDisplay {
             }
         });
 
+        //let devices: Vec<Device> = vec![*TEENSY, *ESP32];
         // write to serial port ... since it is blocking, we'll just do this in a different thread
         thread::spawn(move || loop {
             let buf = rx.recv();
@@ -483,8 +485,8 @@ impl Application for AwesomeDisplay {
             iced::widget::text_input(
                 "Bitpanda Api Key",
                 &self.config_manager.read().unwrap().config.bitpanda_api_key,
-                Message::BitpandaApiKeyChanged,
             )
+            .on_input(Message::BitpandaApiKeyChanged)
             .password()
             .width(Length::Fixed(200f32))
             .style(iced::theme::TextInput::Custom(Box::new(
@@ -499,8 +501,8 @@ impl Application for AwesomeDisplay {
                     .unwrap()
                     .config
                     .openweather_api_key,
-                Message::OpenWeatherApiKeyChanged,
             )
+            .on_input(Message::OpenWeatherApiKeyChanged)
             .style(iced::theme::TextInput::Custom(Box::new(
                 style::TextInput {},
             )))
@@ -515,8 +517,8 @@ impl Application for AwesomeDisplay {
                     .unwrap()
                     .config
                     .openweather_location,
-                Message::OpenWeatherLocationChanged,
             )
+            .on_input(Message::OpenWeatherLocationChanged)
             .style(iced::theme::TextInput::Custom(Box::new(
                 style::TextInput {},
             )))
