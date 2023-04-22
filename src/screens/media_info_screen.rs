@@ -291,6 +291,11 @@ impl MediaInfoScreen {
 
         let dyn_image_cover = image::DynamicImage::ImageRgb8(cover);
 
+        draw_filled_rect_mut(
+            &mut dyn_image_base,
+            Rect::at(0, 0).of_size(320, 170),
+            image::Rgba([211u8, 211u8, 211u8, 255]),
+        );
         image::imageops::overlay(&mut dyn_image_base, &dyn_image_cover, 75, 0);
 
         // convert bgr to rgb
