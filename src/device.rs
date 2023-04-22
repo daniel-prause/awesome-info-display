@@ -10,10 +10,10 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn new(identifier: String) -> Device {
+    pub fn new(identifier: String, baud: u32) -> Device {
         return Device {
             identifier: identifier.into(),
-            baud: 4608000,
+            baud: baud,
             port: std::sync::Mutex::new(None),
             connected: std::sync::Mutex::new(false),
         };

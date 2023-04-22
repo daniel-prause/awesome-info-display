@@ -85,8 +85,8 @@ lazy_static! {
     static ref LAST_KEY_VALUE: Mutex<u32> = Mutex::new(0);
     static ref CLOSE_REQUESTED: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref HIBERNATING: Mutex<bool> = Mutex::new(false);
-    static ref TEENSY: Device = Device::new("16c00483".into());
-    static ref ESP32: Device = Device::new("303a1001".into());
+    static ref TEENSY: Device = Device::new("16c00483".into(), 4608000);
+    static ref ESP32: Device = Device::new("303a1001".into(), 921600);
     static ref LAST_COMPANION_CRC: Mutex<u32> = Mutex::new(1337);
     static ref LAST_COMPANION_BYTES: Mutex<Vec<u8>> = Mutex::new(Vec::new());
 }
@@ -284,7 +284,6 @@ impl Application for AwesomeDisplay {
                     //ESP32.reset_display(0);
                 }
             }
-            thread::sleep(std::time::Duration::from_millis(250));
         });
         (this, Command::none())
     }
@@ -483,15 +482,23 @@ impl Application for AwesomeDisplay {
 
                 let mut dp: DadaPacket = DadaPacket::new(writer.as_slice().to_vec());
                 *LAST_COMPANION_BYTES.lock().unwrap() = dp.as_bytes();
-            }
 
-            // send to esp32
-            match self
-                .companion_sender
-                .try_send(LAST_COMPANION_BYTES.lock().unwrap().clone())
-            {
-                Ok(_) => {}
-                Err(_) => {}
+                // send to esp32
+                match self
+                    .companion_sender
+                    .try_send(LAST_COMPANION_BYTES.lock().unwrap().clone())
+                {
+                    Ok(_) => {}
+                    Err(_) => {}
+                }
+            } else {
+                // send keep alive
+                let mut dp: DadaPacket = DadaPacket::new(Vec::new());
+                // send to esp32
+                match self.companion_sender.try_send(dp.as_bytes()) {
+                    Ok(_) => {}
+                    Err(_) => {}
+                }
             }
         }
 
