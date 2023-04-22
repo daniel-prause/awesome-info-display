@@ -1,16 +1,19 @@
 extern crate winapi;
 use crate::{
     config_manager::ConfigManager,
+    current_cover::{extract_cover_image, extract_current_cover_path},
     screens::{BasicScreen, Screen, Screenable},
 };
 use crossbeam_channel::{bounded, Receiver, Sender};
-use image::{ImageBuffer, Rgb, RgbImage};
+use image::{EncodableLayout, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{
     draw_filled_rect_mut, draw_hollow_rect_mut, draw_line_segment_mut, draw_text_mut,
 };
 use imageproc::rect::Rect;
 use regex;
 use rusttype::{Font, Scale};
+use std::path::Path;
+use std::ptr::null_mut;
 use std::{
     rc::Rc,
     sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
@@ -20,11 +23,10 @@ use std::{
 use unicode_segmentation::UnicodeSegmentation;
 use winapi::{
     shared::minwindef::LPARAM,
-    um::{mmdeviceapi::*, winuser::*},
+    um::{handleapi::CloseHandle, mmdeviceapi::*, winnt::HANDLE, winuser::*},
     Interface,
 };
 use winsafe::{co, msg::WndMsg, prelude::user_Hwnd};
-
 pub struct MediaInfoScreen {
     screen: Screen,
     receiver: Receiver<MusicPlayerInfo>,
@@ -44,6 +46,13 @@ struct MusicPlayerInfo {
     player_active: bool,
     system_volume: f32,
     mute: i32,
+    cover: Vec<u8>,
+    filepath: String,
+}
+#[derive(Clone, Default)]
+pub struct CoverManager {
+    pub last_path: String,
+    pub current_cover: Vec<u8>,
 }
 
 impl Screenable for MediaInfoScreen {
@@ -58,6 +67,7 @@ impl BasicScreen for MediaInfoScreen {
         match music_player_info {
             Ok(music_player_info) => {
                 self.draw_screen(&music_player_info);
+                self.draw_companion_screen(&music_player_info);
                 self.music_player_info = music_player_info;
             }
             Err(_) => {}
@@ -266,6 +276,37 @@ impl MediaInfoScreen {
             );
         }
     }
+
+    fn draw_cover(&mut self, music_player_info: &MusicPlayerInfo) -> Vec<u8> {
+        if !music_player_info.player_active {
+            return vec![0; 320 * 170 * 3];
+        }
+        let mut dyn_image_base = image::DynamicImage::new_rgb8(320, 170);
+        // TODO: replace me with real cover
+        let mut cover = RgbImage::new(170, 170);
+
+        if music_player_info.cover.len() == cover.len() {
+            cover.copy_from_slice(music_player_info.cover.as_bytes());
+        }
+
+        let dyn_image_cover = image::DynamicImage::ImageRgb8(cover);
+
+        image::imageops::overlay(&mut dyn_image_base, &dyn_image_cover, 75, 0);
+
+        // convert bgr to rgb
+        let mut bytes = Vec::new();
+
+        for chunk in dyn_image_base.as_bytes().chunks(3) {
+            let chunk_b = chunk[0];
+            let chunk_g = chunk[1];
+            let chunk_r = chunk[2];
+
+            bytes.append(&mut vec![chunk_r, chunk_g, chunk_b]);
+        }
+        // return image bytes
+        bytes
+    }
+
     fn draw_volume_bar(
         &mut self,
         system_volume: f32,
@@ -308,6 +349,13 @@ impl MediaInfoScreen {
         );
 
         self.draw_play_button(playback_status, image);
+    }
+
+    fn draw_companion_screen(&mut self, music_player_info: &MusicPlayerInfo) {
+        // draw companion image
+        if music_player_info.filepath != self.music_player_info.filepath {
+            self.screen.companion_bytes = self.draw_cover(music_player_info);
+        }
     }
 
     fn draw_screen(&mut self, music_player_info: &MusicPlayerInfo) {
@@ -379,6 +427,8 @@ impl MediaInfoScreen {
                     let match_correct_artist_and_title_format;
                     let match_artist_and_title;
                     let match_artist_or_title;
+                    let mut winamp_process_handle: HANDLE = null_mut();
+
                     match regex::Regex::new(r"\s(.*)-") {
                         Ok(regex) => {
                             match_correct_artist_and_title_format = regex;
@@ -409,7 +459,7 @@ impl MediaInfoScreen {
                     }
 
                     winsafe::CoInitializeEx(co::COINIT::APARTMENTTHREADED).unwrap();
-
+                    let mut cover_manager = CoverManager::default();
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
@@ -460,8 +510,29 @@ impl MediaInfoScreen {
                                     lparam: 0,
                                 });
 
-                                // WINAMP VOLUME. NOT USED RIGHT NOW.
-                                // let mut volume = SendMessageW(hwnd, WM_USER, -666i32 as usize, 122);
+                                let path = extract_current_cover_path(winamp_process_handle);
+                                let file_exists = Path::new(std::ffi::OsStr::new(&path)).exists();
+                                music_player_info.filepath = path.clone();
+
+                                if file_exists {
+                                    if path != cover_manager.last_path || path.is_empty() {
+                                        match extract_cover_image(&path) {
+                                            Some(cover) => {
+                                                music_player_info.cover =
+                                                    cover.data.as_bytes().to_vec();
+                                                cover_manager.last_path = path.clone();
+                                                cover_manager.current_cover =
+                                                    cover.data.as_bytes().to_vec();
+                                            }
+                                            None => {}
+                                        }
+                                    } else {
+                                        music_player_info.cover =
+                                            cover_manager.current_cover.clone();
+                                    }
+                                } else {
+                                    music_player_info.cover = vec![0; 320 * 170 * 3];
+                                }
 
                                 let buffer_length = title_length + 1;
                                 let mut buffer = Vec::<u16>::with_capacity(buffer_length as usize);
@@ -516,6 +587,7 @@ impl MediaInfoScreen {
                                                     }
                                                     None => {
                                                         music_player_info.player_active = false;
+                                                        music_player_info.filepath.clear();
                                                     }
                                                 }
                                             }
@@ -523,11 +595,17 @@ impl MediaInfoScreen {
                                     }
                                     None => {
                                         music_player_info.player_active = false;
+                                        music_player_info.filepath.clear();
                                     }
                                 }
                             }
                             Err(_) => {
                                 music_player_info.player_active = false;
+                                music_player_info.filepath.clear();
+                                unsafe {
+                                    CloseHandle(winamp_process_handle);
+                                }
+                                winamp_process_handle = null_mut();
                             }
                         }
 
@@ -547,6 +625,7 @@ impl MediaInfoScreen {
             receiver: rx,
         };
         this.draw_screen(&Default::default());
+        this.draw_companion_screen(&Default::default());
         this
     }
 }

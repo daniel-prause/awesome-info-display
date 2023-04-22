@@ -8,6 +8,7 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+audiotags = "0.4.1"
 chrono = "0.4"
 confy = "0.5.1"
 cpu-monitor = "0.1"
@@ -32,11 +33,12 @@ scraper = "0.16.0"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 serialport = {git = "https://gitlab.com/susurrus/serialport-rs"}
+signal-hook = "0.3.15"
 systemstat = "0.2.3"
 unicode-segmentation = "1"
 winsafe = {version = "*", features = ['user', 'ole']}
 [target.'cfg(windows)'.dependencies]
-winapi = {version = "0.3", features = ["winuser", "mmdeviceapi", "combaseapi", "objbase", "endpointvolume"]}
+winapi = {version = "0.3.9", features = ["winuser", "mmdeviceapi", "combaseapi", "objbase", "endpointvolume", "memoryapi"]}
 [build-dependencies]
 static_vcruntime = "2.0"
 winres = "0.1"

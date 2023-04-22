@@ -15,9 +15,9 @@ pub struct Screen {
     pub description: String,
     pub key: String,
     pub bytes: Vec<u8>,
+    pub companion_bytes: Vec<u8>,
     pub font: Rc<Font<'static>>,
     pub active: Arc<AtomicBool>,
-    pub initial_update_called: bool,
     pub handle: Option<JoinHandle<()>>,
     pub mode: u32,
     pub mode_timeout: Option<Instant>,
@@ -29,13 +29,13 @@ impl Default for Screen {
         Screen {
             description: String::from(""),
             key: String::from(""),
-            bytes: Vec::new(),
+            bytes: Vec::new(),           // Oled display byte image
+            companion_bytes: Vec::new(), // companion display byte image
             font: Rc::new(
                 Font::try_from_vec(Vec::from(include_bytes!("../Liberation.ttf") as &[u8]))
                     .unwrap(),
             ),
             active: Arc::new(AtomicBool::new(false)),
-            initial_update_called: false,
             handle: None,
             mode: 0,
             mode_timeout: Some(Instant::now()),
@@ -66,13 +66,9 @@ pub trait BasicScreen: Screenable {
         &screen.bytes
     }
 
-    fn initial_update_called(&mut self) -> bool {
-        let mut screen = self.get_screen();
-        if !screen.initial_update_called {
-            screen.initial_update_called = true;
-            return false;
-        }
-        true
+    fn current_image_for_companion(&mut self) -> &Vec<u8> {
+        let screen = self.get_screen();
+        &screen.companion_bytes
     }
 
     fn start(&mut self) {

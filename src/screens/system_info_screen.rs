@@ -18,7 +18,6 @@ use std::{
     time::Duration,
 };
 use systemstat::{saturating_sub_bytes, Platform, System};
-
 pub struct SystemInfoScreen {
     screen: Screen,
     receiver: Receiver<SystemInfoState>,

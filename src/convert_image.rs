@@ -31,16 +31,16 @@ pub fn adjust_brightness_rgb(bytes: &Vec<u8>, brightness: f32) -> Vec<u8> {
     return converted_sb_rgb;
 }
 
-pub fn rgb_bytes_to_rgba_image(bytes: &Vec<u8>) -> iced::widget::Image {
-    let mut converted_sb_rgba = Vec::with_capacity(65536);
+pub fn rgb_bytes_to_rgba_image(bytes: &Vec<u8>, width: u32, height: u32) -> iced::widget::Image {
+    let mut converted_sb_rgba = Vec::with_capacity(width as usize * height as usize * 3usize);
     // build rgba for preview
     for chunk in bytes.chunks(3) {
         converted_sb_rgba.append(&mut vec![chunk[2], chunk[1], chunk[0], 255]);
     }
 
     return iced::widget::Image::new(iced::widget::image::Handle::from_pixels(
-        256,
-        64,
+        width,
+        height,
         converted_sb_rgba,
     ));
 }

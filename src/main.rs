@@ -9,6 +9,7 @@ use iced::{
 mod config;
 mod config_manager;
 mod convert_image;
+mod current_cover;
 mod device;
 mod display_serial_com;
 mod helpers;
@@ -28,6 +29,7 @@ use std::error::Error;
 use std::ffi::CString;
 use std::fmt;
 use std::rc::Rc;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use winapi::shared::minwindef::*;
@@ -78,13 +80,17 @@ const ICONS: Font = Font::External {
 lazy_static! {
     static ref LAST_KEY: Mutex<bool> = Mutex::new(false);
     static ref LAST_KEY_VALUE: Mutex<u32> = Mutex::new(0);
-    static ref CLOSE_REQUESTED: std::sync::atomic::AtomicBool =
-        std::sync::atomic::AtomicBool::new(false);
+    static ref CLOSE_REQUESTED: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref HIBERNATING: Mutex<bool> = Mutex::new(false);
     static ref TEENSY: Device = Device::new();
     static ref ESP32: Device = Device::new();
 }
 pub fn main() -> iced::Result {
+    match signal_hook::flag::register(signal_hook::consts::SIGINT, CLOSE_REQUESTED.clone()) {
+        Ok(_) => {}
+        Err(_) => {}
+    }
+
     unsafe {
         let app_image = ::image::load_from_memory(include_bytes!("../icon.ico") as &[u8]);
 
@@ -125,7 +131,6 @@ pub fn main() -> iced::Result {
 struct AwesomeDisplay {
     screens: screen_manager::ScreenManager,
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
-    should_exit: bool,
     sender: Sender<Vec<u8>>,
     current_screen: crate::screens::Screen,
     screen_descriptions: Vec<(String, String, bool)>,
@@ -203,10 +208,10 @@ impl Application for AwesomeDisplay {
         let (tx, rx): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         let mut screen_manager = screen_manager::ScreenManager::new(screens);
         let screen_descriptions = screen_manager.descriptions_and_keys_and_state();
+
         let this = AwesomeDisplay {
             screens: screen_manager,
             config_manager: config_manager.clone(),
-            should_exit: false,
             sender: tx,
             current_screen: crate::screens::Screen::default(),
             screen_descriptions: screen_descriptions,
@@ -215,8 +220,11 @@ impl Application for AwesomeDisplay {
         // global key press listener
         thread::spawn({
             move || loop {
-                if let Err(error) = grab(callback) {
-                    eprintln!("Error: {:?}", error)
+                match grab(callback) {
+                    Ok(_) => {}
+                    Err(error) => {
+                        eprintln!("Global key grab error: {:?}", error)
+                    }
                 }
             }
         });
@@ -243,7 +251,7 @@ impl Application for AwesomeDisplay {
                 }
             } else {
                 if TEENSY.connect() {
-                    TEENSY.reset_display(500);
+                    TEENSY.reset_display(0);
                 }
             }
         });
@@ -347,11 +355,6 @@ impl Application for AwesomeDisplay {
                     event
                 {
                     CLOSE_REQUESTED.store(true, std::sync::atomic::Ordering::Release);
-                    if TEENSY.is_connected() {
-                        TEENSY.reset_display(0)
-                    }
-                    self.config_manager.write().unwrap().save();
-                    self.should_exit = true;
                 }
             }
             Message::SliderChanged(slider_value) => {
@@ -384,7 +387,17 @@ impl Application for AwesomeDisplay {
         self.current_screen.description = self.screens.current_screen().description().clone();
         self.current_screen.bytes = self.screens.current_screen().current_image().clone();
         self.screen_descriptions = self.screens.descriptions_and_keys_and_state().clone();
-        if self.should_exit {
+        self.current_screen.companion_bytes = self
+            .screens
+            .current_screen()
+            .current_image_for_companion()
+            .clone();
+
+        if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
+            if TEENSY.is_connected() {
+                TEENSY.reset_display(0)
+            }
+            self.config_manager.write().unwrap().save();
             return window::close();
         }
         Command::none()
@@ -402,8 +415,10 @@ impl Application for AwesomeDisplay {
 
     fn view(&self) -> Element<Message> {
         let screen_buffer = &self.current_screen.bytes;
+        let companion_screen_buffer = &self.current_screen.companion_bytes;
         // preview image
-        let image = rgb_bytes_to_rgba_image(&screen_buffer);
+        let image = rgb_bytes_to_rgba_image(&screen_buffer, 256, 64);
+        let companion_image = rgb_bytes_to_rgba_image(&companion_screen_buffer, 320, 170);
 
         // convert to gray scale for display
         let bytes = convert_to_gray_scale(&adjust_brightness_rgb(
@@ -533,6 +548,12 @@ impl Application for AwesomeDisplay {
                 image
                     .width(Length::Fixed(256f32))
                     .height(Length::Fixed(64f32)),
+            )
+            .push(
+                // companion image
+                companion_image
+                    .width(Length::Fixed(320f32))
+                    .height(Length::Fixed(170f32)),
             );
 
         iced_native::widget::Row::new().push(col1).push(col2).into()
