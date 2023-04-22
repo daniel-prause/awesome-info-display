@@ -87,6 +87,8 @@ lazy_static! {
     static ref HIBERNATING: Mutex<bool> = Mutex::new(false);
     static ref TEENSY: Device = Device::new("16c00483".into());
     static ref ESP32: Device = Device::new("303a1001".into());
+    static ref LAST_COMPANION_CRC: Mutex<u32> = Mutex::new(1337);
+    static ref LAST_COMPANION_BYTES: Mutex<Vec<u8>> = Mutex::new(Vec::new());
 }
 pub fn main() -> iced::Result {
     match signal_hook::flag::register(signal_hook::consts::SIGINT, CLOSE_REQUESTED.clone()) {
@@ -445,6 +447,10 @@ impl Application for AwesomeDisplay {
     fn view(&self) -> Element<Message> {
         let screen_buffer = &self.current_screen.bytes;
         let companion_screen_buffer = &self.current_screen.companion_bytes;
+
+        // calc checksum of new image
+        let new_companion_image_checksum = crc32fast::hash(companion_screen_buffer);
+
         // preview image
         let image = rgb_bytes_to_rgba_image(&screen_buffer, 256, 64);
         let companion_image = rgb_bytes_to_rgba_image(&companion_screen_buffer, 320, 170);
@@ -462,21 +468,28 @@ impl Application for AwesomeDisplay {
         }
 
         let mut writer = Vec::new();
-
+        // TODO: extract something like an image cache so that we send only the images that are necessary
         if companion_screen_buffer.len() == 320 * 170 * 3 {
-            WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(100))
-                .write_image(
-                    &swap_rgb(&companion_screen_buffer, 320, 170),
-                    320,
-                    170,
-                    image::ColorType::Rgb8,
-                )
-                .expect("SHIT");
+            if *LAST_COMPANION_CRC.lock().unwrap() != new_companion_image_checksum {
+                *LAST_COMPANION_CRC.lock().unwrap() = new_companion_image_checksum;
+                WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(100))
+                    .write_image(
+                        &swap_rgb(&companion_screen_buffer, 320, 170),
+                        320,
+                        170,
+                        image::ColorType::Rgb8,
+                    )
+                    .expect("SHIT");
 
-            let mut dp: DadaPacket = DadaPacket::new(writer.as_slice().to_vec());
+                let mut dp: DadaPacket = DadaPacket::new(writer.as_slice().to_vec());
+                *LAST_COMPANION_BYTES.lock().unwrap() = dp.as_bytes();
+            }
 
             // send to esp32
-            match self.companion_sender.try_send(dp.as_bytes()) {
+            match self
+                .companion_sender
+                .try_send(LAST_COMPANION_BYTES.lock().unwrap().clone())
+            {
                 Ok(_) => {}
                 Err(_) => {}
             }

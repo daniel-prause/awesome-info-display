@@ -165,6 +165,7 @@ dependencies = [
  "chrono",
  "confy",
  "cpu-monitor",
+ "crc32fast",
  "crossbeam-channel",
  "encoding",
  "error-chain",
