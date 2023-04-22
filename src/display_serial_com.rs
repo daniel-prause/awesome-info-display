@@ -54,24 +54,30 @@ pub fn write_screen_buffer(
     port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
     screen_buf: &[u8],
 ) -> bool {
-    match port.as_deref_mut().unwrap().write(&hex!("e4")) {
+    let mut bytes_send = 0;
+    while bytes_send < screen_buf.len() {
+        let slice = &screen_buf[bytes_send..cmp::min(bytes_send + 64, screen_buf.len())];
+        bytes_send += slice.len();
+
+        match port.as_deref_mut().unwrap().write(&slice) {
+            Ok(_) => {
+                // everything alright, continue
+            }
+            Err(_) => {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+pub fn send_command(
+    port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
+    command: &[u8],
+) -> bool {
+    match port.as_deref_mut().unwrap().write(command) {
         Ok(_) => match std::io::stdout().flush() {
             Ok(_) => {
-                let mut bytes_send = 0;
-                while bytes_send < screen_buf.len() {
-                    let slice =
-                        &screen_buf[bytes_send..cmp::min(bytes_send + 64, screen_buf.len())];
-                    bytes_send += slice.len();
-
-                    match port.as_deref_mut().unwrap().write(&slice) {
-                        Ok(_) => {
-                            // everything alright, continue
-                        }
-                        Err(_) => {
-                            return false;
-                        }
-                    }
-                }
                 return true;
             }
             Err(_) => {}

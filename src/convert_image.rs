@@ -44,3 +44,12 @@ pub fn rgb_bytes_to_rgba_image(bytes: &Vec<u8>, width: u32, height: u32) -> iced
         converted_sb_rgba,
     ));
 }
+
+pub fn swap_rgb(bytes: &Vec<u8>, width: u32, height: u32) -> Vec<u8> {
+    let mut swapped = Vec::with_capacity(width as usize * height as usize * 3usize);
+    // build rgba for preview
+    for chunk in bytes.chunks(3) {
+        swapped.append(&mut vec![chunk[2], chunk[1], chunk[0]]);
+    }
+    return swapped;
+}

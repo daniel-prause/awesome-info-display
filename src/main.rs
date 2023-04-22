@@ -1,15 +1,18 @@
 #![windows_subsystem = "windows"]
 extern crate winapi;
 
+use dada_packet::DadaPacket;
 use iced::widget::Text;
 use iced::{
     executor, time, window, Application, Command, Element, Font, Length, Settings, Subscription,
 };
+use image::ImageEncoder;
 
 mod config;
 mod config_manager;
 mod convert_image;
 mod current_cover;
+mod dada_packet;
 mod device;
 mod display_serial_com;
 mod helpers;
@@ -22,6 +25,7 @@ use crate::device::*;
 use crate::helpers::power::register_power_broadcast;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
+use image::codecs::webp::WebPEncoder;
 use lazy_static::lazy_static;
 use rdev::{grab, Event, EventType, Key};
 use rusttype::Font as ft;
@@ -35,7 +39,6 @@ use std::thread;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::um::winuser::*;
-
 #[derive(Debug)]
 struct SuperError {
     side: SuperErrorSideKick,
@@ -82,8 +85,8 @@ lazy_static! {
     static ref LAST_KEY_VALUE: Mutex<u32> = Mutex::new(0);
     static ref CLOSE_REQUESTED: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref HIBERNATING: Mutex<bool> = Mutex::new(false);
-    static ref TEENSY: Device = Device::new();
-    static ref ESP32: Device = Device::new();
+    static ref TEENSY: Device = Device::new("16c00483".into());
+    static ref ESP32: Device = Device::new("303a1001".into());
 }
 pub fn main() -> iced::Result {
     match signal_hook::flag::register(signal_hook::consts::SIGINT, CLOSE_REQUESTED.clone()) {
@@ -132,6 +135,7 @@ struct AwesomeDisplay {
     screens: screen_manager::ScreenManager,
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
     sender: Sender<Vec<u8>>,
+    companion_sender: Sender<Vec<u8>>,
     current_screen: crate::screens::Screen,
     screen_descriptions: Vec<(String, String, bool)>,
 }
@@ -206,6 +210,7 @@ impl Application for AwesomeDisplay {
             Arc::clone(&config_manager),
         )));
         let (tx, rx): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
+        let (companion_tx, companion_rx): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         let mut screen_manager = screen_manager::ScreenManager::new(screens);
         let screen_descriptions = screen_manager.descriptions_and_keys_and_state();
 
@@ -213,6 +218,7 @@ impl Application for AwesomeDisplay {
             screens: screen_manager,
             config_manager: config_manager.clone(),
             sender: tx,
+            companion_sender: companion_tx,
             current_screen: crate::screens::Screen::default(),
             screen_descriptions: screen_descriptions,
         };
@@ -236,15 +242,15 @@ impl Application for AwesomeDisplay {
             if TEENSY.is_connected() {
                 match buf {
                     Ok(b) => {
-                        let mut screen_buffer: Vec<u8> = b;
                         if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
                             return;
                         }
                         if *HIBERNATING.lock().unwrap() {
-                            screen_buffer = vec![0; screen_buffer.len() as usize];
-                        }
-                        if !TEENSY.write_screen_buffer(&screen_buffer) {
-                            TEENSY.set_port(None);
+                            TEENSY.stand_by();
+                        } else {
+                            if !TEENSY.write_screen_buffer(&b) {
+                                TEENSY.set_port(None);
+                            }
                         }
                     }
                     Err(_) => {}
@@ -254,6 +260,29 @@ impl Application for AwesomeDisplay {
                     TEENSY.reset_display(0);
                 }
             }
+        });
+
+        // esp32
+        thread::spawn(move || loop {
+            let buf = companion_rx.recv();
+            if ESP32.is_connected() {
+                match buf {
+                    Ok(b) => {
+                        if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
+                            return;
+                        }
+                        if !ESP32.write_serialized_buffer(&b) {
+                            ESP32.set_port(None);
+                        }
+                    }
+                    Err(_) => {}
+                }
+            } else {
+                if ESP32.connect() {
+                    //ESP32.reset_display(0);
+                }
+            }
+            thread::sleep(std::time::Duration::from_millis(200));
         });
         (this, Command::none())
     }
@@ -426,10 +455,31 @@ impl Application for AwesomeDisplay {
             self.config_manager.read().unwrap().config.brightness as f32,
         ));
 
-        // send to display
+        // send to teensy
         match self.sender.try_send(bytes) {
             Ok(_) => {}
             Err(_) => {}
+        }
+
+        let mut writer = Vec::new();
+
+        if companion_screen_buffer.len() == 320 * 170 * 3 {
+            WebPEncoder::new(&mut writer)
+                .write_image(
+                    &swap_rgb(&companion_screen_buffer, 320, 170),
+                    320,
+                    170,
+                    image::ColorType::Rgb8,
+                )
+                .expect("SHIT");
+
+            let mut dp: DadaPacket = DadaPacket::new(writer.as_slice().to_vec());
+
+            // send to esp32
+            match self.companion_sender.try_send(dp.as_bytes()) {
+                Ok(_) => {}
+                Err(_) => {}
+            }
         }
 
         let convert_brightness = |value: u16| {
