@@ -25,7 +25,7 @@ use crate::device::*;
 use crate::helpers::power::register_power_broadcast;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
-use image::codecs::webp::WebPEncoder;
+use image::codecs::webp::{WebPEncoder, WebPQuality};
 use lazy_static::lazy_static;
 use rdev::{grab, Event, EventType, Key};
 use rusttype::Font as ft;
@@ -282,7 +282,7 @@ impl Application for AwesomeDisplay {
                     //ESP32.reset_display(0);
                 }
             }
-            thread::sleep(std::time::Duration::from_millis(200));
+            thread::sleep(std::time::Duration::from_millis(250));
         });
         (this, Command::none())
     }
@@ -464,7 +464,7 @@ impl Application for AwesomeDisplay {
         let mut writer = Vec::new();
 
         if companion_screen_buffer.len() == 320 * 170 * 3 {
-            WebPEncoder::new(&mut writer)
+            WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(100))
                 .write_image(
                     &swap_rgb(&companion_screen_buffer, 320, 170),
                     320,
