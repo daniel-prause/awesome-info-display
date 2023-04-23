@@ -298,18 +298,7 @@ impl MediaInfoScreen {
         );
         image::imageops::overlay(&mut dyn_image_base, &dyn_image_cover, 75, 0);
 
-        // convert bgr to rgb
-        let mut bytes = Vec::new();
-
-        for chunk in dyn_image_base.as_bytes().chunks(3) {
-            let chunk_b = chunk[0];
-            let chunk_g = chunk[1];
-            let chunk_r = chunk[2];
-
-            bytes.append(&mut vec![chunk_r, chunk_g, chunk_b]);
-        }
-        // return image bytes
-        bytes
+        return dyn_image_base.as_bytes().to_vec();
     }
 
     fn draw_volume_bar(

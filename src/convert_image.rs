@@ -40,7 +40,10 @@ pub fn rgb_bytes_to_rgba_image(bytes: &Vec<u8>, width: u32, height: u32) -> iced
     let mut converted_sb_rgba = Vec::with_capacity(width as usize * height as usize * 3usize);
     // build rgba for preview
     for chunk in bytes.chunks(3) {
-        converted_sb_rgba.append(&mut vec![chunk[2], chunk[1], chunk[0], 255]);
+        converted_sb_rgba.push(chunk[2]);
+        converted_sb_rgba.push(chunk[1]);
+        converted_sb_rgba.push(chunk[0]);
+        converted_sb_rgba.push(255);
     }
 
     return iced::widget::Image::new(iced::widget::image::Handle::from_pixels(
@@ -61,15 +64,10 @@ pub fn swap_rgb(bytes: &Vec<u8>, width: u32, height: u32) -> Vec<u8> {
     return swapped;
 }
 
-pub fn convert_to_webp(bytes: &Vec<u8>) -> Vec<u8> {
+pub fn convert_to_webp(bytes: &Vec<u8>, width: u32, height: u32) -> Vec<u8> {
     let mut writer = Vec::new();
     WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(100))
-        .write_image(
-            swap_rgb(&bytes, 320, 170).as_slice(),
-            320,
-            170,
-            image::ColorType::Rgb8,
-        )
+        .write_image(&bytes, width, height, image::ColorType::Rgb8)
         .expect("FAILED TO ENCODE WEBP");
     return writer;
 }

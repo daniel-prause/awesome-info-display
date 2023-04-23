@@ -6,7 +6,6 @@ use iced::widget::Text;
 use iced::{
     executor, time, window, Application, Command, Element, Font, Length, Settings, Subscription,
 };
-use image::ImageEncoder;
 
 mod config;
 mod config_manager;
@@ -25,7 +24,7 @@ use crate::device::*;
 use crate::helpers::power::register_power_broadcast;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
-use image::codecs::webp::{WebPEncoder, WebPQuality};
+
 use lazy_static::lazy_static;
 use rdev::{grab, Event, EventType, Key};
 use rusttype::Font as ft;
@@ -277,8 +276,7 @@ impl Application for AwesomeDisplay {
                             let mut payload: Vec<u8> = Vec::new();
 
                             if last_sum != crc32fast::hash(&b) {
-                                // decode
-                                payload = convert_to_webp(&b);
+                                payload = convert_to_webp(&b, 320, 170);
                             }
 
                             let mut dp: DadaPacket = DadaPacket::new(payload);
@@ -460,8 +458,9 @@ impl Application for AwesomeDisplay {
         let companion_screen_buffer = &self.current_screen.companion_bytes;
 
         // preview image
-        let image = rgb_bytes_to_rgba_image(&screen_buffer, 256, 64);
-        let companion_image = rgb_bytes_to_rgba_image(&companion_screen_buffer, 320, 170);
+        let image = rgb_bytes_to_rgba_image(&swap_rgb(&screen_buffer, 256, 64), 256, 64);
+        let companion_image =
+            rgb_bytes_to_rgba_image(&swap_rgb(&companion_screen_buffer, 320, 170), 320, 170);
 
         // convert to gray scale for display
         let bytes = convert_to_gray_scale(&adjust_brightness_rgb(
