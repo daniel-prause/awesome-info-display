@@ -520,7 +520,7 @@ impl MediaInfoScreen {
                                 music_player_info.filepath = path.clone();
 
                                 if file_exists {
-                                    if path != cover_manager.last_path || path.is_empty() {
+                                    if path != cover_manager.last_path {
                                         match extract_cover_image(&path) {
                                             Some(cover) => {
                                                 music_player_info.cover =
@@ -536,7 +536,7 @@ impl MediaInfoScreen {
                                             cover_manager.current_cover.clone();
                                     }
                                 } else {
-                                    music_player_info.cover = vec![0; 320 * 170 * 3];
+                                    music_player_info.cover = vec![211; 320 * 170 * 3];
                                 }
 
                                 let buffer_length = title_length + 1;
