@@ -265,23 +265,47 @@ impl Application for AwesomeDisplay {
         });
 
         // esp32
-        thread::spawn(move || loop {
-            let buf = companion_rx.recv();
-            if ESP32.is_connected() {
-                match buf {
-                    Ok(b) => {
-                        if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
-                            return;
+        thread::spawn(move || {
+            let mut last_sum = 0;
+            loop {
+                let buf = companion_rx.recv();
+                if ESP32.is_connected() {
+                    match buf {
+                        Ok(b) => {
+                            if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
+                                return;
+                            }
+
+                            let mut payload: Vec<u8> = Vec::new();
+
+                            if last_sum != crc32fast::hash(&b) {
+                                last_sum = crc32fast::hash(&b);
+                                // decode
+                                let mut writer = Vec::new();
+                                WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(100))
+                                    .write_image(
+                                        &swap_rgb(&b, 320, 170),
+                                        320,
+                                        170,
+                                        image::ColorType::Rgb8,
+                                    )
+                                    .expect("SHIT");
+                                payload = writer
+                            }
+
+                            let mut dp: DadaPacket = DadaPacket::new(payload);
+                            if !ESP32.write_serialized_buffer(&dp.as_bytes()) {
+                                ESP32.set_port(None);
+                            } else {
+                                thread::sleep(std::time::Duration::from_millis(200));
+                            }
                         }
-                        if !ESP32.write_serialized_buffer(&b) {
-                            ESP32.set_port(None);
-                        }
+                        Err(_) => {}
                     }
-                    Err(_) => {}
-                }
-            } else {
-                if ESP32.connect() {
-                    //ESP32.reset_display(0);
+                } else {
+                    if ESP32.connect() {
+                        //ESP32.reset_display(0);
+                    }
                 }
             }
         });
@@ -447,9 +471,6 @@ impl Application for AwesomeDisplay {
         let screen_buffer = &self.current_screen.bytes;
         let companion_screen_buffer = &self.current_screen.companion_bytes;
 
-        // calc checksum of new image
-        let new_companion_image_checksum = crc32fast::hash(companion_screen_buffer);
-
         // preview image
         let image = rgb_bytes_to_rgba_image(&screen_buffer, 256, 64);
         let companion_image = rgb_bytes_to_rgba_image(&companion_screen_buffer, 320, 170);
@@ -466,39 +487,14 @@ impl Application for AwesomeDisplay {
             Err(_) => {}
         }
 
-        let mut writer = Vec::new();
-        // TODO: extract something like an image cache so that we send only the images that are necessary
         if companion_screen_buffer.len() == 320 * 170 * 3 {
-            if *LAST_COMPANION_CRC.lock().unwrap() != new_companion_image_checksum {
-                *LAST_COMPANION_CRC.lock().unwrap() = new_companion_image_checksum;
-                WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(100))
-                    .write_image(
-                        &swap_rgb(&companion_screen_buffer, 320, 170),
-                        320,
-                        170,
-                        image::ColorType::Rgb8,
-                    )
-                    .expect("SHIT");
-
-                let mut dp: DadaPacket = DadaPacket::new(writer.as_slice().to_vec());
-                *LAST_COMPANION_BYTES.lock().unwrap() = dp.as_bytes();
-
-                // send to esp32
-                match self
-                    .companion_sender
-                    .try_send(LAST_COMPANION_BYTES.lock().unwrap().clone())
-                {
-                    Ok(_) => {}
-                    Err(_) => {}
-                }
-            } else {
-                // send keep alive
-                let mut dp: DadaPacket = DadaPacket::new(Vec::new());
-                // send to esp32
-                match self.companion_sender.try_send(dp.as_bytes()) {
-                    Ok(_) => {}
-                    Err(_) => {}
-                }
+            // send to esp32
+            match self
+                .companion_sender
+                .try_send(companion_screen_buffer.clone())
+            {
+                Ok(_) => {}
+                Err(_) => {}
             }
         }
 
