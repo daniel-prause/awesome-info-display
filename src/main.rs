@@ -4,7 +4,8 @@ extern crate winapi;
 use dada_packet::DadaPacket;
 use iced::widget::Text;
 use iced::{
-    executor, time, window, Application, Command, Element, Font, Length, Settings, Subscription,
+    executor, time, window, Application, Command, Element, Font, Length, Padding, Settings,
+    Subscription,
 };
 use image::ImageEncoder;
 
@@ -615,6 +616,7 @@ impl Application for AwesomeDisplay {
                     .width(Length::Fixed(256f32))
                     .height(Length::Fixed(64f32)),
             )
+            .spacing(10)
             .push(
                 // companion image
                 companion_image
