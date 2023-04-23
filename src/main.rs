@@ -4,8 +4,7 @@ extern crate winapi;
 use dada_packet::DadaPacket;
 use iced::widget::Text;
 use iced::{
-    executor, time, window, Application, Command, Element, Font, Length, Padding, Settings,
-    Subscription,
+    executor, time, window, Application, Command, Element, Font, Length, Settings, Subscription,
 };
 use image::ImageEncoder;
 
@@ -88,8 +87,6 @@ lazy_static! {
     static ref HIBERNATING: Mutex<bool> = Mutex::new(false);
     static ref TEENSY: Device = Device::new("16c00483".into(), 4608000);
     static ref ESP32: Device = Device::new("303a1001".into(), 921600);
-    static ref LAST_COMPANION_CRC: Mutex<u32> = Mutex::new(1337);
-    static ref LAST_COMPANION_BYTES: Mutex<Vec<u8>> = Mutex::new(Vec::new());
 }
 pub fn main() -> iced::Result {
     match signal_hook::flag::register(signal_hook::consts::SIGINT, CLOSE_REQUESTED.clone()) {
