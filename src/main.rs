@@ -249,7 +249,7 @@ impl Application for AwesomeDisplay {
                             TEENSY.stand_by();
                         } else {
                             if !TEENSY.write_screen_buffer(&b) {
-                                TEENSY.set_port(None);
+                                TEENSY.disconnect();
                             }
                         }
                     }
@@ -277,25 +277,15 @@ impl Application for AwesomeDisplay {
                             let mut payload: Vec<u8> = Vec::new();
 
                             if last_sum != crc32fast::hash(&b) {
-                                last_sum = crc32fast::hash(&b);
                                 // decode
-                                let mut writer = Vec::new();
-                                WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(100))
-                                    .write_image(
-                                        &swap_rgb(&b, 320, 170),
-                                        320,
-                                        170,
-                                        image::ColorType::Rgb8,
-                                    )
-                                    .expect("SHIT");
-                                payload = writer
+                                payload = convert_to_webp(&b);
                             }
 
                             let mut dp: DadaPacket = DadaPacket::new(payload);
-                            if !ESP32.write_serialized_buffer(&dp.as_bytes()) {
-                                ESP32.set_port(None);
+                            if ESP32.write_serialized_buffer(&dp.as_bytes()) {
+                                last_sum = crc32fast::hash(&b);
                             } else {
-                                thread::sleep(std::time::Duration::from_millis(200));
+                                ESP32.disconnect();
                             }
                         }
                         Err(_) => {}

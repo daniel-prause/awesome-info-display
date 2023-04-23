@@ -38,6 +38,10 @@ impl Device {
         return self.set_port(init_serial(&self.identifier, self.baud));
     }
 
+    pub fn disconnect(&self) {
+        self.set_port(None);
+    }
+
     pub fn write_screen_buffer(&self, buffer: &[u8]) -> bool {
         if send_command(&mut *self.port.lock().unwrap(), &hex!("e4")) {
             return write_screen_buffer(&mut *self.port.lock().unwrap(), buffer);
@@ -48,6 +52,7 @@ impl Device {
     pub fn write_serialized_buffer(&self, buffer: &[u8]) -> bool {
         return write_screen_buffer(&mut *self.port.lock().unwrap(), buffer);
     }
+
     pub fn reset_display(&self, duration: u64) {
         reset_display(
             &mut *self.port.lock().unwrap(),
