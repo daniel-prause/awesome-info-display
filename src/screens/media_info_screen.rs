@@ -2,6 +2,7 @@ extern crate winapi;
 use crate::{
     config_manager::ConfigManager,
     current_cover::{extract_cover_image, extract_current_cover_path},
+    helpers::text_manipulation::rotate,
     screens::{BasicScreen, Screen, Screenable},
 };
 use crossbeam_channel::{bounded, Receiver, Sender};
@@ -23,8 +24,7 @@ use std::{
 use unicode_segmentation::UnicodeSegmentation;
 use winapi::{
     shared::minwindef::LPARAM,
-    um::{handleapi::CloseHandle, mmdeviceapi::*, winnt::HANDLE, winuser::*},
-    Interface,
+    um::{handleapi::CloseHandle, winnt::HANDLE, winuser::*},
 };
 use winsafe::{co, msg::WndMsg, prelude::user_Hwnd};
 pub struct MediaInfoScreen {
@@ -36,7 +36,7 @@ pub struct MediaInfoScreen {
     music_player_info: MusicPlayerInfo,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 struct MusicPlayerInfo {
     playback_status: isize,
     current_track_position: isize,
@@ -123,7 +123,11 @@ impl MediaInfoScreen {
             0,
             scale,
             &self.screen.font,
-            &rotate(&[&artist, "   "].join(""), Direction::Left, start),
+            &rotate(
+                &[&artist, "   "].join(""),
+                crate::helpers::text_manipulation::Direction::Left,
+                start,
+            ),
         );
     }
 
@@ -155,7 +159,11 @@ impl MediaInfoScreen {
             16,
             scale,
             &self.screen.font,
-            &rotate(&[&title, "   "].join(""), Direction::Left, start),
+            &rotate(
+                &[&title, "   "].join(""),
+                crate::helpers::text_manipulation::Direction::Left,
+                start,
+            ),
         );
     }
 
@@ -465,125 +473,144 @@ impl MediaInfoScreen {
                             None,
                         ) {
                             Ok(window) => {
-                                // 1 == playing, 3 == paused, anything else == stopped
-                                //let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
-                                let playback_status = window.SendMessage(WndMsg {
-                                    msg_id: WM_USER.into(),
-                                    wparam: 0,
-                                    lparam: 104,
-                                });
-                                music_player_info.playback_status = playback_status;
-                                // current position in msecs
-                                let mut current_track_position = window.SendMessage(WndMsg {
-                                    msg_id: WM_USER.into(),
-                                    wparam: 0,
-                                    lparam: 105,
-                                });
-                                if playback_status != 1 && playback_status != 3 {
-                                    current_track_position = 0;
-                                }
-
-                                music_player_info.current_track_position = current_track_position;
-
-                                // track length in seconds (multiply by thousand)
-                                let track_length = window.SendMessage(WndMsg {
-                                    msg_id: WM_USER.into(),
-                                    wparam: 1,
-                                    lparam: 105,
-                                });
-                                music_player_info.track_length = track_length;
-                                // get title
-                                let current_index = window.SendMessage(WndMsg {
-                                    msg_id: WM_USER.into(),
-                                    wparam: 0,
-                                    lparam: 125,
-                                });
-                                let title_length = window.SendMessage(WndMsg {
-                                    msg_id: WM_GETTEXTLENGTH.into(),
-                                    wparam: current_index as usize,
-                                    lparam: 0,
-                                });
-
-                                let path = extract_current_cover_path(winamp_process_handle);
-                                let file_exists = Path::new(std::ffi::OsStr::new(&path)).exists();
-                                music_player_info.filepath = path.clone();
-
-                                if file_exists {
-                                    if path != cover_manager.last_path {
-                                        match extract_cover_image(&path) {
-                                            Some(cover) => {
-                                                music_player_info.cover =
-                                                    cover.data.as_bytes().to_vec();
-                                                cover_manager.last_path = path.clone();
-                                                cover_manager.current_cover =
-                                                    cover.data.as_bytes().to_vec();
-                                            }
-                                            None => {}
+                                match window {
+                                    Some(window) => {
+                                        // 1 == playing, 3 == paused, anything else == stopped
+                                        //let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
+                                        let playback_status = window.SendMessage(WndMsg {
+                                            msg_id: WM_USER.into(),
+                                            wparam: 0,
+                                            lparam: 104,
+                                        });
+                                        music_player_info.playback_status = playback_status;
+                                        // current position in msecs
+                                        let mut current_track_position =
+                                            window.SendMessage(WndMsg {
+                                                msg_id: WM_USER.into(),
+                                                wparam: 0,
+                                                lparam: 105,
+                                            });
+                                        if playback_status != 1 && playback_status != 3 {
+                                            current_track_position = 0;
                                         }
-                                    } else {
-                                        music_player_info.cover =
-                                            cover_manager.current_cover.clone();
-                                    }
-                                } else {
-                                    music_player_info.cover = vec![211; 320 * 170 * 3];
-                                }
 
-                                let buffer_length = title_length + 1;
-                                let mut buffer = Vec::<u16>::with_capacity(buffer_length as usize);
-                                buffer.resize(buffer_length as usize, 0);
+                                        music_player_info.current_track_position =
+                                            current_track_position;
 
-                                window.SendMessage(WndMsg {
-                                    msg_id: WM_GETTEXT.into(),
-                                    wparam: buffer_length as usize,
-                                    lparam: buffer.as_mut_ptr() as LPARAM,
-                                });
+                                        // track length in seconds (multiply by thousand)
+                                        let track_length = window.SendMessage(WndMsg {
+                                            msg_id: WM_USER.into(),
+                                            wparam: 1,
+                                            lparam: 105,
+                                        });
+                                        music_player_info.track_length = track_length;
+                                        // get title
+                                        let current_index = window.SendMessage(WndMsg {
+                                            msg_id: WM_USER.into(),
+                                            wparam: 0,
+                                            lparam: 125,
+                                        });
+                                        let title_length = window.SendMessage(WndMsg {
+                                            msg_id: WM_GETTEXTLENGTH.into(),
+                                            wparam: current_index as usize,
+                                            lparam: 0,
+                                        });
 
-                                let data = String::from_utf16_lossy(&buffer);
+                                        let path =
+                                            extract_current_cover_path(winamp_process_handle);
+                                        let file_exists =
+                                            Path::new(std::ffi::OsStr::new(&path)).exists();
+                                        music_player_info.filepath = path.clone();
 
-                                music_player_info.player_active = title_length > 0
-                                    && match_correct_artist_and_title_format.is_match(&data);
-
-                                let caps = match_correct_artist_and_title_format.captures(&data);
-                                match caps {
-                                    Some(caps) => {
-                                        let artist_and_title =
-                                            caps.get(1).map_or("", |m| m.as_str()).trim();
-
-                                        let artist_and_title_caps =
-                                            match_artist_and_title.captures(&artist_and_title);
-                                        match artist_and_title_caps {
-                                            Some(artist_and_title_caps) => {
-                                                let artist = artist_and_title_caps
-                                                    .get(1)
-                                                    .map_or("", |m| m.as_str())
-                                                    .trim();
-                                                let title = artist_and_title_caps
-                                                    .get(2)
-                                                    .map_or("", |m| m.as_str())
-                                                    .trim();
-
-                                                music_player_info.artist = artist.to_string();
-                                                music_player_info.title = title.to_string();
+                                        if file_exists {
+                                            if path != cover_manager.last_path {
+                                                match extract_cover_image(&path) {
+                                                    Some(cover) => {
+                                                        music_player_info.cover =
+                                                            cover.data.as_bytes().to_vec();
+                                                        cover_manager.last_path = path.clone();
+                                                        cover_manager.current_cover =
+                                                            cover.data.as_bytes().to_vec();
+                                                    }
+                                                    None => {}
+                                                }
+                                            } else {
+                                                music_player_info.cover =
+                                                    cover_manager.current_cover.clone();
                                             }
-                                            None => {
-                                                // check, if only artist OR title are there
-                                                let artist_or_title_caps =
-                                                    match_artist_or_title.captures(&data);
+                                        } else {
+                                            music_player_info.cover = vec![211; 320 * 170 * 3];
+                                        }
 
-                                                match artist_or_title_caps {
-                                                    Some(artist_or_title_caps) => {
-                                                        let title = artist_or_title_caps
+                                        let buffer_length = title_length + 1;
+                                        let mut buffer =
+                                            Vec::<u16>::with_capacity(buffer_length as usize);
+                                        buffer.resize(buffer_length as usize, 0);
+
+                                        window.SendMessage(WndMsg {
+                                            msg_id: WM_GETTEXT.into(),
+                                            wparam: buffer_length as usize,
+                                            lparam: buffer.as_mut_ptr() as LPARAM,
+                                        });
+
+                                        let data = String::from_utf16_lossy(&buffer);
+
+                                        music_player_info.player_active = title_length > 0
+                                            && match_correct_artist_and_title_format
+                                                .is_match(&data);
+
+                                        let caps =
+                                            match_correct_artist_and_title_format.captures(&data);
+                                        match caps {
+                                            Some(caps) => {
+                                                let artist_and_title =
+                                                    caps.get(1).map_or("", |m| m.as_str()).trim();
+
+                                                let artist_and_title_caps = match_artist_and_title
+                                                    .captures(&artist_and_title);
+                                                match artist_and_title_caps {
+                                                    Some(artist_and_title_caps) => {
+                                                        let artist = artist_and_title_caps
                                                             .get(1)
                                                             .map_or("", |m| m.as_str())
                                                             .trim();
+                                                        let title = artist_and_title_caps
+                                                            .get(2)
+                                                            .map_or("", |m| m.as_str())
+                                                            .trim();
+
+                                                        music_player_info.artist =
+                                                            artist.to_string();
                                                         music_player_info.title = title.to_string();
-                                                        music_player_info.artist = "".into();
                                                     }
                                                     None => {
-                                                        music_player_info.player_active = false;
-                                                        music_player_info.filepath.clear();
+                                                        // check, if only artist OR title are there
+                                                        let artist_or_title_caps =
+                                                            match_artist_or_title.captures(&data);
+
+                                                        match artist_or_title_caps {
+                                                            Some(artist_or_title_caps) => {
+                                                                let title = artist_or_title_caps
+                                                                    .get(1)
+                                                                    .map_or("", |m| m.as_str())
+                                                                    .trim();
+                                                                music_player_info.title =
+                                                                    title.to_string();
+                                                                music_player_info.artist =
+                                                                    "".into();
+                                                            }
+                                                            None => {
+                                                                music_player_info.player_active =
+                                                                    false;
+                                                                music_player_info.filepath.clear();
+                                                            }
+                                                        }
                                                     }
                                                 }
+                                            }
+                                            None => {
+                                                music_player_info.player_active = false;
+                                                music_player_info.filepath.clear();
                                             }
                                         }
                                     }
@@ -603,7 +630,7 @@ impl MediaInfoScreen {
                             }
                         }
 
-                        let volume_data = get_master_volume();
+                        let volume_data = crate::helpers::master_volume::get_master_volume();
                         music_player_info.system_volume = volume_data.0;
                         music_player_info.mute = volume_data.1;
                         sender.try_send(music_player_info).unwrap_or_default();
@@ -622,62 +649,4 @@ impl MediaInfoScreen {
         this.draw_companion_screen(&Default::default());
         this
     }
-}
-// MOVE EVERYTHING BELOW SOMEWHERE ELSE, TO SOME MODULE ETC.
-pub enum Direction {
-    Left,
-    //Right,
-}
-
-pub fn rotate(str: &str, direction: Direction, count: usize) -> String {
-    let mut str_vec: Vec<char> = str.chars().collect();
-    match direction {
-        Direction::Left => str_vec.rotate_left(count),
-        //Direction::Right => str_vec.rotate_right(count),
-    }
-    str_vec.iter().collect()
-}
-
-// TODO: disable for non-windows OS and find another way.
-pub fn get_master_volume() -> (f32, i32) {
-    let mut current_volume = 0.0 as f32;
-    let mut mute = 0;
-    let mut device_enumerator: *mut winapi::um::mmdeviceapi::IMMDeviceEnumerator =
-        std::ptr::null_mut();
-    unsafe {
-        winapi::um::combaseapi::CoCreateInstance(
-            &winapi::um::mmdeviceapi::CLSID_MMDeviceEnumerator,
-            std::ptr::null_mut(),
-            winapi::um::combaseapi::CLSCTX_ALL,
-            &IMMDeviceEnumerator::uuidof(),
-            &mut device_enumerator as *mut *mut winapi::um::mmdeviceapi::IMMDeviceEnumerator
-                as *mut _,
-        );
-        let mut default_device: *mut winapi::um::mmdeviceapi::IMMDevice = std::mem::zeroed();
-        (*device_enumerator).GetDefaultAudioEndpoint(
-            winapi::um::mmdeviceapi::eRender,
-            winapi::um::mmdeviceapi::eConsole,
-            &mut default_device,
-        );
-        if default_device == std::ptr::null_mut() {
-            return (0.0, 0);
-        }
-
-        (*device_enumerator).Release();
-        let mut endpoint_volume: *mut winapi::um::endpointvolume::IAudioEndpointVolume =
-            std::mem::zeroed();
-
-        (*default_device).Activate(
-            &winapi::um::endpointvolume::IAudioEndpointVolume::uuidof(),
-            winapi::shared::wtypesbase::CLSCTX_INPROC_SERVER,
-            std::ptr::null_mut(),
-            &mut endpoint_volume as *mut *mut winapi::um::endpointvolume::IAudioEndpointVolume
-                as *mut _,
-        );
-
-        (*default_device).Release();
-        (*endpoint_volume).GetMasterVolumeLevelScalar(&mut current_volume as *mut f32);
-        (*endpoint_volume).GetMute(&mut mute as *mut i32);
-    }
-    (current_volume, mute)
 }

@@ -4960,8 +4960,7 @@ dependencies = [
 [[package]]
 name = "winsafe"
 version = "0.0.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62a4f20d0e60f34bfbb2624564d0bfda0a6eaee8f7f4494e5c3c883c3a62fdd2"
+source = "git+https://github.com/rodrigocfd/winsafe#7c0bd9cb6ef633c60c83bd77b45ed17ebc7bf372"
 
 [[package]]
 name = "wio"
