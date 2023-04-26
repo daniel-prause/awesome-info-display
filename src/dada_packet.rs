@@ -22,7 +22,11 @@ impl DadaPacket {
         let mut escaped_bytes = self.escape_bytes();
         len += escaped_bytes.len() as u32;
 
-        returnable_vector.append(&mut len.to_le_bytes().to_vec());
+        // convert to 3 byte value
+        let mut len_as_bytes = len.to_le_bytes().to_vec();
+        len_as_bytes.pop();
+
+        returnable_vector.append(&mut len_as_bytes);
         returnable_vector.append(&mut self.start_bytes);
         returnable_vector.append(&mut escaped_bytes);
         returnable_vector.append(&mut self.end_bytes);
