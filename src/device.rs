@@ -1,10 +1,11 @@
 use hex_literal::hex;
 
-use crate::display_serial_com::*;
+use crate::{dada_packet::DadaPacket, display_serial_com::*};
 use std::time::Duration;
 pub struct Device {
     identifier: String,
     baud: u32,
+    pub awake: std::sync::Mutex<bool>,
     pub port: std::sync::Mutex<Option<Box<dyn serialport::SerialPort>>>,
     pub connected: std::sync::Mutex<bool>,
 }
@@ -16,6 +17,7 @@ impl Device {
             baud: baud,
             port: std::sync::Mutex::new(None),
             connected: std::sync::Mutex::new(false),
+            awake: std::sync::Mutex::new(false),
         };
     }
 
@@ -46,11 +48,7 @@ impl Device {
         if send_command(&mut *self.port.lock().unwrap(), &hex!("e4")) {
             return write_screen_buffer(&mut *self.port.lock().unwrap(), buffer);
         }
-        return true;
-    }
-
-    pub fn write_serialized_buffer(&self, buffer: &[u8]) -> bool {
-        return write_screen_buffer(&mut *self.port.lock().unwrap(), buffer);
+        return false;
     }
 
     pub fn reset_display(&self, duration: u64) {
@@ -64,15 +62,29 @@ impl Device {
         return send_command(&mut *self.port.lock().unwrap(), &command.to_le_bytes());
     }
 
-    pub fn stand_by(&self) -> bool {
-        if self.send_command(232) {
-            return self.write_screen_buffer(&vec![0; 8192 as usize]);
+    pub fn stand_by(&self) {
+        if *self.awake.lock().unwrap() {
+            self.send_command(17);
+            let mut dp: DadaPacket = DadaPacket::new(Vec::new());
+            if !write_screen_buffer(&mut *self.port.lock().unwrap(), &dp.as_bytes()) {
+                self.disconnect()
+            } else {
+                *self.awake.lock().unwrap() = false;
+            }
         }
-        return false;
     }
 
     #[allow(unused)]
-    pub fn wake_up(&self) -> bool {
-        return self.send_command(233);
+    pub fn wake_up(&self) {
+        if !*self.awake.lock().unwrap() {
+            self.send_command(18);
+            let mut dp: DadaPacket = DadaPacket::new(Vec::new());
+
+            if !write_screen_buffer(&mut *self.port.lock().unwrap(), &dp.as_bytes()) {
+                self.disconnect()
+            } else {
+                *self.awake.lock().unwrap() = true;
+            }
+        }
     }
 }

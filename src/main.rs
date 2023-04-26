@@ -245,7 +245,8 @@ impl Application for AwesomeDisplay {
                             return;
                         }
                         if *HIBERNATING.lock().unwrap() {
-                            TEENSY.stand_by();
+                            //TEENSY.stand_by();
+                            TEENSY.send_command(17);
                         } else {
                             if !TEENSY.write_screen_buffer(&b) {
                                 TEENSY.disconnect();
@@ -272,18 +273,23 @@ impl Application for AwesomeDisplay {
                             if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
                                 return;
                             }
-
-                            let mut payload: Vec<u8> = Vec::new();
-
-                            if last_sum != crc32fast::hash(&b) {
-                                payload = convert_to_webp(&b, 320, 170);
-                            }
-
-                            let mut dp: DadaPacket = DadaPacket::new(payload);
-                            if ESP32.write_serialized_buffer(&dp.as_bytes()) {
-                                last_sum = crc32fast::hash(&b);
+                            if *HIBERNATING.lock().unwrap() {
+                                ESP32.stand_by();
                             } else {
-                                ESP32.disconnect();
+                                ESP32.wake_up();
+
+                                let mut payload: Vec<u8> = Vec::new();
+
+                                if last_sum != crc32fast::hash(&b) {
+                                    payload = convert_to_webp(&b, 320, 170);
+                                }
+
+                                let mut dp: DadaPacket = DadaPacket::new(payload);
+                                if ESP32.write_screen_buffer(&dp.as_bytes()) {
+                                    last_sum = crc32fast::hash(&b);
+                                } else {
+                                    ESP32.disconnect();
+                                }
                             }
                         }
                         Err(_) => {}
