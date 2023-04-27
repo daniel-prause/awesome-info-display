@@ -1,7 +1,7 @@
-use hex_literal::hex;
 
-use crate::{dada_packet::DadaPacket, display_serial_com::*};
-use std::time::Duration;
+
+use crate::{display_serial_com::*};
+
 pub struct Device {
     identifier: String,
     baud: u32,

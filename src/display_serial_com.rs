@@ -1,8 +1,6 @@
-use hex_literal::hex;
 use serialport;
 use std::cmp;
 use std::io::Write;
-use std::thread;
 use std::time::Duration;
 
 pub fn init_serial(
@@ -35,21 +33,6 @@ pub fn init_serial(
     return None;
 }
 
-pub fn reset_display(
-    port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
-    duration: Duration,
-) {
-    match port.as_deref_mut() {
-        Some(deref_port) => match deref_port.write(&hex!("11")) {
-            Ok(_) => 0usize,
-            Err(_) => 0usize,
-        },
-        None => 0usize,
-    };
-    thread::sleep(duration);
-}
-
-#[allow(unused)]
 pub fn write_screen_buffer(
     port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
     screen_buf: &[u8],
