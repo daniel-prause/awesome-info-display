@@ -45,17 +45,14 @@ impl Device {
     }
 
     pub fn write_screen_buffer(&self, buffer: &[u8]) -> bool {
-        if send_command(&mut *self.port.lock().unwrap(), &hex!("e4")) {
+        if self.send_command(228) {
             return write_screen_buffer(&mut *self.port.lock().unwrap(), buffer);
         }
         return false;
     }
 
-    pub fn reset_display(&self, duration: u64) {
-        reset_display(
-            &mut *self.port.lock().unwrap(),
-            Duration::from_millis(duration),
-        );
+    pub fn reset_display(&self) {
+        self.send_command(17);
     }
 
     pub fn send_command(&self, command: u8) -> bool {
@@ -64,9 +61,7 @@ impl Device {
 
     pub fn stand_by(&self) {
         if *self.awake.lock().unwrap() {
-            self.send_command(17);
-            let mut dp: DadaPacket = DadaPacket::new(Vec::new());
-            if !write_screen_buffer(&mut *self.port.lock().unwrap(), &dp.as_bytes()) {
+            if !self.send_command(18) {
                 self.disconnect()
             } else {
                 *self.awake.lock().unwrap() = false;
@@ -74,13 +69,9 @@ impl Device {
         }
     }
 
-    #[allow(unused)]
     pub fn wake_up(&self) {
         if !*self.awake.lock().unwrap() {
-            self.send_command(18);
-            let mut dp: DadaPacket = DadaPacket::new(Vec::new());
-
-            if !write_screen_buffer(&mut *self.port.lock().unwrap(), &dp.as_bytes()) {
+            if !self.send_command(19) {
                 self.disconnect()
             } else {
                 *self.awake.lock().unwrap() = true;

@@ -257,7 +257,7 @@ impl Application for AwesomeDisplay {
                 }
             } else {
                 if TEENSY.connect() {
-                    TEENSY.reset_display(0);
+                    TEENSY.reset_display();
                 }
             }
         });
@@ -284,8 +284,7 @@ impl Application for AwesomeDisplay {
                                     payload = convert_to_webp(&b, 320, 170);
                                 }
 
-                                let mut dp: DadaPacket = DadaPacket::new(payload);
-                                if ESP32.write_screen_buffer(&dp.as_bytes()) {
+                                if ESP32.write_screen_buffer(&DadaPacket::new(payload).as_bytes()) {
                                     last_sum = crc32fast::hash(&b);
                                 } else {
                                     ESP32.disconnect();
@@ -295,9 +294,7 @@ impl Application for AwesomeDisplay {
                         Err(_) => {}
                     }
                 } else {
-                    if ESP32.connect() {
-                        //ESP32.reset_display(0);
-                    }
+                    ESP32.connect();
                 }
             }
         });
@@ -441,7 +438,7 @@ impl Application for AwesomeDisplay {
 
         if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
             if TEENSY.is_connected() {
-                TEENSY.reset_display(0)
+                TEENSY.reset_display()
             }
             self.config_manager.write().unwrap().save();
             return window::close();
