@@ -1,4 +1,5 @@
 use crate::helpers::convert::to_wstring;
+use crate::HIBERNATING;
 use std::thread;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
@@ -65,4 +66,21 @@ pub fn register_power_broadcast(
             DispatchMessageW(&msg);
         }
     });
+}
+pub unsafe extern "system" fn window_proc(
+    hwnd: HWND,
+    msg: UINT,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    if msg == WM_POWERBROADCAST {
+        *HIBERNATING.lock().unwrap() = wparam == PBT_APMSUSPEND;
+    }
+
+    if msg == WM_DESTROY {
+        PostQuitMessage(0);
+        return 0;
+    }
+
+    return DefWindowProcW(hwnd, msg, wparam, lparam);
 }

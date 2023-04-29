@@ -11,6 +11,8 @@ mod screens;
 mod style;
 
 use device::*;
+use helpers::keyboard::{self, start_global_key_grabber};
+use helpers::power::window_proc;
 use helpers::{convert::convert_brightness, convert_image::*, power::register_power_broadcast};
 use iced::widget::Text;
 use iced::{
@@ -20,7 +22,7 @@ use iced::{
 use image::ImageFormat;
 use lazy_static::lazy_static;
 use once_cell::sync::Lazy;
-use rdev::{grab, Event, EventType, Key};
+
 use rusttype::Font as ft;
 use std::{
     collections::HashMap,
@@ -29,12 +31,8 @@ use std::{
     fmt,
     rc::Rc,
     sync::{atomic::AtomicBool, Arc, Mutex, RwLock},
-    thread,
 };
-use winapi::{
-    shared::{minwindef::*, windef::*},
-    um::winuser::*,
-};
+
 #[derive(Debug)]
 struct SuperError {
     side: SuperErrorSideKick,
@@ -228,16 +226,7 @@ impl Application for AwesomeDisplay {
         };
 
         // global key press listener
-        thread::spawn({
-            move || loop {
-                match grab(callback) {
-                    Ok(_) => {}
-                    Err(error) => {
-                        eprintln!("Global key grab error: {:?}", error)
-                    }
-                }
-            }
-        });
+        start_global_key_grabber(keyboard::callback);
 
         // init device objects
         for device in DEVICES.values() {
@@ -555,52 +544,6 @@ impl Application for AwesomeDisplay {
     }
 }
 
-fn callback(event: Event) -> Option<Event> {
-    match event.event_type {
-        EventType::KeyPress(Key::Unknown(178)) => {
-            *LAST_KEY.lock().unwrap() = true;
-            *LAST_KEY_VALUE.lock().unwrap() = 178;
-            Some(event)
-        }
-        EventType::KeyPress(Key::Unknown(177)) => {
-            *LAST_KEY.lock().unwrap() = true;
-            *LAST_KEY_VALUE.lock().unwrap() = 177;
-            Some(event)
-        }
-        EventType::KeyPress(Key::Unknown(176)) => {
-            *LAST_KEY.lock().unwrap() = true;
-            *LAST_KEY_VALUE.lock().unwrap() = 176;
-            Some(event)
-        }
-        EventType::KeyPress(Key::Unknown(175)) => {
-            *LAST_KEY.lock().unwrap() = true;
-            *LAST_KEY_VALUE.lock().unwrap() = 175;
-            Some(event)
-        }
-        EventType::KeyPress(Key::Unknown(174)) => {
-            *LAST_KEY.lock().unwrap() = true;
-            *LAST_KEY_VALUE.lock().unwrap() = 174;
-            Some(event)
-        }
-        EventType::KeyPress(Key::Unknown(173)) => {
-            *LAST_KEY.lock().unwrap() = true;
-            *LAST_KEY_VALUE.lock().unwrap() = 173;
-            Some(event)
-        }
-        EventType::KeyPress(Key::Unknown(179)) => {
-            *LAST_KEY.lock().unwrap() = true;
-            *LAST_KEY_VALUE.lock().unwrap() = 179;
-            Some(event)
-        }
-        EventType::KeyPress(Key::Pause) => {
-            *LAST_KEY.lock().unwrap() = true;
-            *LAST_KEY_VALUE.lock().unwrap() = 180;
-            Some(event)
-        }
-        _ => Some(event),
-    }
-}
-
 fn special_checkbox<'a>(
     checked: bool,
     key: String,
@@ -612,22 +555,4 @@ fn special_checkbox<'a>(
     .style(iced::theme::Checkbox::Custom(Box::new(style::Checkbox {})))
     .width(Length::Fixed(200f32))
     .into()
-}
-
-pub unsafe extern "system" fn window_proc(
-    hwnd: HWND,
-    msg: UINT,
-    wparam: WPARAM,
-    lparam: LPARAM,
-) -> LRESULT {
-    if msg == WM_POWERBROADCAST {
-        *HIBERNATING.lock().unwrap() = wparam == PBT_APMSUSPEND;
-    }
-
-    if msg == WM_DESTROY {
-        PostQuitMessage(0);
-        return 0;
-    }
-
-    return DefWindowProcW(hwnd, msg, wparam, lparam);
 }
