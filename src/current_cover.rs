@@ -1,4 +1,4 @@
-use std::{os::windows::prelude::OsStrExt, ptr::null_mut};
+use std::ptr::null_mut;
 
 use audiotags::Tag;
 use image::EncodableLayout;
@@ -11,6 +11,8 @@ use winapi::{
     },
 };
 
+use crate::helpers::convert::to_wstring;
+
 pub struct Cover {
     pub data: Vec<u8>,
     pub filepath: String,
@@ -18,10 +20,7 @@ pub struct Cover {
 
 pub fn extract_current_cover_path(mut winamp_process_handle: HANDLE) -> String {
     unsafe {
-        let winname: Vec<u16> = std::ffi::OsStr::new("Winamp v1.x")
-            .encode_wide()
-            .chain(std::iter::once(0))
-            .collect();
+        let winname: Vec<u16> = to_wstring("Winamp v1.x");
         // wide string
         let hwnd: winapi::shared::windef::HWND = FindWindowW(winname.as_ptr(), null_mut());
 

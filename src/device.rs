@@ -1,23 +1,37 @@
+use crossbeam_channel::{bounded, Receiver, Sender};
+use image::ImageFormat;
 
-
-use crate::{display_serial_com::*};
-
+use crate::{dada_packet::DadaPacket, display_serial_com::*};
 pub struct Device {
     identifier: String,
     baud: u32,
+    use_dada_packet: bool,
+    pub image_format: ImageFormat,
+    pub sender: Sender<Vec<u8>>,
+    pub receiver: Receiver<Vec<u8>>,
     pub awake: std::sync::Mutex<bool>,
     pub port: std::sync::Mutex<Option<Box<dyn serialport::SerialPort>>>,
     pub connected: std::sync::Mutex<bool>,
 }
 
 impl Device {
-    pub fn new(identifier: String, baud: u32) -> Device {
+    pub fn new(
+        identifier: String,
+        baud: u32,
+        use_dada_packet: bool,
+        image_format: ImageFormat,
+    ) -> Device {
+        let (sender, receiver): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         return Device {
             identifier: identifier.into(),
-            baud: baud,
+            baud,
+            use_dada_packet,
+            sender,
+            receiver,
+            image_format,
+            awake: std::sync::Mutex::new(false),
             port: std::sync::Mutex::new(None),
             connected: std::sync::Mutex::new(false),
-            awake: std::sync::Mutex::new(false),
         };
     }
 
@@ -44,9 +58,16 @@ impl Device {
         self.set_port(None);
     }
 
-    pub fn write_screen_buffer(&self, buffer: &[u8]) -> bool {
+    pub fn write(&self, payload: &[u8]) -> bool {
         if self.send_command(228) {
-            return write_screen_buffer(&mut *self.port.lock().unwrap(), buffer);
+            if self.use_dada_packet {
+                return write_screen_buffer(
+                    &mut *self.port.lock().unwrap(),
+                    &DadaPacket::new(payload.to_vec()).as_bytes(),
+                );
+            }
+
+            return write_screen_buffer(&mut *self.port.lock().unwrap(), payload);
         }
         return false;
     }
