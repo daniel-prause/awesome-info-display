@@ -1,7 +1,13 @@
+use std::thread;
+
 use crossbeam_channel::{bounded, Receiver, Sender};
 use image::ImageFormat;
 
-use crate::{dada_packet::DadaPacket, helpers::display_serial_com::*};
+use crate::{
+    dada_packet::DadaPacket,
+    helpers::{convert_image::convert_to_webp, display_serial_com::*},
+    CLOSE_REQUESTED, HIBERNATING,
+};
 pub struct Device {
     identifier: String,
     baud: u32,
@@ -98,5 +104,50 @@ impl Device {
                 *self.awake.lock().unwrap() = true;
             }
         }
+    }
+
+    pub fn start_background_worker(self: &'static Device) {
+        thread::spawn(move || {
+            let mut last_sum = 0;
+            loop {
+                let buf = self.receiver.recv();
+                if self.is_connected() {
+                    match buf {
+                        Ok(b) => {
+                            if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
+                                return;
+                            }
+                            if *HIBERNATING.lock().unwrap() {
+                                self.stand_by();
+                            } else {
+                                self.wake_up();
+
+                                let crc_of_buf = crc32fast::hash(&b);
+                                let mut payload = b;
+                                if last_sum != crc_of_buf {
+                                    if self.image_format == ImageFormat::WebP {
+                                        payload = convert_to_webp(&payload, 320, 170);
+                                    }
+                                    if self.write(&payload) {
+                                        last_sum = crc_of_buf;
+                                    } else {
+                                        self.disconnect();
+                                    }
+                                } else {
+                                    if !self.send_command(229) {
+                                        self.disconnect();
+                                    }
+                                }
+                            }
+                        }
+                        Err(_) => {}
+                    }
+                } else {
+                    if self.connect() {
+                        self.reset_display()
+                    }
+                }
+            }
+        });
     }
 }

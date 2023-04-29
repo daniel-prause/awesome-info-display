@@ -240,49 +240,8 @@ impl Application for AwesomeDisplay {
         });
 
         // init device objects
-        for (_, device) in DEVICES.iter() {
-            thread::spawn(move || {
-                let mut last_sum = 0;
-                loop {
-                    let buf = device.receiver.recv();
-                    if device.is_connected() {
-                        match buf {
-                            Ok(b) => {
-                                if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
-                                    return;
-                                }
-                                if *HIBERNATING.lock().unwrap() {
-                                    device.stand_by();
-                                } else {
-                                    device.wake_up();
-
-                                    let crc_of_buf = crc32fast::hash(&b);
-                                    let mut payload = b;
-                                    if last_sum != crc_of_buf {
-                                        if device.image_format == ImageFormat::WebP {
-                                            payload = convert_to_webp(&payload, 320, 170);
-                                        }
-                                        if device.write(&payload) {
-                                            last_sum = crc_of_buf;
-                                        } else {
-                                            device.disconnect();
-                                        }
-                                    } else {
-                                        if !device.send_command(229) {
-                                            device.disconnect();
-                                        }
-                                    }
-                                }
-                            }
-                            Err(_) => {}
-                        }
-                    } else {
-                        if device.connect() {
-                            device.reset_display()
-                        }
-                    }
-                }
-            });
+        for device in DEVICES.values() {
+            device.start_background_worker()
         }
 
         (this, Command::none())
