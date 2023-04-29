@@ -140,9 +140,8 @@ pub fn main() -> iced::Result {
 }
 
 struct AwesomeDisplay {
-    screens: screen_manager::ScreenManager,
+    screens: Mutex<screen_manager::ScreenManager>,
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
-    current_screen: crate::screens::Screen,
     screen_descriptions: Vec<(String, String, bool)>,
 }
 
@@ -219,9 +218,8 @@ impl Application for AwesomeDisplay {
         let screen_descriptions = screen_manager.descriptions_and_keys_and_state();
 
         let this = AwesomeDisplay {
-            screens: screen_manager,
+            screens: Mutex::new(screen_manager),
             config_manager: config_manager.clone(),
-            current_screen: crate::screens::Screen::default(),
             screen_descriptions: screen_descriptions,
         };
 
@@ -294,14 +292,14 @@ impl Application for AwesomeDisplay {
                 self.config_manager.write().unwrap().save();
             }
             Message::NextScreen => {
-                self.screens.update_current_screen();
-                self.screens.next_screen();
-                self.screens.update_current_screen();
+                self.screens.lock().unwrap().update_current_screen();
+                self.screens.lock().unwrap().next_screen();
+                self.screens.lock().unwrap().update_current_screen();
             }
             Message::PreviousScreen => {
-                self.screens.update_current_screen();
-                self.screens.previous_screen();
-                self.screens.update_current_screen();
+                self.screens.lock().unwrap().update_current_screen();
+                self.screens.lock().unwrap().previous_screen();
+                self.screens.lock().unwrap().update_current_screen();
             }
             Message::UpdateCurrentScreen => {
                 if *LAST_KEY.lock().unwrap() {
@@ -310,23 +308,27 @@ impl Application for AwesomeDisplay {
                     if val == 174 || val == 175 {
                         // 1 is "volume mode"
                         self.screens
+                            .lock()
+                            .unwrap()
                             .set_screen_for_short("media_info_screen".into(), 1);
                     } else if val >= 176 && val < 180 {
                         // 0 is "normal mode"
                         self.screens
+                            .lock()
+                            .unwrap()
                             .set_screen_for_short("media_info_screen".into(), 0);
                     } else if val == 180 {
-                        self.screens.next_screen()
+                        self.screens.lock().unwrap().next_screen()
                     }
                     *LAST_KEY_VALUE.lock().unwrap() = 0;
                 }
-                self.screens.update_current_screen();
+                self.screens.lock().unwrap().update_current_screen();
             }
             Message::KeyboardEventOccurred(_event, key_code) => {
                 // switch to media screen for a few seconds
                 *LAST_KEY.lock().unwrap() = true;
                 *LAST_KEY_VALUE.lock().unwrap() = key_code;
-                self.screens.update_current_screen();
+                self.screens.lock().unwrap().update_current_screen();
             }
             Message::WindowEventOccurred(event) => {
                 if let iced_native::Event::Window(iced_native::window::Event::CloseRequested) =
@@ -339,8 +341,11 @@ impl Application for AwesomeDisplay {
                 self.config_manager.write().unwrap().config.brightness = slider_value as u16;
             }
             Message::ScreenStatusChanged(status, screen) => {
-                if self.screens.screen_deactivatable(&screen) {
-                    self.screens.set_status_for_screen(&screen, status);
+                if self.screens.lock().unwrap().screen_deactivatable(&screen) {
+                    self.screens
+                        .lock()
+                        .unwrap()
+                        .set_status_for_screen(&screen, status);
                 }
             }
             Message::BitpandaApiKeyChanged(message) => {
@@ -361,15 +366,6 @@ impl Application for AwesomeDisplay {
                     .openweather_location = message;
             }
         }
-
-        self.current_screen.description = self.screens.current_screen().description().clone();
-        self.current_screen.bytes = self.screens.current_screen().current_image().clone();
-        self.screen_descriptions = self.screens.descriptions_and_keys_and_state().clone();
-        self.current_screen.companion_bytes = self
-            .screens
-            .current_screen()
-            .current_image_for_companion()
-            .clone();
 
         // disconnect all devices, if application will be closed
         if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
@@ -396,8 +392,20 @@ impl Application for AwesomeDisplay {
     }
 
     fn view(&self) -> Element<Message> {
-        let screen_buffer = &self.current_screen.bytes;
-        let companion_screen_buffer = &self.current_screen.companion_bytes;
+        let screen_buffer = &self
+            .screens
+            .lock()
+            .unwrap()
+            .current_screen()
+            .current_image()
+            .clone();
+        let companion_screen_buffer = &self
+            .screens
+            .lock()
+            .unwrap()
+            .current_screen()
+            .current_image_for_companion()
+            .clone();
 
         // preview image
         let image = rgb_bytes_to_rgba_image(&swap_rgb(&screen_buffer, 256, 64), 256, 64);
@@ -526,7 +534,10 @@ impl Application for AwesomeDisplay {
             .align_items(iced::Alignment::Center)
             .width(Length::Fill)
             .push(iced::widget::text("Current screen").size(50))
-            .push(iced::widget::text(&self.current_screen.description).size(25))
+            .push(
+                iced::widget::text(&self.screens.lock().unwrap().current_screen().description())
+                    .size(25),
+            )
             .push(
                 image
                     .width(Length::Fixed(256f32))
