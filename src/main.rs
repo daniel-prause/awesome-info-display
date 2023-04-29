@@ -1,45 +1,40 @@
 #![windows_subsystem = "windows"]
 extern crate winapi;
 
-use helpers::convert::convert_brightness;
+mod config;
+mod config_manager;
+mod dada_packet;
+mod device;
+mod helpers;
+mod screen_manager;
+mod screens;
+mod style;
+
+use device::*;
+use helpers::{convert::convert_brightness, convert_image::*, power::register_power_broadcast};
 use iced::widget::Text;
 use iced::{
     executor, time, window, Application, Command, Element, Font, Length, Settings, Subscription,
 };
 
 use image::ImageFormat;
-use once_cell::sync::Lazy;
-use std::collections::HashMap;
-
-mod config;
-mod config_manager;
-mod convert_image;
-mod current_cover;
-mod dada_packet;
-mod device;
-mod display_serial_com;
-mod helpers;
-mod screen_manager;
-mod screens;
-mod style;
-
-use crate::convert_image::*;
-use crate::device::*;
-use crate::helpers::power::register_power_broadcast;
-
 use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use rdev::{grab, Event, EventType, Key};
 use rusttype::Font as ft;
-use std::error::Error;
-use std::ffi::CString;
-use std::fmt;
-use std::rc::Rc;
-use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex, RwLock};
-use std::thread;
-use winapi::shared::minwindef::*;
-use winapi::shared::windef::*;
-use winapi::um::winuser::*;
+use std::{
+    collections::HashMap,
+    error::Error,
+    ffi::CString,
+    fmt,
+    rc::Rc,
+    sync::{atomic::AtomicBool, Arc, Mutex, RwLock},
+    thread,
+};
+use winapi::{
+    shared::{minwindef::*, windef::*},
+    um::winuser::*,
+};
 #[derive(Debug)]
 struct SuperError {
     side: SuperErrorSideKick,

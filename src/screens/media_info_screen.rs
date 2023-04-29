@@ -1,7 +1,7 @@
 extern crate winapi;
 use crate::{
     config_manager::ConfigManager,
-    current_cover::{extract_cover_image, extract_current_cover_path},
+    helpers::current_cover::{extract_cover_image, extract_current_cover_path},
     helpers::text_manipulation::rotate,
     screens::{BasicScreen, Screen, Screenable},
 };

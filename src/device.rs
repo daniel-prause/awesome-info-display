@@ -1,7 +1,7 @@
 use crossbeam_channel::{bounded, Receiver, Sender};
 use image::ImageFormat;
 
-use crate::{dada_packet::DadaPacket, display_serial_com::*};
+use crate::{dada_packet::DadaPacket, helpers::display_serial_com::*};
 pub struct Device {
     identifier: String,
     baud: u32,
