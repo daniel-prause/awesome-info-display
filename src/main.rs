@@ -280,12 +280,13 @@ impl Application for AwesomeDisplay {
 
                                 let mut payload: Vec<u8> = Vec::new();
 
-                                if last_sum != crc32fast::hash(&b) {
+                                let crc_of_buf = crc32fast::hash(&b);
+                                if last_sum != crc_of_buf {
                                     payload = convert_to_webp(&b, 320, 170);
                                 }
 
                                 if ESP32.write_screen_buffer(&DadaPacket::new(payload).as_bytes()) {
-                                    last_sum = crc32fast::hash(&b);
+                                    last_sum = crc_of_buf;
                                 } else {
                                     ESP32.disconnect();
                                 }
