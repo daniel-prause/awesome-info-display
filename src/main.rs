@@ -392,14 +392,14 @@ impl Application for AwesomeDisplay {
     }
 
     fn view(&self) -> Element<Message> {
-        let screen_buffer = &self
+        let main_screen_bytes = &self
             .screens
             .lock()
             .unwrap()
             .current_screen()
             .current_image()
             .clone();
-        let companion_screen_buffer = &self
+        let companion_screen_bytes = &self
             .screens
             .lock()
             .unwrap()
@@ -408,18 +408,21 @@ impl Application for AwesomeDisplay {
             .clone();
 
         // preview image
-        let image = rgb_bytes_to_rgba_image(&swap_rgb(&screen_buffer, 256, 64), 256, 64);
-        let companion_image =
-            rgb_bytes_to_rgba_image(&swap_rgb(&companion_screen_buffer, 320, 170), 320, 170);
+        let main_screen_image =
+            rgb_bytes_to_rgba_image(&swap_rgb(&main_screen_bytes, 256, 64), 256, 64);
+        let companion_screen_image =
+            rgb_bytes_to_rgba_image(&swap_rgb(&companion_screen_bytes, 320, 170), 320, 170);
 
         // convert to gray scale for display
-        let bytes = convert_to_gray_scale(&adjust_brightness_rgb(
-            &screen_buffer,
+        let main_screen_bytes = convert_to_gray_scale(&adjust_brightness_rgb(
+            &main_screen_bytes,
             self.config_manager.read().unwrap().config.brightness as f32,
         ));
 
-        for (device_name, buffer) in vec![(TEENSY, bytes), (ESP32, companion_screen_buffer.clone())]
-        {
+        for (device_name, buffer) in vec![
+            (TEENSY, main_screen_bytes),
+            (ESP32, companion_screen_bytes.clone()),
+        ] {
             if !buffer.is_empty() {
                 DEVICES
                     .get(device_name)
@@ -539,14 +542,14 @@ impl Application for AwesomeDisplay {
                     .size(25),
             )
             .push(
-                image
+                main_screen_image
                     .width(Length::Fixed(256f32))
                     .height(Length::Fixed(64f32)),
             )
             .spacing(10)
             .push(
                 // companion image
-                companion_image
+                companion_screen_image
                     .width(Length::Fixed(320f32))
                     .height(Length::Fixed(170f32)),
             );
