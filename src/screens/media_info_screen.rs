@@ -440,7 +440,7 @@ impl MediaInfoScreen {
                             return;
                         }
                     }
-                    match regex::Regex::new(r"(.*) - (.*)") {
+                    match regex::Regex::new(r"(.*?) - (.*)") {
                         Ok(regex) => {
                             match_artist_and_title = regex;
                         }
@@ -518,12 +518,12 @@ impl MediaInfoScreen {
 
                                         let path =
                                             extract_current_cover_path(winamp_process_handle);
-                                        let file_exists =
-                                            Path::new(std::ffi::OsStr::new(&path)).exists();
-                                        music_player_info.filepath = path.clone();
 
-                                        if file_exists {
-                                            if path != cover_manager.last_path {
+                                        if path != cover_manager.last_path {
+                                            let file_exists =
+                                                Path::new(std::ffi::OsStr::new(&path)).exists();
+                                            if file_exists {
+                                                music_player_info.filepath = path.clone();
                                                 match extract_cover_image(&path) {
                                                     Some(cover) => {
                                                         music_player_info.cover =
@@ -535,11 +535,11 @@ impl MediaInfoScreen {
                                                     None => {}
                                                 }
                                             } else {
-                                                music_player_info.cover =
-                                                    cover_manager.current_cover.clone();
+                                                music_player_info.cover = vec![211; 320 * 170 * 3];
                                             }
                                         } else {
-                                            music_player_info.cover = vec![211; 320 * 170 * 3];
+                                            music_player_info.cover =
+                                                cover_manager.current_cover.clone();
                                         }
 
                                         let buffer_length = title_length + 1;
