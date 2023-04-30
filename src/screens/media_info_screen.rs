@@ -355,7 +355,9 @@ impl MediaInfoScreen {
 
     fn draw_companion_screen(&mut self, music_player_info: &MusicPlayerInfo) {
         // draw companion image
-        if music_player_info.filepath != self.music_player_info.filepath {
+        if music_player_info.filepath != self.music_player_info.filepath
+            || (music_player_info.filepath.is_empty() && self.music_player_info.filepath.is_empty())
+        {
             self.screen.companion_bytes = self.draw_cover(music_player_info);
         }
     }
