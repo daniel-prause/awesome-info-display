@@ -144,6 +144,7 @@ impl Device {
                     }
                 } else {
                     if self.connect() {
+                        last_sum = 0;
                         self.reset_display()
                     }
                 }
