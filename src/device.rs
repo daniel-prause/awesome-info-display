@@ -1,4 +1,4 @@
-use std::thread;
+use std::{sync::atomic::Ordering, thread};
 
 use crossbeam_channel::{bounded, Receiver, Sender};
 use image::ImageFormat;
@@ -6,12 +6,14 @@ use image::ImageFormat;
 use crate::{
     dada_packet::DadaPacket,
     helpers::{convert_image::convert_to_webp, display_serial_com::*},
-    CLOSE_REQUESTED, HIBERNATING,
+    CLOSE_REQUESTED, HIBERNATING, LAST_BME_INFO,
 };
 pub struct Device {
     identifier: String,
     baud: u32,
     use_dada_packet: bool,
+    has_bme_sensor: bool,
+    background_workers_started: std::sync::atomic::AtomicBool,
     pub image_format: ImageFormat,
     pub sender: Sender<Vec<u8>>,
     pub receiver: Receiver<Vec<u8>>,
@@ -26,6 +28,7 @@ impl Device {
         baud: u32,
         use_dada_packet: bool,
         image_format: ImageFormat,
+        has_bme_sensor: bool,
     ) -> Device {
         let (sender, receiver): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         return Device {
@@ -35,6 +38,8 @@ impl Device {
             sender,
             receiver,
             image_format,
+            has_bme_sensor,
+            background_workers_started: std::sync::atomic::AtomicBool::new(false),
             awake: std::sync::Mutex::new(false),
             port: std::sync::Mutex::new(None),
             connected: std::sync::Mutex::new(false),
@@ -119,7 +124,33 @@ impl Device {
         }
     }
 
-    pub fn start_background_worker(self: &'static Device) {
+    pub fn start_background_workers(self: &'static Device) {
+        if !self.background_workers_started.load(Ordering::Acquire) {
+            self.background_workers_started
+                .store(true, Ordering::Release);
+            self.start_writer();
+            self.start_bme_sensor_background_thread();
+        }
+    }
+
+    fn start_bme_sensor_background_thread(self: &'static Device) {
+        if self.has_bme_sensor {
+            thread::spawn(move || loop {
+                if self.is_connected() {
+                    let bme_info = self.get_bme_info();
+                    if !bme_info.0.is_empty() && !bme_info.1.is_empty() {
+                        *LAST_BME_INFO.lock().unwrap() = bme_info;
+                    }
+                }
+                if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
+                    return;
+                }
+                thread::sleep(std::time::Duration::from_millis(2000));
+            });
+        }
+    }
+
+    fn start_writer(self: &'static Device) {
         thread::spawn(move || {
             let mut last_sum = 0;
             loop {

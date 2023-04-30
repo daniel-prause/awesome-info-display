@@ -24,7 +24,6 @@ use lazy_static::lazy_static;
 use once_cell::sync::Lazy;
 
 use rusttype::Font as ft;
-use std::thread;
 use std::{
     collections::HashMap,
     error::Error,
@@ -89,11 +88,11 @@ static DEVICES: Lazy<HashMap<String, Device>> = Lazy::new(|| {
     let mut m: HashMap<String, Device> = HashMap::new();
     m.insert(
         TEENSY.into(),
-        Device::new("16c00483".into(), 4608000, false, ImageFormat::Bmp),
+        Device::new("16c00483".into(), 4608000, false, ImageFormat::Bmp, true),
     );
     m.insert(
         ESP32.into(),
-        Device::new("303a1001".into(), 921600, true, ImageFormat::WebP),
+        Device::new("303a1001".into(), 921600, true, ImageFormat::WebP, false),
     );
     m
 });
@@ -230,18 +229,8 @@ impl Application for AwesomeDisplay {
 
         // init device objects
         for device in DEVICES.values() {
-            device.start_background_worker()
+            device.start_background_workers()
         }
-        // update bme sensor
-        thread::spawn(move || loop {
-            if DEVICES.get(TEENSY).unwrap().is_connected() {
-                let bme_info = DEVICES.get(TEENSY).unwrap().get_bme_info();
-                if !bme_info.0.is_empty() && !bme_info.1.is_empty() {
-                    *LAST_BME_INFO.lock().unwrap() = bme_info;
-                }
-            }
-            thread::sleep(std::time::Duration::from_millis(2000));
-        });
         (this, Command::none())
     }
     fn title(&self) -> String {
