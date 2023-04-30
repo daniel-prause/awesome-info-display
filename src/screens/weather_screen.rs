@@ -3,6 +3,7 @@ use crate::config_manager::ConfigManager;
 use crate::screens::BasicScreen;
 use crate::screens::Screen;
 use crate::screens::Screenable;
+use crate::LAST_BME_INFO;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
@@ -14,6 +15,7 @@ use std::rc::Rc;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
 use std::thread;
 use std::time::Duration;
+use std::time::Instant;
 
 pub struct WeatherScreen {
     screen: Screen,
@@ -76,7 +78,7 @@ impl WeatherScreen {
             image,
             Rgb([255u8, 255u8, 255u8]),
             72,
-            16,
+            6,
             Scale { x: 32.0, y: 32.0 },
             &self.screen.font,
             format!("{}\u{00B0}C", (weather_info.temperature.round() as i64)).as_str(),
@@ -98,7 +100,7 @@ impl WeatherScreen {
             image,
             Rgb([255u8, 255u8, 255u8]),
             160,
-            20,
+            10,
             Scale { x: 14.0, y: 14.0 },
             &self.symbols.as_ref(),
             format!("\u{f72e}").as_str(),
@@ -108,7 +110,7 @@ impl WeatherScreen {
             image,
             Rgb([255u8, 255u8, 255u8]),
             178,
-            20,
+            10,
             Scale { x: 14.0, y: 14.0 },
             &self.screen.font,
             format!("{} km/h", ((weather_info.wind) * 3.6).round()).as_str(),
@@ -119,11 +121,25 @@ impl WeatherScreen {
             image,
             Rgb([255u8, 255u8, 255u8]),
             178,
-            36,
+            24,
             Scale { x: 14.0, y: 14.0 },
             &self.screen.font,
             format!("{}", weather_info.wind_direction).as_str(),
         );
+
+        // indoor temperature / indoor humidity
+        let (temperature, humidity) = LAST_BME_INFO.lock().unwrap().clone();
+        draw_text_mut(
+            image,
+            Rgb([255u8, 255u8, 255u8]),
+            72,
+            38,
+            Scale { x: 14.0, y: 14.0 },
+            &self.screen.font,
+            format!("{}°C / {}%", temperature, humidity).as_str(),
+        );
+
+        //*LAST_BME_INFO.lock().unwrap()
     }
 
     fn get_weather_icon(code: String) -> String {
@@ -168,6 +184,8 @@ impl WeatherScreen {
                         ];
                         return arr[(val as usize) % 16];
                     };
+                    let mut last_weather_info: WeatherInfo = Default::default();
+                    let mut last_update = Instant::now() - Duration::from_secs(61);
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
@@ -186,24 +204,30 @@ impl WeatherScreen {
                             .clone();
                         // TODO: make this configurable for language and metric/non-metric units
                         // get current weather for location
-                        match weather(location.as_str(), "metric", "en", api_key.as_str()) {
-                            Ok(current) => {
-                                let mut weather_info: WeatherInfo = Default::default();
+                        if last_update.elapsed().as_secs() > 60 {
+                            last_update = Instant::now();
+                            match weather(location.as_str(), "metric", "en", api_key.as_str()) {
+                                Ok(current) => {
+                                    let mut weather_info: WeatherInfo = Default::default();
 
-                                weather_info.weather_icon = current.weather[0].icon.clone();
+                                    weather_info.weather_icon = current.weather[0].icon.clone();
 
-                                weather_info.temperature = current.main.temp;
-                                weather_info.wind = current.wind.speed;
-                                weather_info.wind_direction =
-                                    deg_to_dir(current.wind.deg).to_string();
-                                weather_info.city =
-                                    format!("{},{}", &current.name, &current.sys.country);
-                                sender.try_send(weather_info).unwrap_or_default();
+                                    weather_info.temperature = current.main.temp;
+                                    weather_info.wind = current.wind.speed;
+                                    weather_info.wind_direction =
+                                        deg_to_dir(current.wind.deg).to_string();
+                                    weather_info.city =
+                                        format!("{},{}", &current.name, &current.sys.country);
+                                    last_weather_info = weather_info.clone();
+                                }
+                                Err(e) => eprintln!("Could not fetch weather because: {}", e),
                             }
-                            Err(e) => eprintln!("Could not fetch weather because: {}", e),
                         }
+                        sender
+                            .try_send(last_weather_info.clone())
+                            .unwrap_or_default();
                         // TODO: think about whether we want to solve this like in bitpanda screen with last_update...
-                        thread::sleep(Duration::from_millis(60000));
+                        thread::sleep(Duration::from_millis(1000));
                     }
                 })),
                 ..Default::default()

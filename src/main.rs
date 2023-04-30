@@ -24,6 +24,7 @@ use lazy_static::lazy_static;
 use once_cell::sync::Lazy;
 
 use rusttype::Font as ft;
+use std::thread;
 use std::{
     collections::HashMap,
     error::Error,
@@ -79,6 +80,7 @@ lazy_static! {
     static ref LAST_KEY_VALUE: Mutex<u32> = Mutex::new(0);
     static ref CLOSE_REQUESTED: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref HIBERNATING: Mutex<bool> = Mutex::new(false);
+    static ref LAST_BME_INFO: Mutex<(String, String)> = Mutex::new((String::new(), String::new()));
 }
 const TEENSY: &str = "teensy";
 const ESP32: &str = "esp32";
@@ -230,7 +232,16 @@ impl Application for AwesomeDisplay {
         for device in DEVICES.values() {
             device.start_background_worker()
         }
-
+        // update bme sensor
+        thread::spawn(move || loop {
+            if DEVICES.get(TEENSY).unwrap().is_connected() {
+                let bme_info = DEVICES.get(TEENSY).unwrap().get_bme_info();
+                if !bme_info.0.is_empty() && !bme_info.1.is_empty() {
+                    *LAST_BME_INFO.lock().unwrap() = bme_info;
+                }
+            }
+            thread::sleep(std::time::Duration::from_millis(2000));
+        });
         (this, Command::none())
     }
     fn title(&self) -> String {

@@ -42,31 +42,53 @@ pub fn write_screen_buffer(
         let slice = &screen_buf[bytes_send..cmp::min(bytes_send + 64, screen_buf.len())];
         bytes_send += slice.len();
 
-        match port.as_deref_mut().unwrap().write(&slice) {
-            Ok(_) => {
-                // everything alright, continue
+        if port.as_deref_mut().is_some() {
+            match port.as_deref_mut().unwrap().write(&slice) {
+                Ok(_) => {
+                    // everything alright, continue
+                }
+                Err(_) => {
+                    return false;
+                }
             }
-            Err(_) => {
-                return false;
-            }
+        } else {
+            return false;
         }
     }
     return true;
+}
+
+pub fn read_bme_sensor(port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>) -> String {
+    let mut data: [u8; 14] = [0; 14];
+    if port.as_deref_mut().is_some() {
+        match port.as_deref_mut().unwrap().read_exact(&mut data) {
+            Ok(_) => {
+                // everything alright,
+                return std::str::from_utf8(&data).unwrap().to_string();
+            }
+            Err(_) => {
+                return String::new();
+            }
+        }
+    }
+    return String::new();
 }
 
 pub fn send_command(
     port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
     command: &[u8],
 ) -> bool {
-    match port.as_deref_mut().unwrap().write(command) {
-        Ok(_) => match std::io::stdout().flush() {
-            Ok(_) => {
-                return true;
-            }
-            Err(_) => {}
-        },
-        Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => (),
-        Err(e) => eprintln!("{:?}", e),
+    if port.as_deref_mut().is_some() {
+        match port.as_deref_mut().unwrap().write(command) {
+            Ok(_) => match std::io::stdout().flush() {
+                Ok(_) => {
+                    return true;
+                }
+                Err(_) => {}
+            },
+            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => (),
+            Err(e) => eprintln!("{:?}", e),
+        }
     }
 
     return false;

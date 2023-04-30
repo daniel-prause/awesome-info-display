@@ -78,6 +78,19 @@ impl Device {
         return false;
     }
 
+    pub fn get_bme_info(&self) -> (String, String) {
+        if self.send_command(205) {
+            let mut result = read_bme_sensor(&mut *self.port.lock().unwrap());
+            result = result.trim_end_matches('\0').into();
+            let mut parts = result.split(" ");
+            return (
+                parts.next().unwrap_or_default().into(),
+                parts.next().unwrap_or_default().into(),
+            );
+        }
+        return (String::new(), String::new());
+    }
+
     pub fn reset_display(&self) {
         self.send_command(17);
     }
