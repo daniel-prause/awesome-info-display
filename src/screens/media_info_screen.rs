@@ -358,7 +358,7 @@ impl MediaInfoScreen {
         if music_player_info.filepath != self.music_player_info.filepath
             || (music_player_info.filepath.is_empty() && self.music_player_info.filepath.is_empty())
         {
-            self.screen.companion_bytes = self.draw_cover(music_player_info);
+            self.screen.companion_screen_bytes = self.draw_cover(music_player_info);
         }
     }
 
@@ -405,7 +405,7 @@ impl MediaInfoScreen {
         } else {
             self.draw_intro(&mut image, scale);
         }
-        self.screen.bytes = image.into_vec();
+        self.screen.main_screen_bytes = image.into_vec();
     }
 
     pub fn new(

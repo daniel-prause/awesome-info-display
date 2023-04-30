@@ -132,7 +132,7 @@ impl SystemInfoScreen {
 
         self.draw_cpu(&mut image, cpu_usage, scale);
         self.draw_memory(&mut image, ram_usage, scale);
-        self.screen.bytes = image.into_vec();
+        self.screen.main_screen_bytes = image.into_vec();
     }
 
     pub fn new(

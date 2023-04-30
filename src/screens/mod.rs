@@ -14,8 +14,8 @@ pub mod weather_screen;
 pub struct Screen {
     pub description: String,
     pub key: String,
-    pub bytes: Vec<u8>,
-    pub companion_bytes: Vec<u8>,
+    pub main_screen_bytes: Vec<u8>,
+    pub companion_screen_bytes: Vec<u8>,
     pub font: Rc<Font<'static>>,
     pub active: Arc<AtomicBool>,
     pub handle: Option<JoinHandle<()>>,
@@ -29,8 +29,8 @@ impl Default for Screen {
         Screen {
             description: String::from(""),
             key: String::from(""),
-            bytes: Vec::new(),           // Oled display byte image
-            companion_bytes: Vec::new(), // companion display byte image
+            main_screen_bytes: Vec::new(), // Oled display byte image
+            companion_screen_bytes: Vec::new(), // companion display byte image
             font: Rc::new(
                 Font::try_from_vec(Vec::from(include_bytes!("../Liberation.ttf") as &[u8]))
                     .unwrap(),
@@ -63,12 +63,12 @@ pub trait BasicScreen: Screenable {
 
     fn current_image(&mut self) -> &Vec<u8> {
         let screen = self.get_screen();
-        &screen.bytes
+        &screen.main_screen_bytes
     }
 
     fn current_image_for_companion(&mut self) -> &Vec<u8> {
         let screen = self.get_screen();
-        &screen.companion_bytes
+        &screen.companion_screen_bytes
     }
 
     fn start(&mut self) {

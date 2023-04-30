@@ -52,7 +52,7 @@ impl IceScreen {
         // draw initial image
         let mut image = RgbImage::new(256, 64);
         self.draw_ice_info(ice_info, &mut image);
-        self.screen.bytes = image.into_vec();
+        self.screen.main_screen_bytes = image.into_vec();
     }
     fn draw_ice_info(&mut self, ice_info: IceInfo, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>) {
         let sorts = ice_info.sorts.join(" · ");

@@ -53,7 +53,7 @@ impl WeatherScreen {
         // draw initial image
         let mut image = RgbImage::new(256, 64);
         self.draw_weather_info(weather_info, &mut image);
-        self.screen.bytes = image.into_vec();
+        self.screen.main_screen_bytes = image.into_vec();
     }
     fn draw_weather_info(
         &mut self,

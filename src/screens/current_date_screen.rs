@@ -55,7 +55,7 @@ impl CurrentDateScreen {
         let scale = Scale { x: 16.0, y: 16.0 };
 
         self.draw_clock(&mut image, local, scale);
-        self.screen.bytes = image.into_vec();
+        self.screen.main_screen_bytes = image.into_vec();
     }
 
     pub fn draw_clock(
