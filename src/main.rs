@@ -212,7 +212,6 @@ impl Application for AwesomeDisplay {
             String::from("Ice Sorts"),
             String::from("ice_screen"),
             font.clone(),
-            config_manager.clone(),
         )));
 
         let this = AwesomeDisplay {
