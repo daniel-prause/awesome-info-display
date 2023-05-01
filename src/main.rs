@@ -143,7 +143,6 @@ pub fn main() -> iced::Result {
 struct AwesomeDisplay {
     screens: Mutex<screen_manager::ScreenManager>,
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
-    screen_descriptions: Vec<(String, String, bool)>,
 }
 
 #[derive(Debug, Clone)]
@@ -177,51 +176,48 @@ impl Application for AwesomeDisplay {
             screens::system_info_screen::SystemInfoScreen::new(
                 String::from("System Info"),
                 String::from("system_info_screen"),
-                Rc::clone(&font),
-                Arc::clone(&config_manager),
+                font.clone(),
+                config_manager.clone(),
             ),
         ));
         screens.push(Box::new(screens::media_info_screen::MediaInfoScreen::new(
             String::from("Media Info"),
             String::from("media_info_screen"),
-            Rc::clone(&font),
-            Rc::clone(&symbols),
-            Arc::clone(&config_manager),
+            font.clone(),
+            symbols.clone(),
+            config_manager.clone(),
         )));
         screens.push(Box::new(screens::bitpanda_screen::BitpandaScreen::new(
             String::from("Bitpanda Info"),
             String::from("bitpanda_screen"),
-            Rc::clone(&font),
-            Arc::clone(&config_manager),
+            font.clone(),
+            config_manager.clone(),
         )));
         screens.push(Box::new(screens::weather_screen::WeatherScreen::new(
             String::from("Weather Info"),
             String::from("weather_screen"),
-            Rc::clone(&font),
-            Rc::clone(&symbols),
-            Arc::clone(&config_manager),
+            font.clone(),
+            symbols.clone(),
+            config_manager.clone(),
         )));
         screens.push(Box::new(
             screens::current_date_screen::CurrentDateScreen::new(
                 String::from("Time Info"),
                 String::from("current_date_screen"),
-                Rc::clone(&font),
-                Arc::clone(&config_manager),
+                font.clone(),
+                config_manager.clone(),
             ),
         ));
         screens.push(Box::new(screens::ice_screen::IceScreen::new(
             String::from("Ice Sorts"),
             String::from("ice_screen"),
-            Rc::clone(&font),
-            Arc::clone(&config_manager),
+            font.clone(),
+            config_manager.clone(),
         )));
-        let mut screen_manager = screen_manager::ScreenManager::new(screens);
-        let screen_descriptions = screen_manager.descriptions_and_keys_and_state();
 
         let this = AwesomeDisplay {
-            screens: Mutex::new(screen_manager),
+            screens: Mutex::new(screen_manager::ScreenManager::new(screens)),
             config_manager: config_manager.clone(),
-            screen_descriptions: screen_descriptions,
         };
 
         // global key press listener
@@ -287,19 +283,20 @@ impl Application for AwesomeDisplay {
         )
     }
     fn update(&mut self, message: Message) -> Command<Message> {
+        let mut screen_manager = self.screens.lock().unwrap();
         match message {
             Message::SaveConfig => {
                 self.config_manager.write().unwrap().save();
             }
             Message::NextScreen => {
-                self.screens.lock().unwrap().update_current_screen();
-                self.screens.lock().unwrap().next_screen();
-                self.screens.lock().unwrap().update_current_screen();
+                screen_manager.update_current_screen();
+                screen_manager.next_screen();
+                screen_manager.update_current_screen();
             }
             Message::PreviousScreen => {
-                self.screens.lock().unwrap().update_current_screen();
-                self.screens.lock().unwrap().previous_screen();
-                self.screens.lock().unwrap().update_current_screen();
+                screen_manager.update_current_screen();
+                screen_manager.previous_screen();
+                screen_manager.update_current_screen();
             }
             Message::UpdateCurrentScreen => {
                 if *LAST_KEY.lock().unwrap() {
@@ -307,28 +304,22 @@ impl Application for AwesomeDisplay {
                     let val = *LAST_KEY_VALUE.lock().unwrap();
                     if val == 174 || val == 175 {
                         // 1 is "volume mode"
-                        self.screens
-                            .lock()
-                            .unwrap()
-                            .set_screen_for_short("media_info_screen".into(), 1);
+                        screen_manager.set_screen_for_short("media_info_screen".into(), 1);
                     } else if val >= 176 && val < 180 {
                         // 0 is "normal mode"
-                        self.screens
-                            .lock()
-                            .unwrap()
-                            .set_screen_for_short("media_info_screen".into(), 0);
+                        screen_manager.set_screen_for_short("media_info_screen".into(), 0);
                     } else if val == 180 {
-                        self.screens.lock().unwrap().next_screen()
+                        screen_manager.next_screen()
                     }
                     *LAST_KEY_VALUE.lock().unwrap() = 0;
                 }
-                self.screens.lock().unwrap().update_current_screen();
+                screen_manager.update_current_screen();
             }
             Message::KeyboardEventOccurred(_event, key_code) => {
                 // switch to media screen for a few seconds
                 *LAST_KEY.lock().unwrap() = true;
                 *LAST_KEY_VALUE.lock().unwrap() = key_code;
-                self.screens.lock().unwrap().update_current_screen();
+                screen_manager.update_current_screen();
             }
             Message::WindowEventOccurred(event) => {
                 if let iced_native::Event::Window(iced_native::window::Event::CloseRequested) =
@@ -341,11 +332,8 @@ impl Application for AwesomeDisplay {
                 self.config_manager.write().unwrap().config.brightness = slider_value as u16;
             }
             Message::ScreenStatusChanged(status, screen) => {
-                if self.screens.lock().unwrap().screen_deactivatable(&screen) {
-                    self.screens
-                        .lock()
-                        .unwrap()
-                        .set_status_for_screen(&screen, status);
+                if screen_manager.screen_deactivatable(&screen) {
+                    screen_manager.set_status_for_screen(&screen, status);
                 }
             }
             Message::BitpandaApiKeyChanged(message) => {
@@ -463,7 +451,13 @@ impl Application for AwesomeDisplay {
         ];
 
         // insert screens into left column menu
-        for screen in self.screen_descriptions.clone().into_iter() {
+        for screen in self
+            .screens
+            .lock()
+            .unwrap()
+            .descriptions_and_keys_and_state()
+            .into_iter()
+        {
             column_parts.push(special_checkbox(screen.2, screen.1.into(), screen.0.into()).into());
         }
 
