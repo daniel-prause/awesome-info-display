@@ -138,8 +138,6 @@ impl WeatherScreen {
             &self.screen.font,
             format!("{}°C / {}%", temperature, humidity).as_str(),
         );
-
-        //*LAST_BME_INFO.lock().unwrap()
     }
 
     fn get_weather_icon(code: String) -> String {

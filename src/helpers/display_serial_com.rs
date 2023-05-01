@@ -1,6 +1,5 @@
 use serialport;
 use std::cmp;
-use std::io::Write;
 use std::time::Duration;
 
 pub fn init_serial(
@@ -80,7 +79,7 @@ pub fn send_command(
 ) -> bool {
     if port.as_deref_mut().is_some() {
         match port.as_deref_mut().unwrap().write(command) {
-            Ok(_) => match std::io::stdout().flush() {
+            Ok(_) => match port.as_deref_mut().unwrap().flush() {
                 Ok(_) => {
                     return true;
                 }

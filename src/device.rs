@@ -116,6 +116,7 @@ impl Device {
 
     pub fn wake_up(&self) {
         if !*self.awake.lock().unwrap() {
+            thread::sleep(std::time::Duration::from_millis(200));
             if !self.send_command(19) {
                 self.disconnect()
             } else {
@@ -164,8 +165,6 @@ impl Device {
                             if *HIBERNATING.lock().unwrap() {
                                 self.stand_by();
                             } else {
-                                self.wake_up();
-
                                 let crc_of_buf = crc32fast::hash(&b);
                                 let mut payload = b;
                                 if last_sum != crc_of_buf {
@@ -182,6 +181,7 @@ impl Device {
                                         self.disconnect();
                                     }
                                 }
+                                self.wake_up();
                             }
                         }
                         Err(_) => {}
