@@ -379,17 +379,9 @@ impl Application for AwesomeDisplay {
     }
 
     fn view(&self) -> Element<Message> {
-        let main_screen_bytes = &self
-            .screens
-            .lock()
-            .unwrap()
-            .current_screen()
-            .current_image()
-            .clone();
-        let companion_screen_bytes = &self
-            .screens
-            .lock()
-            .unwrap()
+        let mut screen_manager = self.screens.lock().unwrap();
+        let main_screen_bytes = screen_manager.current_screen().current_image().clone();
+        let companion_screen_bytes = screen_manager
             .current_screen()
             .current_image_for_companion()
             .clone();
@@ -450,13 +442,7 @@ impl Application for AwesomeDisplay {
         ];
 
         // insert screens into left column menu
-        for screen in self
-            .screens
-            .lock()
-            .unwrap()
-            .descriptions_and_keys_and_state()
-            .into_iter()
-        {
+        for screen in screen_manager.descriptions_and_keys_and_state().into_iter() {
             column_parts.push(special_checkbox(screen.2, screen.1.into(), screen.0.into()).into());
         }
 
@@ -530,10 +516,7 @@ impl Application for AwesomeDisplay {
             .align_items(iced::Alignment::Center)
             .width(Length::Fill)
             .push(iced::widget::text("Current screen").size(50))
-            .push(
-                iced::widget::text(&self.screens.lock().unwrap().current_screen().description())
-                    .size(25),
-            )
+            .push(iced::widget::text(screen_manager.current_screen().description()).size(25))
             .push(
                 main_screen_image
                     .width(Length::Fixed(256f32))
