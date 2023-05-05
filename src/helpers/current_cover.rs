@@ -47,11 +47,7 @@ pub fn extract_current_cover_path(mut winamp_process_handle: HANDLE) -> String {
         );
 
         /* str via strlen */
-        let str_len = buffer
-            .clone()
-            .into_iter()
-            .position(|x| x == 0)
-            .unwrap_or_default();
+        let str_len = buffer.iter().position(|x| *x == 0).unwrap_or_default();
         return String::from_utf16_lossy(&buffer[0..str_len]);
     }
 }
