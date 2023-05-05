@@ -216,7 +216,7 @@ impl WeatherScreen {
                                         deg_to_dir(current.wind.deg).to_string();
                                     weather_info.city =
                                         format!("{},{}", &current.name, &current.sys.country);
-                                    last_weather_info = weather_info.clone();
+                                    last_weather_info = weather_info;
                                 }
                                 Err(e) => eprintln!("Could not fetch weather because: {}", e),
                             }
