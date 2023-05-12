@@ -480,7 +480,7 @@ impl MediaInfoScreen {
                                         // 1 == playing, 3 == paused, anything else == stopped
                                         //let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
                                         let playback_status = window.SendMessage(WndMsg {
-                                            msg_id: WM_USER.into(),
+                                            msg_id: co::WM::USER,
                                             wparam: 0,
                                             lparam: 104,
                                         });
@@ -488,7 +488,7 @@ impl MediaInfoScreen {
                                         // current position in msecs
                                         let mut current_track_position =
                                             window.SendMessage(WndMsg {
-                                                msg_id: WM_USER.into(),
+                                                msg_id: co::WM::USER,
                                                 wparam: 0,
                                                 lparam: 105,
                                             });
@@ -501,19 +501,19 @@ impl MediaInfoScreen {
 
                                         // track length in seconds (multiply by thousand)
                                         let track_length = window.SendMessage(WndMsg {
-                                            msg_id: WM_USER.into(),
+                                            msg_id: co::WM::USER,
                                             wparam: 1,
                                             lparam: 105,
                                         });
                                         music_player_info.track_length = track_length;
                                         // get title
                                         let current_index = window.SendMessage(WndMsg {
-                                            msg_id: WM_USER.into(),
+                                            msg_id: co::WM::USER,
                                             wparam: 0,
                                             lparam: 125,
                                         });
                                         let title_length = window.SendMessage(WndMsg {
-                                            msg_id: WM_GETTEXTLENGTH.into(),
+                                            msg_id: co::WM::GETTEXTLENGTH,
                                             wparam: current_index as usize,
                                             lparam: 0,
                                         });
@@ -550,7 +550,7 @@ impl MediaInfoScreen {
                                         buffer.resize(buffer_length as usize, 0);
 
                                         window.SendMessage(WndMsg {
-                                            msg_id: WM_GETTEXT.into(),
+                                            msg_id: co::WM::GETTEXT,
                                             wparam: buffer_length as usize,
                                             lparam: buffer.as_mut_ptr() as LPARAM,
                                         });
