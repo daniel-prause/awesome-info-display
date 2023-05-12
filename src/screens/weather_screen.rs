@@ -3,12 +3,12 @@ use crate::config_manager::ConfigManager;
 use crate::screens::BasicScreen;
 use crate::screens::Screen;
 use crate::screens::Screenable;
+use crate::weather::*;
 use crate::LAST_BME_INFO;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
-use openweathermap::blocking::weather;
 use rusttype::Font;
 use rusttype::Scale;
 use std::rc::Rc;
@@ -25,7 +25,8 @@ pub struct WeatherScreen {
 
 #[derive(Default, Clone)]
 struct WeatherInfo {
-    weather_icon: String,
+    weather_icon: u8,
+    is_day: u8,
     city: String,
     temperature: f64,
     wind: f64,
@@ -70,7 +71,8 @@ impl WeatherScreen {
             6,
             Scale { x: 40.0, y: 40.0 },
             self.symbols.as_ref(),
-            WeatherScreen::get_weather_icon(weather_info.weather_icon).as_str(),
+            WeatherScreen::get_weather_icon(weather_info.weather_icon, weather_info.is_day)
+                .as_str(),
         );
 
         // temperature
@@ -140,20 +142,33 @@ impl WeatherScreen {
         );
     }
 
-    fn get_weather_icon(code: String) -> String {
-        match code.as_ref() {
-            "01d" => String::from("\u{f185}"),
-            "01n" => String::from("\u{f186}"),
-            "02d" => String::from("\u{f6c4}"),
-            "02n" => String::from("\u{f6c3}"),
-            "03d" | "03n" | "04d" | "04n" => String::from("\u{f0c2}"),
-            "09d" | "09n" => String::from("\u{f740}"),
-            "10d" => String::from("\u{f73d}"),
-            "10n" => String::from("\u{f73c}"),
-            "11d" | "11n" => String::from("\u{f0e7}"),
-            "13d" | "13n" => String::from("\u{f2dc}"),
-            "50d" | "50n" => String::from("\u{f75f}"),
-            _ => String::from(""),
+    fn get_weather_icon(code: u8, is_day: u8) -> String {
+        if is_day == 0 {
+            // night
+            match code {
+                0 => String::from("\u{f186}"),
+                1 | 2 | 3 => String::from("\u{f6c3}"),
+                45 | 48 => String::from("\u{f75f}"),
+                51 | 53 | 55 | 56 | 57 | 61 | 63 | 65 | 66 | 67 | 80 | 81 | 82 => {
+                    String::from("\u{f73c}")
+                }
+                71 | 73 | 75 | 77 | 85 | 86 => String::from("\u{f2dc}"),
+                95 | 96 | 99 => String::from("\u{f0e7}"),
+                _ => String::from(""),
+            }
+        } else {
+            // day
+            match code {
+                0 => String::from("\u{f185}"),
+                1 | 2 | 3 => String::from("\u{f6c4}"),
+                45 | 48 => String::from("\u{f75f}"),
+                51 | 53 | 55 | 56 | 57 | 61 | 63 | 65 | 66 | 67 | 80 | 81 | 82 => {
+                    String::from("\u{f73d}")
+                }
+                71 | 73 | 75 | 77 | 85 | 86 => String::from("\u{f2dc}"),
+                95 | 96 | 99 => String::from("\u{f0e7}"),
+                _ => String::from(""),
+            }
         }
     }
     pub fn new(
@@ -184,16 +199,11 @@ impl WeatherScreen {
                     };
                     let mut last_weather_info: WeatherInfo = Default::default();
                     let mut last_update = Instant::now() - Duration::from_secs(61);
+                    let client = open_meteo_rs::Client::new();
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
                         }
-                        let api_key = config_manager
-                            .read()
-                            .unwrap()
-                            .config
-                            .openweather_api_key
-                            .clone();
                         let location = config_manager
                             .read()
                             .unwrap()
@@ -204,21 +214,43 @@ impl WeatherScreen {
                         // get current weather for location
                         if last_update.elapsed().as_secs() > 60 {
                             last_update = Instant::now();
-                            match weather(location.as_str(), "metric", "en", api_key.as_str()) {
-                                Ok(current) => {
-                                    let mut weather_info: WeatherInfo = Default::default();
+                            // get locations first
+                            //let locations = weather::location::get_location(location.into());
+                            let locations = location::get_location(location.into());
+                            match locations {
+                                Ok(locations) => {
+                                    let mut opts = open_meteo_rs::forecast::Options::default();
+                                    weather::set_opts(&mut opts, &locations);
+                                    let closest_location = locations.results[0].clone();
+                                    let result = weather::weather_and_forecast(&client, opts);
 
-                                    weather_info.weather_icon = current.weather[0].icon.clone();
+                                    match result.current_weather {
+                                        Some(current) => {
+                                            let mut weather_info: WeatherInfo = Default::default();
 
-                                    weather_info.temperature = current.main.temp;
-                                    weather_info.wind = current.wind.speed;
-                                    weather_info.wind_direction =
-                                        deg_to_dir(current.wind.deg).to_string();
-                                    weather_info.city =
-                                        format!("{},{}", &current.name, &current.sys.country);
-                                    last_weather_info = weather_info;
+                                            weather_info.weather_icon =
+                                                current.weathercode.unwrap_or_default() as u8;
+
+                                            weather_info.temperature =
+                                                current.temperature.unwrap_or_default();
+                                            weather_info.wind =
+                                                current.windspeed.unwrap_or_default();
+                                            weather_info.wind_direction =
+                                                deg_to_dir(current.winddirection.unwrap())
+                                                    .to_string();
+                                            weather_info.city = format!(
+                                                "{},{}",
+                                                closest_location.name,
+                                                closest_location.country_code
+                                            );
+                                            last_weather_info = weather_info;
+                                        }
+                                        None => eprintln!("Could not fetch weather"),
+                                    }
                                 }
-                                Err(e) => eprintln!("Could not fetch weather because: {}", e),
+                                Err(e) => {
+                                    eprintln!("Could not fetch weather! Reason: {:?}", e)
+                                }
                             }
                         }
                         sender

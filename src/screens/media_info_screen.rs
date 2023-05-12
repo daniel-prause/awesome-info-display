@@ -24,7 +24,7 @@ use std::{
 use unicode_segmentation::UnicodeSegmentation;
 use winapi::{
     shared::minwindef::LPARAM,
-    um::{handleapi::CloseHandle, winnt::HANDLE, winuser::*},
+    um::{handleapi::CloseHandle, winnt::HANDLE},
 };
 use winsafe::{co, msg::WndMsg, prelude::user_Hwnd};
 pub struct MediaInfoScreen {

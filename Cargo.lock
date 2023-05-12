@@ -163,6 +163,7 @@ version = "0.1.0"
 dependencies = [
  "audiotags",
  "chrono",
+ "chrono-tz",
  "confy",
  "cpu-monitor",
  "crc32fast",
@@ -179,6 +180,7 @@ dependencies = [
  "imageproc",
  "lazy_static",
  "once_cell",
+ "open-meteo-rs",
  "openweathermap",
  "rdev",
  "regex",
@@ -191,6 +193,7 @@ dependencies = [
  "signal-hook",
  "static_vcruntime",
  "systemstat",
+ "tokio",
  "unicode-segmentation",
  "winapi",
  "winres",
@@ -345,9 +348,32 @@ dependencies = [
  "js-sys",
  "num-integer",
  "num-traits",
+ "serde",
  "time 0.1.45",
  "wasm-bindgen",
  "winapi",
+]
+
+[[package]]
+name = "chrono-tz"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf9cc2b23599e6d7479755f3594285efb3f74a1bdca7a7374948bc831e23a552"
+dependencies = [
+ "chrono",
+ "chrono-tz-build",
+ "phf 0.11.1",
+]
+
+[[package]]
+name = "chrono-tz-build"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9998fb9f7e9b2111641485bf8beb32f92945f97f92a3d061f744cfef335f751"
+dependencies = [
+ "parse-zoneinfo",
+ "phf 0.11.1",
+ "phf_codegen 0.11.1",
 ]
 
 [[package]]
@@ -861,6 +887,12 @@ checksum = "ac1b7517328c04c2aa68422fc60a41b92208182142ed04a25879c26c8f878794"
 dependencies = [
  "libloading",
 ]
+
+[[package]]
+name = "doc-comment"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "downcast-rs"
@@ -1622,6 +1654,12 @@ dependencies = [
  "widestring",
  "winapi",
 ]
+
+[[package]]
+name = "heck"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
 name = "hermit-abi"
@@ -2800,6 +2838,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7e5500299e16ebb147ae15a00a942af264cf3688f47923b8fc2cd5858f23ad3"
 
 [[package]]
+name = "open-meteo-rs"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38aa51ffe7645d9a93ec3d0e7aa1a26a97a7d9b17474aadec457312ea2cf05b5"
+dependencies = [
+ "chrono",
+ "chrono-tz",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "snafu",
+ "tokio",
+]
+
+[[package]]
 name = "openssl"
 version = "0.10.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2958,6 +3011,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "parse-zoneinfo"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c705f256449c60da65e11ff6626e0c16a0a0b96aaa348de61376b249bc340f41"
+dependencies = [
+ "regex",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3017,6 +3079,16 @@ checksum = "4fb1c3a8bc4dd4e5cfce29b44ffc14bedd2ee294559a294e2a4d4c9e9a6a13cd"
 dependencies = [
  "phf_generator 0.10.0",
  "phf_shared 0.10.0",
+]
+
+[[package]]
+name = "phf_codegen"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a56ac890c5e3ca598bbdeaa99964edb5b0258a583a9eb6ef4e89fc85d9224770"
+dependencies = [
+ "phf_generator 0.11.1",
+ "phf_shared 0.11.1",
 ]
 
 [[package]]
@@ -3838,6 +3910,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "snafu"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb0656e7e3ffb70f6c39b3c2a86332bb74aa3c679da781642590f3c1118c5045"
+dependencies = [
+ "doc-comment",
+ "snafu-derive",
+]
+
+[[package]]
+name = "snafu-derive"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "475b3bbe5245c26f2d8a6f62d67c1f30eb9fffeccee721c45d162c3ebbdf81b2"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "socket2"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4106,9 +4200,23 @@ dependencies = [
  "libc",
  "mio",
  "num_cpus",
+ "parking_lot 0.12.1",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
+ "tokio-macros",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "630bdcf245f78637c13ec01ffae6187cca34625e8c63150d424b59e55af2675e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.15",
 ]
 
 [[package]]

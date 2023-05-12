@@ -9,6 +9,7 @@ mod helpers;
 mod screen_manager;
 mod screens;
 mod style;
+mod weather;
 
 use device::*;
 use helpers::keyboard::{self, start_global_key_grabber};
