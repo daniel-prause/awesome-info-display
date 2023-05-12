@@ -66,14 +66,14 @@ impl WeatherScreen {
         let mut image = RgbImage::new(320, 170);
 
         // days
-        let mut x: i32 = 10;
+        let mut x: i32 = 24;
         for forecast in &weather_info.weather_forecast {
             draw_text_mut(
                 &mut image,
                 Rgb([255u8, 255u8, 255u8]),
                 x,
                 6,
-                Scale { x: 32.0, y: 32.0 },
+                Scale { x: 38.0, y: 38.0 },
                 &self.screen.font,
                 forecast.day.as_str(),
             );
@@ -81,7 +81,7 @@ impl WeatherScreen {
         }
 
         // temperatures
-        let mut x: i32 = 10;
+        let mut x: i32 = 24;
         for forecast in &weather_info.weather_forecast {
             // min
             draw_text_mut(
@@ -89,7 +89,7 @@ impl WeatherScreen {
                 Rgb([255u8, 255u8, 255u8]),
                 x,
                 40,
-                Scale { x: 18.0, y: 18.0 },
+                Scale { x: 22.0, y: 22.0 },
                 &self.screen.font,
                 format!("{: >2} \u{00B0}C", forecast.min.round() as i64,).as_str(),
             );
@@ -99,7 +99,7 @@ impl WeatherScreen {
                 Rgb([255u8, 255u8, 255u8]),
                 x,
                 60,
-                Scale { x: 18.0, y: 18.0 },
+                Scale { x: 22.0, y: 22.0 },
                 &self.screen.font,
                 format!("{: >2} \u{00B0}C", forecast.max.round() as i64,).as_str(),
             );
