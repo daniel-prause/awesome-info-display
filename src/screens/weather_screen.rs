@@ -74,7 +74,7 @@ impl WeatherScreen {
                 x,
                 6,
                 Scale { x: 32.0, y: 32.0 },
-                self.symbols.as_ref(),
+                &self.screen.font,
                 forecast.day.as_str(),
             );
             x += 103;
