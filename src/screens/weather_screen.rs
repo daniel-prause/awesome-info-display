@@ -4,6 +4,7 @@ use crate::screens::Screen;
 use crate::screens::Screenable;
 use crate::weather::*;
 use crate::LAST_BME_INFO;
+use chrono::Datelike;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
@@ -30,6 +31,14 @@ struct WeatherInfo {
     temperature: f64,
     wind: f64,
     wind_direction: String,
+    weather_forecast: Vec<WeatherForecast>,
+}
+
+#[derive(Default, Clone)]
+struct WeatherForecast {
+    day: String,
+    min: f64,
+    max: f64,
 }
 
 impl Screenable for WeatherScreen {
@@ -43,7 +52,8 @@ impl BasicScreen for WeatherScreen {
         let weather_info = self.receiver.try_recv();
         match weather_info {
             Ok(weather_info) => {
-                self.draw_screen(weather_info);
+                self.draw_screen(&weather_info);
+                self.draw_companion_screen(&weather_info);
             }
             Err(_) => {}
         }
@@ -51,7 +61,55 @@ impl BasicScreen for WeatherScreen {
 }
 
 impl WeatherScreen {
-    fn draw_screen(&mut self, weather_info: WeatherInfo) {
+    fn draw_companion_screen(&mut self, weather_info: &WeatherInfo) {
+        // draw initial image
+        let mut image = RgbImage::new(320, 170);
+
+        // days
+        let mut x: i32 = 10;
+        for forecast in &weather_info.weather_forecast {
+            draw_text_mut(
+                &mut image,
+                Rgb([255u8, 255u8, 255u8]),
+                x,
+                6,
+                Scale { x: 32.0, y: 32.0 },
+                self.symbols.as_ref(),
+                forecast.day.as_str(),
+            );
+            x += 103;
+        }
+
+        // temperatures
+        let mut x: i32 = 10;
+        for forecast in &weather_info.weather_forecast {
+            // min
+            draw_text_mut(
+                &mut image,
+                Rgb([255u8, 255u8, 255u8]),
+                x,
+                40,
+                Scale { x: 18.0, y: 18.0 },
+                &self.screen.font,
+                format!("{: >2} \u{00B0}C", forecast.min.round() as i64,).as_str(),
+            );
+            // max
+            draw_text_mut(
+                &mut image,
+                Rgb([255u8, 255u8, 255u8]),
+                x,
+                60,
+                Scale { x: 18.0, y: 18.0 },
+                &self.screen.font,
+                format!("{: >2} \u{00B0}C", forecast.max.round() as i64,).as_str(),
+            );
+            x += 103;
+        }
+
+        self.screen.companion_screen_bytes = image.into_vec();
+    }
+
+    fn draw_screen(&mut self, weather_info: &WeatherInfo) {
         // draw initial image
         let mut image = RgbImage::new(256, 64);
         self.draw_weather_info(weather_info, &mut image);
@@ -59,7 +117,7 @@ impl WeatherScreen {
     }
     fn draw_weather_info(
         &mut self,
-        weather_info: WeatherInfo,
+        weather_info: &WeatherInfo,
         image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
     ) {
         // icon
@@ -242,6 +300,28 @@ impl WeatherScreen {
                                                 closest_location.name,
                                                 closest_location.country_code
                                             );
+                                            // forecast
+                                            for weather in result.daily.unwrap().iter() {
+                                                weather_info.weather_forecast.push(
+                                                    WeatherForecast {
+                                                        day: weather.date.weekday().to_string(),
+                                                        min: weather
+                                                            .values
+                                                            .get("temperature_2m_min")
+                                                            .unwrap()
+                                                            .value
+                                                            .as_f64()
+                                                            .unwrap_or_default(),
+                                                        max: weather
+                                                            .values
+                                                            .get("temperature_2m_max")
+                                                            .unwrap()
+                                                            .value
+                                                            .as_f64()
+                                                            .unwrap_or_default(),
+                                                    },
+                                                );
+                                            }
                                             last_weather_info = weather_info;
                                         }
                                         None => eprintln!("Could not fetch weather"),
@@ -265,7 +345,7 @@ impl WeatherScreen {
             receiver: rx,
         };
 
-        this.draw_screen(Default::default());
+        this.draw_screen(&Default::default());
         this
     }
 }
