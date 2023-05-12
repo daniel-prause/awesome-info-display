@@ -157,8 +157,7 @@ enum Message {
     KeyboardEventOccurred(iced::keyboard::KeyCode, u32),
     WindowEventOccurred(iced_native::Event),
     BitpandaApiKeyChanged(String),
-    OpenWeatherApiKeyChanged(String),
-    OpenWeatherLocationChanged(String),
+    WeatherLocationChanged(String),
 }
 
 impl Application for AwesomeDisplay {
@@ -339,19 +338,8 @@ impl Application for AwesomeDisplay {
             Message::BitpandaApiKeyChanged(message) => {
                 self.config_manager.write().unwrap().config.bitpanda_api_key = message;
             }
-            Message::OpenWeatherApiKeyChanged(message) => {
-                self.config_manager
-                    .write()
-                    .unwrap()
-                    .config
-                    .openweather_api_key = message;
-            }
-            Message::OpenWeatherLocationChanged(message) => {
-                self.config_manager
-                    .write()
-                    .unwrap()
-                    .config
-                    .openweather_location = message;
+            Message::WeatherLocationChanged(message) => {
+                self.config_manager.write().unwrap().config.weather_location = message;
             }
         }
 
@@ -460,31 +448,10 @@ impl Application for AwesomeDisplay {
             )))
             .into(),
             iced::widget::TextInput::new(
-                "Openweather Api Key",
-                &self
-                    .config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .openweather_api_key,
+                "weather Location",
+                &self.config_manager.read().unwrap().config.weather_location,
             )
-            .on_input(Message::OpenWeatherApiKeyChanged)
-            .style(iced::theme::TextInput::Custom(Box::new(
-                style::TextInput {},
-            )))
-            .width(Length::Fixed(200f32))
-            .password()
-            .into(),
-            iced::widget::TextInput::new(
-                "Openweather Location",
-                &self
-                    .config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .openweather_location,
-            )
-            .on_input(Message::OpenWeatherLocationChanged)
+            .on_input(Message::WeatherLocationChanged)
             .style(iced::theme::TextInput::Custom(Box::new(
                 style::TextInput {},
             )))

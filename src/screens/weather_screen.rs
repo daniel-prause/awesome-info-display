@@ -1,4 +1,3 @@
-extern crate openweathermap;
 use crate::config_manager::ConfigManager;
 use crate::screens::BasicScreen;
 use crate::screens::Screen;
@@ -208,7 +207,7 @@ impl WeatherScreen {
                             .read()
                             .unwrap()
                             .config
-                            .openweather_location
+                            .weather_location
                             .clone();
                         // TODO: make this configurable for language and metric/non-metric units
                         // get current weather for location

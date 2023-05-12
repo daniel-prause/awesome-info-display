@@ -181,7 +181,6 @@ dependencies = [
  "lazy_static",
  "once_cell",
  "open-meteo-rs",
- "openweathermap",
  "rdev",
  "regex",
  "reqwest",
@@ -2894,21 +2893,6 @@ dependencies = [
  "libc",
  "pkg-config",
  "vcpkg",
-]
-
-[[package]]
-name = "openweathermap"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f0d1c2372bc54e111467a33f6614a247b9b430a5ff00e9bcc84bb133bb09403"
-dependencies = [
- "futures",
- "http",
- "rand 0.8.5",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
 ]
 
 [[package]]

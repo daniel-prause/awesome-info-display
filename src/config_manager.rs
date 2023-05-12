@@ -16,8 +16,7 @@ impl ConfigManager {
         let config = Config {
             bitpanda_api_key: String::new(),
             bitpanda_screen_active: true,
-            openweather_api_key: String::new(),
-            openweather_location: String::new(),
+            weather_location: String::new(),
             media_screen_active: true,
             weather_screen_active: true,
             ice_screen_active: true,
