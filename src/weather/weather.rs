@@ -1,6 +1,6 @@
 use open_meteo_rs::forecast::{ForecastResult, Options};
 
-use super::location::{Locations};
+use super::location::Locations;
 
 pub async fn get_weather(
     client: &open_meteo_rs::Client,
