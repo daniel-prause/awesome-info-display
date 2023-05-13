@@ -83,9 +83,9 @@ impl WeatherScreen {
             draw_text_mut(
                 &mut image,
                 Rgb([255u8, 255u8, 255u8]),
-                x,
+                x - 8,
                 40,
-                Scale { x: 22.0, y: 22.0 },
+                Scale { x: 32.0, y: 32.0 },
                 &self.symbols,
                 format!(
                     "{: >3}",
@@ -99,7 +99,7 @@ impl WeatherScreen {
                 &mut image,
                 Rgb([255u8, 255u8, 255u8]),
                 x,
-                70,
+                80,
                 Scale { x: 22.0, y: 22.0 },
                 &self.screen.font,
                 format!("{: >2} \u{00B0}C", forecast.min.round() as i64).as_str(),
@@ -110,7 +110,7 @@ impl WeatherScreen {
                 &mut image,
                 Rgb([255u8, 255u8, 255u8]),
                 x,
-                90,
+                100,
                 Scale { x: 22.0, y: 22.0 },
                 &self.screen.font,
                 format!("{: >2} \u{00B0}C", forecast.max.round() as i64).as_str(),
@@ -287,7 +287,6 @@ impl WeatherScreen {
                             // get locations first
                             //let locations = weather::location::get_location(location.into());
                             let locations = location::get_location(location.into());
-                            println!("locations: {:?}", locations);
                             match locations {
                                 Ok(locations) => {
                                     let mut opts = open_meteo_rs::forecast::Options::default();
