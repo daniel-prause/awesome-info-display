@@ -40,6 +40,7 @@ pub fn set_opts(opts: &mut Options, locations: &Locations) {
     // Daily parameters
     opts.daily.push("temperature_2m_max".into());
     opts.daily.push("temperature_2m_min".into());
+    opts.daily.push("weathercode".into());
 }
 
 pub fn weather_and_forecast(client: &open_meteo_rs::Client, opts: Options) -> ForecastResult {

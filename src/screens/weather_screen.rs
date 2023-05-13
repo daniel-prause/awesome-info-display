@@ -39,6 +39,7 @@ struct WeatherForecast {
     day: String,
     min: f64,
     max: f64,
+    weather_icon: u8,
 }
 
 impl Screenable for WeatherScreen {
@@ -65,9 +66,9 @@ impl WeatherScreen {
         // draw initial image
         let mut image = RgbImage::new(320, 170);
 
-        // days
         let mut x: i32 = 24;
         for forecast in &weather_info.weather_forecast {
+            // day
             draw_text_mut(
                 &mut image,
                 Rgb([255u8, 255u8, 255u8]),
@@ -77,32 +78,44 @@ impl WeatherScreen {
                 &self.screen.font,
                 forecast.day.as_str(),
             );
-            x += 103;
-        }
 
-        // temperatures
-        let mut x: i32 = 24;
-        for forecast in &weather_info.weather_forecast {
-            // min
+            // icon
             draw_text_mut(
                 &mut image,
                 Rgb([255u8, 255u8, 255u8]),
                 x,
                 40,
                 Scale { x: 22.0, y: 22.0 },
-                &self.screen.font,
-                format!("{: >2} \u{00B0}C", forecast.min.round() as i64,).as_str(),
+                &self.symbols,
+                format!(
+                    "{: >3}",
+                    WeatherScreen::get_weather_icon(forecast.weather_icon, 1)
+                )
+                .as_str(),
             );
+
+            // min
+            draw_text_mut(
+                &mut image,
+                Rgb([255u8, 255u8, 255u8]),
+                x,
+                70,
+                Scale { x: 22.0, y: 22.0 },
+                &self.screen.font,
+                format!("{: >2} \u{00B0}C", forecast.min.round() as i64).as_str(),
+            );
+
             // max
             draw_text_mut(
                 &mut image,
                 Rgb([255u8, 255u8, 255u8]),
                 x,
-                60,
+                90,
                 Scale { x: 22.0, y: 22.0 },
                 &self.screen.font,
-                format!("{: >2} \u{00B0}C", forecast.max.round() as i64,).as_str(),
+                format!("{: >2} \u{00B0}C", forecast.max.round() as i64).as_str(),
             );
+
             x += 103;
         }
 
@@ -274,6 +287,7 @@ impl WeatherScreen {
                             // get locations first
                             //let locations = weather::location::get_location(location.into());
                             let locations = location::get_location(location.into());
+                            println!("locations: {:?}", locations);
                             match locations {
                                 Ok(locations) => {
                                     let mut opts = open_meteo_rs::forecast::Options::default();
@@ -319,6 +333,14 @@ impl WeatherScreen {
                                                             .value
                                                             .as_f64()
                                                             .unwrap_or_default(),
+                                                        weather_icon: weather
+                                                            .values
+                                                            .get("weathercode")
+                                                            .unwrap()
+                                                            .value
+                                                            .as_u64()
+                                                            .unwrap_or_default()
+                                                            as u8,
                                                     },
                                                 );
                                             }
@@ -328,6 +350,7 @@ impl WeatherScreen {
                                     }
                                 }
                                 Err(e) => {
+                                    last_update = Instant::now() - Duration::from_secs(61);
                                     eprintln!("Could not fetch weather! Reason: {:?}", e)
                                 }
                             }
