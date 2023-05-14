@@ -297,7 +297,7 @@ impl WeatherScreen {
                                     match result.current_weather {
                                         Some(current) => {
                                             let mut weather_info: WeatherInfo = Default::default();
-
+                                            weather_info.is_day = current.is_day.unwrap();
                                             weather_info.weather_icon =
                                                 current.weathercode.unwrap_or_default() as u8;
 
