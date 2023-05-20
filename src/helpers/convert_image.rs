@@ -21,7 +21,7 @@ pub fn convert_to_gray_scale(bytes: &Vec<u8>) -> Vec<u8> {
 
 pub fn adjust_brightness_rgb(bytes: &Vec<u8>, brightness: f32) -> Vec<u8> {
     let mut converted_sb_rgb = Vec::with_capacity(49152);
-    let set_brightness = |chunk_param: u8| (chunk_param as f32 * brightness as f32 / 100.0) as u8;
+    let set_brightness = |chunk_param: u8| (chunk_param as f32 * brightness / 100.0) as u8;
 
     for chunk in bytes.chunks(3) {
         let chunk_two = set_brightness(chunk[2]);
@@ -33,7 +33,7 @@ pub fn adjust_brightness_rgb(bytes: &Vec<u8>, brightness: f32) -> Vec<u8> {
         converted_sb_rgb.push(chunk_zero);
     }
 
-    return converted_sb_rgb;
+    converted_sb_rgb
 }
 
 pub fn rgb_bytes_to_rgba_image(bytes: &Vec<u8>, width: u32, height: u32) -> iced::widget::Image {
@@ -46,11 +46,11 @@ pub fn rgb_bytes_to_rgba_image(bytes: &Vec<u8>, width: u32, height: u32) -> iced
         converted_sb_rgba.push(255);
     }
 
-    return iced::widget::Image::new(iced::widget::image::Handle::from_pixels(
+    iced::widget::Image::new(iced::widget::image::Handle::from_pixels(
         width,
         height,
         converted_sb_rgba,
-    ));
+    ))
 }
 
 pub fn swap_rgb(bytes: &Vec<u8>, width: u32, height: u32) -> Vec<u8> {
@@ -61,13 +61,13 @@ pub fn swap_rgb(bytes: &Vec<u8>, width: u32, height: u32) -> Vec<u8> {
         swapped.push(chunk[1]);
         swapped.push(chunk[0]);
     }
-    return swapped;
+    swapped
 }
 
 pub fn convert_to_webp(bytes: &Vec<u8>, width: u32, height: u32) -> Vec<u8> {
     let mut writer = Vec::new();
     WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(100))
-        .write_image(&bytes, width, height, image::ColorType::Rgb8)
+        .write_image(bytes, width, height, image::ColorType::Rgb8)
         .expect("FAILED TO ENCODE WEBP");
-    return writer;
+    writer
 }

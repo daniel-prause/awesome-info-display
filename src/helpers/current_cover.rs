@@ -33,8 +33,8 @@ pub fn extract_current_cover_path(mut winamp_process_handle: HANDLE) -> String {
         }
 
         let psz_name = SendMessageW(hwnd, WM_USER, 0, 3031);
-        let mut buffer = Vec::<u16>::with_capacity(2048 as usize);
-        buffer.resize(2048 as usize, 0);
+        let mut buffer = Vec::<u16>::with_capacity(2048_usize);
+        buffer.resize(2048_usize, 0);
 
         let mut number_read = 0;
 
@@ -48,12 +48,12 @@ pub fn extract_current_cover_path(mut winamp_process_handle: HANDLE) -> String {
 
         /* str via strlen */
         let str_len = buffer.iter().position(|x| *x == 0).unwrap_or_default();
-        return String::from_utf16_lossy(&buffer[0..str_len]);
+        String::from_utf16_lossy(&buffer[0..str_len])
     }
 }
 
 pub fn extract_cover_image(path: &String) -> Option<Cover> {
-    match Tag::new().read_from_path(&path) {
+    match Tag::new().read_from_path(path) {
         Ok(tag) => {
             match tag.album_cover() {
                 Some(cover) => {
@@ -83,5 +83,5 @@ pub fn extract_cover_image(path: &String) -> Option<Cover> {
         }
         Err(_) => {}
     }
-    return None;
+    None
 }

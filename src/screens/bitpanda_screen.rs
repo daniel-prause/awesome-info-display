@@ -207,7 +207,7 @@ fn calculate_wallet(
 
     let wallet_json: Value = serde_json::from_str(wallet_values?.text()?.as_str())?;
     let wallets: Vec<Value> = serde_json::from_str(&wallet_json["data"].to_string())?;
-    let assets: Value = serde_json::from_str(&asset_values?.as_str())?;
+    let assets: Value = serde_json::from_str(asset_values?.as_str())?;
     let mut sum = 0.0;
     for wallet in wallets {
         let asset_key = wallet["attributes"]["cryptocoin_symbol"]
@@ -229,6 +229,6 @@ fn calculate_wallet(
 
     Ok(WalletInfo {
         wallet_value: ((sum * 100.0).round() / 100.0),
-        last_update: last_update,
+        last_update,
     })
 }

@@ -82,5 +82,5 @@ pub unsafe extern "system" fn window_proc(
         return 0;
     }
 
-    return DefWindowProcW(hwnd, msg, wparam, lparam);
+    DefWindowProcW(hwnd, msg, wparam, lparam)
 }

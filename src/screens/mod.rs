@@ -49,7 +49,7 @@ pub trait Screenable {
 }
 
 pub trait BasicScreen: Screenable {
-    fn update(&mut self) -> ();
+    fn update(&mut self);
 
     fn description(&mut self) -> String {
         let screen = self.get_screen();

@@ -92,7 +92,7 @@ impl CurrentDateScreen {
                 active: active.clone(),
                 handle: Some(thread::spawn(move || {
                     let sender = tx.to_owned();
-                    let active = active.clone();
+                    let active = active;
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();

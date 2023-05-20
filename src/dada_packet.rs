@@ -10,7 +10,7 @@ impl DadaPacket {
         DadaPacket {
             start_bytes: "DADA".into(),
             end_bytes: "ADAD".into(),
-            payload: payload,
+            payload,
         }
     }
 

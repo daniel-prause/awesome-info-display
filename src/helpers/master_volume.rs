@@ -1,7 +1,7 @@
 use winapi::{um::mmdeviceapi::IMMDeviceEnumerator, Interface};
 
 pub fn get_master_volume() -> (f32, i32) {
-    let mut current_volume = 0.0 as f32;
+    let mut current_volume = 0.0_f32;
     let mut mute = 0;
 
     let mut device_enumerator: *mut winapi::um::mmdeviceapi::IMMDeviceEnumerator =

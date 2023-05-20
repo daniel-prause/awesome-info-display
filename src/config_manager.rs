@@ -25,7 +25,7 @@ impl ConfigManager {
             brightness: 100,
         };
         let mut this = ConfigManager {
-            config: config,
+            config,
             config_hash: String::new(),
             config_path: String::from("./settings.json"),
         };
@@ -39,7 +39,7 @@ impl ConfigManager {
                 eprintln!("Error: {:?}", e);
             }
         }
-        return this;
+        this
     }
 
     pub fn save(&mut self) {
@@ -66,22 +66,22 @@ impl ConfigManager {
         let screen = &*screen;
         match screen {
             "bitpanda_screen" => {
-                return self.config.bitpanda_screen_active;
+                self.config.bitpanda_screen_active
             }
             "weather_screen" => {
-                return self.config.weather_screen_active;
+                self.config.weather_screen_active
             }
             "media_info_screen" => {
-                return self.config.media_screen_active;
+                self.config.media_screen_active
             }
             "system_info_screen" => {
-                return self.config.system_info_screen_active;
+                self.config.system_info_screen_active
             }
             "current_date_screen" => {
-                return self.config.current_date_screen_active;
+                self.config.current_date_screen_active
             }
             "ice_screen" => {
-                return self.config.ice_screen_active;
+                self.config.ice_screen_active
             }
             _ => false,
         }

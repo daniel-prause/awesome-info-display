@@ -12,7 +12,7 @@ pub struct ScreenManager {
 impl ScreenManager {
     pub fn new(screens: Vec<Box<dyn super::screens::BasicScreen>>) -> Self {
         let mut this = ScreenManager {
-            screens: screens,
+            screens,
             current: 0,
             timeout: Some(Instant::now()),
             last_screen: 0,
@@ -68,9 +68,9 @@ impl ScreenManager {
     }
 
     pub fn set_screen_for_short(&mut self, key: String, mode: u32) {
-        let index: usize;
-        match self.screens.iter_mut().position(|r| *r.key() == key) {
-            Some(idx) => index = idx,
+        
+        let index: usize = match self.screens.iter_mut().position(|r| *r.key() == key) {
+            Some(idx) => idx,
             None => return,
         };
 
@@ -142,6 +142,6 @@ impl ScreenManager {
         for screen in self.screens.iter_mut() {
             result.push((screen.description(), screen.key(), screen.enabled()))
         }
-        return result;
+        result
     }
 }

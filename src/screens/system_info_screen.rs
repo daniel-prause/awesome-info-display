@@ -152,7 +152,7 @@ impl SystemInfoScreen {
                 handle: Some(thread::spawn(move || {
                     let sys = System::new();
                     let sender = tx.to_owned();
-                    let active = active.clone();
+                    let active = active;
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
@@ -162,7 +162,7 @@ impl SystemInfoScreen {
                         let end = CpuInstant::now().unwrap();
                         let duration = end - start;
                         let mut system_info: SystemInfoState = Default::default();
-                        system_info.cpu_usage = (duration.non_idle() * 100.0).floor().into();
+                        system_info.cpu_usage = (duration.non_idle() * 100.0).floor();
                         match sys.memory() {
                             Ok(mem) => {
                                 system_info.ram_usage =

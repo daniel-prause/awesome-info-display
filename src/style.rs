@@ -80,7 +80,7 @@ impl iced::widget::text_input::StyleSheet for TextInput {
     }
 
     fn value_color(&self, _style: &Self::Style) -> Color {
-        iced::Color::BLACK.into()
+        iced::Color::BLACK
     }
 
     /// Produces the style of a focused text input.
@@ -96,12 +96,12 @@ impl iced::widget::text_input::StyleSheet for TextInput {
 
     /// Produces the [`Color`] of the placeholder of a text input.
     fn placeholder_color(&self, _style: &Self::Style) -> Color {
-        iced::Color::BLACK.into()
+        iced::Color::BLACK
     }
 
     /// Produces the [`Color`] of the selection of a text input.
     fn selection_color(&self, _style: &Self::Style) -> Color {
-        let mut color = iced::Color::from(HOVERED);
+        let mut color = HOVERED;
         color.a = 0.5;
         color
     }

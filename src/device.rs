@@ -31,8 +31,8 @@ impl Device {
         has_bme_sensor: bool,
     ) -> Device {
         let (sender, receiver): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
-        return Device {
-            identifier: identifier.into(),
+        Device {
+            identifier,
             baud,
             use_dada_packet,
             sender,
@@ -43,7 +43,7 @@ impl Device {
             awake: std::sync::Mutex::new(false),
             port: std::sync::Mutex::new(None),
             connected: std::sync::Mutex::new(false),
-        };
+        }
     }
 
     pub fn is_connected(&self) -> bool {
@@ -58,7 +58,7 @@ impl Device {
         let port_valid = port.is_some();
         self.set_connected(port_valid);
         *self.port.lock().unwrap() = port;
-        return port_valid;
+        port_valid
     }
 
     pub fn connect(&self) -> bool {
@@ -73,27 +73,27 @@ impl Device {
         if self.send_command(228) {
             if self.use_dada_packet {
                 return write_screen_buffer(
-                    &mut *self.port.lock().unwrap(),
+                    &mut self.port.lock().unwrap(),
                     &DadaPacket::new(payload.to_vec()).as_bytes(),
                 );
             }
 
-            return write_screen_buffer(&mut *self.port.lock().unwrap(), payload);
+            return write_screen_buffer(&mut self.port.lock().unwrap(), payload);
         }
-        return false;
+        false
     }
 
     pub fn get_bme_info(&self) -> (String, String) {
         if self.send_command(205) {
-            let mut result = read_bme_sensor(&mut *self.port.lock().unwrap());
+            let mut result = read_bme_sensor(&mut self.port.lock().unwrap());
             result = result.trim_end_matches('\0').into();
-            let mut parts = result.split(" ");
+            let mut parts = result.split(' ');
             return (
                 parts.next().unwrap_or_default().into(),
                 parts.next().unwrap_or_default().into(),
             );
         }
-        return (String::new(), String::new());
+        (String::new(), String::new())
     }
 
     pub fn reset_display(&self) {
@@ -101,7 +101,7 @@ impl Device {
     }
 
     pub fn send_command(&self, command: u8) -> bool {
-        return send_command(&mut *self.port.lock().unwrap(), &command.to_le_bytes());
+        return send_command(&mut self.port.lock().unwrap(), &command.to_le_bytes());
     }
 
     pub fn stand_by(&self) {
@@ -176,21 +176,17 @@ impl Device {
                                     } else {
                                         self.disconnect();
                                     }
-                                } else {
-                                    if !self.send_command(229) {
-                                        self.disconnect();
-                                    }
+                                } else if !self.send_command(229) {
+                                    self.disconnect();
                                 }
                                 self.wake_up();
                             }
                         }
                         Err(_) => {}
                     }
-                } else {
-                    if self.connect() {
-                        last_sum = 0;
-                        self.reset_display()
-                    }
+                } else if self.connect() {
+                    last_sum = 0;
+                    self.reset_display()
                 }
             }
         });

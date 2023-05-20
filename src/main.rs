@@ -216,7 +216,7 @@ impl Application for AwesomeDisplay {
 
         let this = AwesomeDisplay {
             screens: Mutex::new(screen_manager::ScreenManager::new(screens)),
-            config_manager: config_manager.clone(),
+            config_manager,
         };
 
         // global key press listener
@@ -304,7 +304,7 @@ impl Application for AwesomeDisplay {
                     if val == 174 || val == 175 {
                         // 1 is "volume mode"
                         screen_manager.set_screen_for_short("media_info_screen".into(), 1);
-                    } else if val >= 176 && val < 180 {
+                    } else if (176..180).contains(&val) {
                         // 0 is "normal mode"
                         screen_manager.set_screen_for_short("media_info_screen".into(), 0);
                     } else if val == 180 {
@@ -358,13 +358,13 @@ impl Application for AwesomeDisplay {
     }
 
     fn theme(&self) -> iced::Theme {
-        return iced::Theme::custom(iced::theme::Palette {
+        iced::Theme::custom(iced::theme::Palette {
             background: iced::Color::from_rgb(0.21, 0.22, 0.247),
             text: iced::Color::WHITE,
             primary: iced::Color::from_rgb(114.0 / 255.0, 137.0 / 255.0, 218.0 / 255.0),
             success: iced::Color::from_rgb(0.0, 1.0, 0.0),
             danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
-        });
+        })
     }
 
     fn view(&self) -> Element<Message> {
@@ -389,7 +389,7 @@ impl Application for AwesomeDisplay {
 
         for (device_name, buffer) in vec![
             (TEENSY, main_screen_bytes),
-            (ESP32, companion_screen_bytes.clone()),
+            (ESP32, companion_screen_bytes),
         ] {
             if !buffer.is_empty() {
                 DEVICES
@@ -432,7 +432,7 @@ impl Application for AwesomeDisplay {
 
         // insert screens into left column menu
         for screen in screen_manager.descriptions_and_keys_and_state().into_iter() {
-            column_parts.push(special_checkbox(screen.2, screen.1.into(), screen.0.into()).into());
+            column_parts.push(special_checkbox(screen.2, screen.1, screen.0));
         }
 
         let mut left_column_after_screens: Vec<iced_native::Element<Message, iced::Renderer>> = vec![

@@ -8,10 +8,10 @@ pub fn init_serial(
 ) -> Option<std::boxed::Box<dyn serialport::SerialPort>> {
     let ports = serialport::available_ports().expect("No ports found!");
 
-    if ports.len() == 0 {
+    if ports.is_empty() {
         return None;
     }
-    for p in ports.clone() {
+    for p in ports {
         match p.port_type {
             serialport::SerialPortType::UsbPort(info) => {
                 let comp = format!("{:04x}{:04x}", info.vid, info.pid);
@@ -29,7 +29,7 @@ pub fn init_serial(
             _ => {}
         }
     }
-    return None;
+    None
 }
 
 pub fn write_screen_buffer(
@@ -42,7 +42,7 @@ pub fn write_screen_buffer(
         bytes_send += slice.len();
 
         if port.as_deref_mut().is_some() {
-            match port.as_deref_mut().unwrap().write(&slice) {
+            match port.as_deref_mut().unwrap().write(slice) {
                 Ok(_) => {
                     // everything alright, continue
                 }
@@ -54,7 +54,7 @@ pub fn write_screen_buffer(
             return false;
         }
     }
-    return true;
+    true
 }
 
 pub fn read_bme_sensor(port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>) -> String {
@@ -70,7 +70,7 @@ pub fn read_bme_sensor(port: &mut Option<std::boxed::Box<dyn serialport::SerialP
             }
         }
     }
-    return String::new();
+    String::new()
 }
 
 pub fn send_command(
@@ -90,5 +90,5 @@ pub fn send_command(
         }
     }
 
-    return false;
+    false
 }

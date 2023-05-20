@@ -6,7 +6,7 @@ pub async fn get_weather(
     client: &open_meteo_rs::Client,
     opts: open_meteo_rs::forecast::Options,
 ) -> ForecastResult {
-    return client.forecast(opts).await.unwrap_or_default();
+    client.forecast(opts).await.unwrap_or_default()
 }
 
 pub fn set_opts(opts: &mut Options, locations: &Locations) {

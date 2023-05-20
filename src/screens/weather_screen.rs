@@ -174,8 +174,8 @@ impl WeatherScreen {
             160,
             10,
             Scale { x: 14.0, y: 14.0 },
-            &self.symbols.as_ref(),
-            format!("\u{f72e}").as_str(),
+            self.symbols.as_ref(),
+            "\u{f72e}".to_string().as_str(),
         );
         // wind speed
         draw_text_mut(
@@ -196,7 +196,7 @@ impl WeatherScreen {
             24,
             Scale { x: 14.0, y: 14.0 },
             &self.screen.font,
-            format!("{}", weather_info.wind_direction).as_str(),
+            weather_info.wind_direction.to_string().as_str(),
         );
 
         // indoor temperature / indoor humidity
@@ -265,7 +265,7 @@ impl WeatherScreen {
                             "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW",
                             "WSW", "W", "WNW", "NW", "NNW",
                         ];
-                        return arr[(val as usize) % 16];
+                        arr[(val as usize) % 16]
                     };
                     let mut last_weather_info: WeatherInfo = Default::default();
                     let mut last_update =
@@ -287,7 +287,7 @@ impl WeatherScreen {
                             last_update = Instant::now();
                             // get locations first
                             //let locations = weather::location::get_location(location.into());
-                            let locations = location::get_location(location.into());
+                            let locations = location::get_location(location);
                             match locations {
                                 Ok(locations) => {
                                     let mut opts = open_meteo_rs::forecast::Options::default();

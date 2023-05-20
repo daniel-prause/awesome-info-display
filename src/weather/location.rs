@@ -77,5 +77,5 @@ pub fn get_location(city: String) -> core::result::Result<Locations, ExtractCode
         .text()?
         .as_str(),
     )?;
-    return Ok(locations);
+    Ok(locations)
 }

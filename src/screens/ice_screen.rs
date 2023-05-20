@@ -36,7 +36,7 @@ impl BasicScreen for IceScreen {
         let ice_info = self.receiver.try_recv();
         match ice_info {
             Ok(ice_info) => {
-                self.last_ice_info = ice_info.clone();
+                self.last_ice_info = ice_info;
             }
             Err(_) => {}
         }

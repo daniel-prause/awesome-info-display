@@ -124,7 +124,7 @@ impl MediaInfoScreen {
             scale,
             &self.screen.font,
             &rotate(
-                &[&artist, "   "].join(""),
+                &[artist, "   "].join(""),
                 crate::helpers::text_manipulation::Direction::Left,
                 start,
             ),
@@ -160,7 +160,7 @@ impl MediaInfoScreen {
             scale,
             &self.screen.font,
             &rotate(
-                &[&title, "   "].join(""),
+                &[title, "   "].join(""),
                 crate::helpers::text_manipulation::Direction::Left,
                 start,
             ),
@@ -427,7 +427,7 @@ impl MediaInfoScreen {
                 active: active.clone(),
                 handle: Some(thread::spawn(move || {
                     let sender = tx.to_owned();
-                    let active = active.clone();
+                    let active = active;
                     let match_correct_artist_and_title_format;
                     let match_artist_and_title;
                     let match_artist_or_title;
@@ -569,7 +569,7 @@ impl MediaInfoScreen {
                                                     caps.get(1).map_or("", |m| m.as_str()).trim();
 
                                                 let artist_and_title_caps = match_artist_and_title
-                                                    .captures(&artist_and_title);
+                                                    .captures(artist_and_title);
                                                 match artist_and_title_caps {
                                                     Some(artist_and_title_caps) => {
                                                         let artist = artist_and_title_caps
