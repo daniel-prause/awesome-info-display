@@ -268,8 +268,7 @@ impl WeatherScreen {
                         arr[(val as usize) % 16]
                     };
                     let mut last_weather_info: WeatherInfo = Default::default();
-                    let mut last_update =
-                        Instant::now().checked_sub(Duration::from_secs(61)).unwrap();
+                    let mut last_update = Instant::now().checked_sub(Duration::from_secs(61));
                     let client = open_meteo_rs::Client::new();
                     loop {
                         while !active.load(Ordering::Acquire) {
@@ -283,8 +282,8 @@ impl WeatherScreen {
                             .clone();
                         // TODO: make this configurable for language and metric/non-metric units
                         // get current weather for location
-                        if last_update.elapsed().as_secs() > 60 {
-                            last_update = Instant::now();
+                        if last_update.is_none() || last_update.unwrap().elapsed().as_secs() > 60 {
+                            last_update = Some(Instant::now());
                             // get locations first
                             //let locations = weather::location::get_location(location.into());
                             let locations = location::get_location(location);
@@ -350,9 +349,8 @@ impl WeatherScreen {
                                     }
                                 }
                                 Err(e) => {
-                                    last_update = Instant::now()
-                                        .checked_sub(Duration::from_secs(61))
-                                        .unwrap();
+                                    last_update =
+                                        Instant::now().checked_sub(Duration::from_secs(61));
                                     eprintln!("Could not fetch weather! Reason: {:?}", e)
                                 }
                             }
