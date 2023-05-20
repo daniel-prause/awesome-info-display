@@ -268,7 +268,8 @@ impl WeatherScreen {
                         return arr[(val as usize) % 16];
                     };
                     let mut last_weather_info: WeatherInfo = Default::default();
-                    let mut last_update = Instant::now() - Duration::from_secs(61);
+                    let mut last_update =
+                        Instant::now().checked_sub(Duration::from_secs(61)).unwrap();
                     let client = open_meteo_rs::Client::new();
                     loop {
                         while !active.load(Ordering::Acquire) {
@@ -349,7 +350,9 @@ impl WeatherScreen {
                                     }
                                 }
                                 Err(e) => {
-                                    last_update = Instant::now() - Duration::from_secs(61);
+                                    last_update = Instant::now()
+                                        .checked_sub(Duration::from_secs(61))
+                                        .unwrap();
                                     eprintln!("Could not fetch weather! Reason: {:?}", e)
                                 }
                             }
