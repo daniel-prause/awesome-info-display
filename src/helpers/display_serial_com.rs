@@ -37,19 +37,9 @@ pub fn write_screen_buffer(
     screen_buf: &[u8],
 ) -> bool {
     match port.as_deref_mut() {
-        Some(p) => {
-            match p.write_all(screen_buf) {
-                Ok(_) => {
-                    // everything alright, continue
-                }
-                Err(_) => {
-                    return false;
-                }
-            }
-        }
-        None => return false,
+        Some(p) => p.write_all(screen_buf).is_ok(),
+        None => false,
     }
-    true
 }
 
 pub fn read_bme_sensor(port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>) -> String {
