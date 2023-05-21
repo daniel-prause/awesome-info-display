@@ -19,7 +19,7 @@ pub struct Device {
     pub receiver: Receiver<Vec<u8>>,
     pub awake: std::sync::Mutex<bool>,
     pub port: std::sync::Mutex<Option<Box<dyn serialport::SerialPort>>>,
-    pub connected: std::sync::Mutex<bool>,
+    pub connected: std::sync::atomic::AtomicBool,
 }
 
 impl Device {
@@ -42,16 +42,16 @@ impl Device {
             background_workers_started: std::sync::atomic::AtomicBool::new(false),
             awake: std::sync::Mutex::new(false),
             port: std::sync::Mutex::new(None),
-            connected: std::sync::Mutex::new(false),
+            connected: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
     pub fn is_connected(&self) -> bool {
-        return *self.connected.lock().unwrap();
+        return self.connected.load(Ordering::Acquire);
     }
 
     pub fn set_connected(&self, status: bool) {
-        *self.connected.lock().unwrap() = status;
+        self.connected.store(status, Ordering::Release);
     }
 
     pub fn set_port(&self, port: Option<std::boxed::Box<dyn serialport::SerialPort>>) -> bool {
