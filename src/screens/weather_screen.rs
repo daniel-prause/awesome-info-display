@@ -274,16 +274,16 @@ impl WeatherScreen {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
                         }
-                        let location = config_manager
-                            .read()
-                            .unwrap()
-                            .config
-                            .weather_location
-                            .clone();
                         // TODO: make this configurable for language and metric/non-metric units
                         // get current weather for location
                         if last_update.is_none() || last_update.unwrap().elapsed().as_secs() > 60 {
                             last_update = Some(Instant::now());
+                            let location = config_manager
+                                .read()
+                                .unwrap()
+                                .config
+                                .weather_location
+                                .clone();
                             // get locations first
                             //let locations = weather::location::get_location(location.into());
                             let locations = location::get_location(location);
