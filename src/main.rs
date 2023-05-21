@@ -12,7 +12,7 @@ mod style;
 mod weather;
 
 use device::*;
-use helpers::keyboard::{self, start_global_key_grabber};
+use helpers::keyboard::{self, set_last_key, start_global_key_grabber};
 use helpers::power::window_proc;
 use helpers::{convert::convert_brightness, convert_image::*, power::register_power_broadcast};
 use iced::widget::Text;
@@ -316,8 +316,7 @@ impl Application for AwesomeDisplay {
             }
             Message::KeyboardEventOccurred(_event, key_code) => {
                 // switch to media screen for a few seconds
-                *LAST_KEY.lock().unwrap() = true;
-                *LAST_KEY_VALUE.lock().unwrap() = key_code;
+                set_last_key(key_code);
                 screen_manager.update_current_screen();
             }
             Message::WindowEventOccurred(event) => {
@@ -387,10 +386,9 @@ impl Application for AwesomeDisplay {
             self.config_manager.read().unwrap().config.brightness as f32,
         ));
 
-        for (device_name, buffer) in vec![
-            (TEENSY, main_screen_bytes),
-            (ESP32, companion_screen_bytes),
-        ] {
+        for (device_name, buffer) in
+            vec![(TEENSY, main_screen_bytes), (ESP32, companion_screen_bytes)]
+        {
             if !buffer.is_empty() {
                 DEVICES
                     .get(device_name)
