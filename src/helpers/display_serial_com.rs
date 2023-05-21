@@ -1,5 +1,5 @@
 use serialport;
-use std::cmp;
+
 use std::time::Duration;
 
 pub fn init_serial(
@@ -36,13 +36,9 @@ pub fn write_screen_buffer(
     port: &mut Option<std::boxed::Box<dyn serialport::SerialPort>>,
     screen_buf: &[u8],
 ) -> bool {
-    let mut bytes_send = 0;
-    while bytes_send < screen_buf.len() {
-        let slice = &screen_buf[bytes_send..cmp::min(bytes_send + 64, screen_buf.len())];
-        bytes_send += slice.len();
-
-        if port.as_deref_mut().is_some() {
-            match port.as_deref_mut().unwrap().write(slice) {
+    match port.as_deref_mut() {
+        Some(p) => {
+            match p.write_all(screen_buf) {
                 Ok(_) => {
                     // everything alright, continue
                 }
@@ -50,9 +46,8 @@ pub fn write_screen_buffer(
                     return false;
                 }
             }
-        } else {
-            return false;
         }
+        None => return false,
     }
     true
 }
