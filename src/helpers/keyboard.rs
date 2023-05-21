@@ -55,6 +55,6 @@ pub fn callback(event: Event) -> Option<Event> {
 }
 
 pub fn set_last_key(key: u32) {
-    *LAST_KEY.lock().unwrap() = true;
     *LAST_KEY_VALUE.lock().unwrap() = key;
+    *LAST_KEY.lock().unwrap() = true;
 }
