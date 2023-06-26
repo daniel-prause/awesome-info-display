@@ -152,7 +152,8 @@ enum Message {
     PreviousScreen,
     UpdateCurrentScreen,
     SaveConfig,
-    SliderChanged(f32),
+    MainScreenBrightnessChanged(f32),
+    CompanionScreenBrightnessChanged(f32),
     ScreenStatusChanged(bool, String),
     KeyboardEventOccurred(iced::keyboard::KeyCode, u32),
     WindowEventOccurred(iced_native::Event),
@@ -224,6 +225,16 @@ impl Application for AwesomeDisplay {
 
         // init device objects
         for device in DEVICES.values() {
+            device.set_brightness(
+                (this
+                    .config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .companion_brightness as f32
+                    * 2.55f32) as u8
+                    - 1,
+            );
             device.start_background_workers()
         }
         (this, Command::none())
@@ -326,8 +337,21 @@ impl Application for AwesomeDisplay {
                     CLOSE_REQUESTED.store(true, std::sync::atomic::Ordering::Release);
                 }
             }
-            Message::SliderChanged(slider_value) => {
+            Message::MainScreenBrightnessChanged(slider_value) => {
                 self.config_manager.write().unwrap().config.brightness = slider_value as u16;
+            }
+            Message::CompanionScreenBrightnessChanged(slider_value) => {
+                self.config_manager
+                    .write()
+                    .unwrap()
+                    .config
+                    .companion_brightness = slider_value as u16;
+                if DEVICES.get(ESP32).unwrap().is_connected() {
+                    DEVICES
+                        .get(ESP32)
+                        .unwrap()
+                        .set_brightness((slider_value * 2.55 as f32) as u8 - 1);
+                }
             }
             Message::ScreenStatusChanged(status, screen) => {
                 if screen_manager.screen_deactivatable(&screen) {
@@ -414,17 +438,42 @@ impl Application for AwesomeDisplay {
             .width(Length::Fixed(200f32))
             .into(),
             iced::widget::text(format!(
-                "Brightness: {:.2}",
+                "Main Brightness: {:.2}",
                 convert_brightness(self.config_manager.read().unwrap().config.brightness) as u16
             ))
             .into(),
             iced::widget::Slider::new(
                 20.0..=100.0,
                 self.config_manager.read().unwrap().config.brightness as f32,
-                Message::SliderChanged,
+                Message::MainScreenBrightnessChanged,
             )
             .width(Length::Fixed(190f32))
-            .step(0.1)
+            .step(1.0)
+            .into(),
+            iced::widget::text(format!(
+                "Companion Brightness: {:.2}",
+                convert_brightness(
+                    self.config_manager
+                        .read()
+                        .unwrap()
+                        .config
+                        .companion_brightness
+                ) as u16
+            ))
+            .horizontal_alignment(iced::alignment::Horizontal::Center)
+            .width(Length::Fixed(210f32))
+            .into(),
+            iced::widget::Slider::new(
+                20.0..=100.0,
+                self.config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .companion_brightness as f32,
+                Message::CompanionScreenBrightnessChanged,
+            )
+            .width(Length::Fixed(190f32))
+            .step(1.0)
             .into(),
         ];
 

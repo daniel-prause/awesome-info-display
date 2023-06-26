@@ -11,4 +11,5 @@ pub struct Config {
     pub ice_screen_active: bool,
     pub current_date_screen_active: bool,
     pub brightness: u16,
+    pub companion_brightness: u16,
 }

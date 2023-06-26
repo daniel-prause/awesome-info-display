@@ -23,6 +23,7 @@ impl ConfigManager {
             system_info_screen_active: true,
             current_date_screen_active: true,
             brightness: 100,
+            companion_brightness: 100,
         };
         let mut this = ConfigManager {
             config,
@@ -65,24 +66,12 @@ impl ConfigManager {
     pub fn screen_enabled(&mut self, screen: String) -> bool {
         let screen = &*screen;
         match screen {
-            "bitpanda_screen" => {
-                self.config.bitpanda_screen_active
-            }
-            "weather_screen" => {
-                self.config.weather_screen_active
-            }
-            "media_info_screen" => {
-                self.config.media_screen_active
-            }
-            "system_info_screen" => {
-                self.config.system_info_screen_active
-            }
-            "current_date_screen" => {
-                self.config.current_date_screen_active
-            }
-            "ice_screen" => {
-                self.config.ice_screen_active
-            }
+            "bitpanda_screen" => self.config.bitpanda_screen_active,
+            "weather_screen" => self.config.weather_screen_active,
+            "media_info_screen" => self.config.media_screen_active,
+            "system_info_screen" => self.config.system_info_screen_active,
+            "current_date_screen" => self.config.current_date_screen_active,
+            "ice_screen" => self.config.ice_screen_active,
             _ => false,
         }
     }

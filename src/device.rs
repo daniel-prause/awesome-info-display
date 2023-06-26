@@ -14,6 +14,7 @@ pub struct Device {
     use_dada_packet: bool,
     has_bme_sensor: bool,
     background_workers_started: std::sync::atomic::AtomicBool,
+    pub brightness: std::sync::atomic::AtomicU8,
     pub image_format: ImageFormat,
     pub sender: Sender<Vec<u8>>,
     pub receiver: Receiver<Vec<u8>>,
@@ -39,6 +40,7 @@ impl Device {
             receiver,
             image_format,
             has_bme_sensor,
+            brightness: std::sync::atomic::AtomicU8::new(100),
             background_workers_started: std::sync::atomic::AtomicBool::new(false),
             awake: std::sync::Mutex::new(false),
             port: std::sync::Mutex::new(None),
@@ -104,6 +106,20 @@ impl Device {
         return send_command(&mut self.port.lock().unwrap(), &command.to_le_bytes());
     }
 
+    // will be ignored from teensy for now until we find out, how the brightness for the
+    // oled display can be set oO
+    pub fn set_brightness(&self, brightness: u8) -> bool {
+        if self.use_dada_packet {
+            self.brightness.store(brightness, Ordering::Release);
+            return self.send_command(20)
+                && write_screen_buffer(
+                    &mut self.port.lock().unwrap(),
+                    &DadaPacket::new(brightness.to_le_bytes().to_vec()).as_bytes(),
+                );
+        }
+        false // not implemented for teensy
+    }
+
     pub fn stand_by(&self) {
         if *self.awake.lock().unwrap() {
             if !self.send_command(18) {
@@ -154,9 +170,14 @@ impl Device {
     fn start_writer(self: &'static Device) {
         thread::spawn(move || {
             let mut last_sum = 0;
+            let mut brightness_set = false;
             loop {
                 let buf = self.receiver.recv();
                 if self.is_connected() {
+                    if !brightness_set {
+                        self.set_brightness(self.brightness.load(Ordering::Acquire));
+                        brightness_set = true;
+                    }
                     match buf {
                         Ok(b) => {
                             if CLOSE_REQUESTED.load(std::sync::atomic::Ordering::Acquire) {
@@ -185,6 +206,7 @@ impl Device {
                         Err(_) => {}
                     }
                 } else if self.connect() {
+                    brightness_set = false;
                     last_sum = 0;
                     self.reset_display()
                 }
