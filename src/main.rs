@@ -11,6 +11,7 @@ mod screens;
 mod style;
 mod weather;
 
+use debounce::EventDebouncer;
 use device::*;
 use helpers::keyboard::{self, set_last_key, start_global_key_grabber};
 use helpers::power::window_proc;
@@ -68,6 +69,24 @@ fn get_super_error() -> SuperError {
     }
 }
 
+struct BrightnessEvent {
+    brightness_value: f32,
+    event_type: String,
+}
+
+impl Default for BrightnessEvent {
+    fn default() -> BrightnessEvent {
+        BrightnessEvent {
+            brightness_value: 0f32,
+            event_type: "brightness_event".into(),
+        }
+    }
+}
+impl PartialEq for BrightnessEvent {
+    fn eq(&self, other: &Self) -> bool {
+        self.event_type == other.event_type
+    }
+}
 const FONT_BYTES: &[u8] = include_bytes!("Liberation.ttf");
 const SYMBOL_BYTES: &[u8] = include_bytes!("symbols.otf");
 const ICONS: Font = Font::External {
@@ -144,6 +163,7 @@ pub fn main() -> iced::Result {
 struct AwesomeDisplay {
     screens: Mutex<screen_manager::ScreenManager>,
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
+    companion_brightness_debouncer: Mutex<EventDebouncer<BrightnessEvent>>,
 }
 
 #[derive(Debug, Clone)]
@@ -218,6 +238,17 @@ impl Application for AwesomeDisplay {
         let this = AwesomeDisplay {
             screens: Mutex::new(screen_manager::ScreenManager::new(screens)),
             config_manager,
+            companion_brightness_debouncer: Mutex::new(EventDebouncer::new(
+                std::time::Duration::from_millis(500),
+                move |event: BrightnessEvent| {
+                    if DEVICES.get(ESP32).unwrap().is_connected() {
+                        DEVICES
+                            .get(ESP32)
+                            .unwrap()
+                            .set_brightness((event.brightness_value * 2.55 as f32) as u8 - 1);
+                    }
+                },
+            )),
         };
 
         // global key press listener
@@ -346,12 +377,13 @@ impl Application for AwesomeDisplay {
                     .unwrap()
                     .config
                     .companion_brightness = slider_value as u16;
-                if DEVICES.get(ESP32).unwrap().is_connected() {
-                    DEVICES
-                        .get(ESP32)
-                        .unwrap()
-                        .set_brightness((slider_value * 2.55 as f32) as u8 - 1);
-                }
+                self.companion_brightness_debouncer
+                    .lock()
+                    .unwrap()
+                    .put(BrightnessEvent {
+                        brightness_value: slider_value,
+                        ..Default::default()
+                    });
             }
             Message::ScreenStatusChanged(status, screen) => {
                 if screen_manager.screen_deactivatable(&screen) {

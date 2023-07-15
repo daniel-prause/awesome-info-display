@@ -87,7 +87,7 @@ pub trait BasicScreen: Screenable {
     }
 
     fn set_mode(&mut self, mode: u32) {
-        let mut screen = self.get_screen();
+        let screen = self.get_screen();
         screen.mode_timeout = Some(Instant::now());
         screen.mode = mode;
     }
