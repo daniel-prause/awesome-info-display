@@ -14,7 +14,7 @@ mod weather;
 use device::*;
 use helpers::keyboard::{self, set_last_key, start_global_key_grabber};
 use helpers::power::window_proc;
-use helpers::{convert::convert_brightness, convert_image::*, power::register_power_broadcast};
+use helpers::{convert_image::*, power::register_power_broadcast};
 use iced::widget::Text;
 use iced::{
     executor, time, window, Application, Command, Element, Font, Length, Settings, Subscription,
@@ -439,7 +439,7 @@ impl Application for AwesomeDisplay {
             .into(),
             iced::widget::text(format!(
                 "Main Brightness: {:.2}",
-                convert_brightness(self.config_manager.read().unwrap().config.brightness) as u16
+                self.config_manager.read().unwrap().config.brightness
             ))
             .into(),
             iced::widget::Slider::new(
@@ -452,13 +452,11 @@ impl Application for AwesomeDisplay {
             .into(),
             iced::widget::text(format!(
                 "Companion Brightness: {:.2}",
-                convert_brightness(
-                    self.config_manager
-                        .read()
-                        .unwrap()
-                        .config
-                        .companion_brightness
-                ) as u16
+                self.config_manager
+                    .read()
+                    .unwrap()
+                    .config
+                    .companion_brightness
             ))
             .horizontal_alignment(iced::alignment::Horizontal::Center)
             .width(Length::Fixed(210f32))
