@@ -88,6 +88,10 @@ impl PartialEq for BrightnessEvent {
     }
 }
 const FONT_BYTES: &[u8] = include_bytes!("Liberation.ttf");
+const MONO: Font = Font::External {
+    name: "Mono",
+    bytes: FONT_BYTES,
+};
 const SYMBOL_BYTES: &[u8] = include_bytes!("symbols.otf");
 const ICONS: Font = Font::External {
     name: "Icons",
@@ -540,12 +544,33 @@ impl Application for AwesomeDisplay {
             .width(Length::Fixed(200f32))
             .on_press(Message::SaveConfig)
             .into(),
-            iced::widget::Text::new(if DEVICES.get(TEENSY).unwrap().is_connected() {
-                String::from("\u{f26c} \u{f058}")
-            } else {
-                String::from("\u{f26c} \u{f057}")
-            })
-            .font(ICONS)
+            iced_native::widget::Row::with_children(vec![
+                iced::widget::Text::new("Teensy")
+                    .width(Length::Fixed(146f32))
+                    .font(MONO)
+                    .into(),
+                iced::widget::Text::new(if DEVICES.get(TEENSY).unwrap().is_connected() {
+                    String::from("\u{f26c} \u{f058}")
+                } else {
+                    String::from("\u{f26c} \u{f057}")
+                })
+                .font(ICONS)
+                .into(),
+            ])
+            .into(),
+            iced_native::widget::Row::with_children(vec![
+                iced::widget::Text::new("ESP32")
+                    .width(Length::Fixed(146f32))
+                    .font(MONO)
+                    .into(),
+                iced::widget::Text::new(if DEVICES.get(ESP32).unwrap().is_connected() {
+                    String::from("\u{f26c} \u{f058}")
+                } else {
+                    String::from("\u{f26c} \u{f057}")
+                })
+                .font(ICONS)
+                .into(),
+            ])
             .into(),
         ];
 
