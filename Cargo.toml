@@ -20,10 +20,7 @@ encoding = "0.2"
 error-chain = "0.12"
 futures = "0.3"
 hex-literal = "0.4.1"
-iced = {version = "0.9", features = ["canvas", "tokio", "image", "debug"]}
-iced_futures = "0.6"
-iced_native = "0.10.3"
-iced_style = "0.8"
+iced = {version = "0.10.0", features = ["canvas", "tokio", "image", "debug"]}
 image = {version = "0.24.6", default-features = false, features = ["ico", "webp-encoder"]}
 imageproc = "0.23"
 lazy_static = "1.4"

@@ -17,9 +17,7 @@ use helpers::keyboard::{self, set_last_key, start_global_key_grabber};
 use helpers::power::window_proc;
 use helpers::{convert_image::*, power::register_power_broadcast};
 use iced::widget::Text;
-use iced::{
-    executor, time, window, Application, Command, Element, Font, Length, Settings, Subscription,
-};
+use iced::{executor, time, window, Application, Command, Element, Length, Settings};
 
 use image::ImageFormat;
 use lazy_static::lazy_static;
@@ -88,14 +86,12 @@ impl PartialEq for BrightnessEvent {
     }
 }
 const FONT_BYTES: &[u8] = include_bytes!("Liberation.ttf");
-const MONO: Font = Font::External {
-    name: "Mono",
-    bytes: FONT_BYTES,
-};
 const SYMBOL_BYTES: &[u8] = include_bytes!("symbols.otf");
-const ICONS: Font = Font::External {
-    name: "Icons",
-    bytes: SYMBOL_BYTES,
+const ICONS: iced::Font = iced::Font {
+    family: iced::font::Family::Name("Font Awesome 5 Free Solid"),
+    weight: iced::font::Weight::Black,
+    stretch: iced::font::Stretch::Normal,
+    monospaced: false,
 };
 
 lazy_static! {
@@ -176,11 +172,12 @@ enum Message {
     PreviousScreen,
     UpdateCurrentScreen,
     SaveConfig,
+    FontLoaded(Result<(), iced::font::Error>),
     MainScreenBrightnessChanged(f32),
     CompanionScreenBrightnessChanged(f32),
     ScreenStatusChanged(bool, String),
     KeyboardEventOccurred(iced::keyboard::KeyCode, u32),
-    WindowEventOccurred(iced_native::Event),
+    WindowEventOccurred(iced::Event),
     ConfigValueChanged(String, String),
 }
 
@@ -271,22 +268,25 @@ impl Application for AwesomeDisplay {
             );
             device.start_background_workers()
         }
-        (this, Command::none())
+        (
+            this,
+            iced::font::load(SYMBOL_BYTES).map(Message::FontLoaded),
+        )
     }
     fn title(&self) -> String {
         String::from("AwesomeInfoDisplay")
     }
 
-    fn subscription(&self) -> Subscription<Message> {
-        iced_futures::subscription::Subscription::batch(
+    fn subscription(&self) -> iced::Subscription<Message> {
+        iced::Subscription::batch(
             vec![
-                iced_native::subscription::events_with(|event, status| {
-                    if let iced_native::event::Status::Captured = status {
+                iced::subscription::events_with(|event, status| {
+                    if let iced::event::Status::Captured = status {
                         return None;
                     }
 
                     match event {
-                        iced_native::Event::Keyboard(iced::keyboard::Event::KeyReleased {
+                        iced::Event::Keyboard(iced::keyboard::Event::KeyReleased {
                             modifiers: _,
                             key_code,
                         }) => match key_code {
@@ -321,7 +321,7 @@ impl Application for AwesomeDisplay {
                 }),
                 time::every(std::time::Duration::from_millis(250))
                     .map(|_| Message::UpdateCurrentScreen),
-                iced_native::subscription::events().map(Message::WindowEventOccurred),
+                iced::subscription::events().map(Message::WindowEventOccurred),
             ]
             .into_iter(),
         )
@@ -365,9 +365,7 @@ impl Application for AwesomeDisplay {
                 screen_manager.update_current_screen();
             }
             Message::WindowEventOccurred(event) => {
-                if let iced_native::Event::Window(iced_native::window::Event::CloseRequested) =
-                    event
-                {
+                if let iced::Event::Window(iced::window::Event::CloseRequested) = event {
                     CLOSE_REQUESTED.store(true, std::sync::atomic::Ordering::Release);
                 }
             }
@@ -396,6 +394,7 @@ impl Application for AwesomeDisplay {
             Message::ConfigValueChanged(key, value) => {
                 self.config_manager.write().unwrap().set_value(key, value);
             }
+            _ => (),
         }
 
         // disconnect all devices, if application will be closed
@@ -455,7 +454,7 @@ impl Application for AwesomeDisplay {
             }
         }
 
-        let mut column_parts: Vec<iced_native::Element<Message, iced::Renderer>> = vec![
+        let mut column_parts = vec![
             iced::widget::button(
                 Text::new("Next screen").horizontal_alignment(iced::alignment::Horizontal::Center),
             )
@@ -512,7 +511,7 @@ impl Application for AwesomeDisplay {
             column_parts.push(special_checkbox(screen.2, screen.1, screen.0));
         }
 
-        let mut left_column_after_screens: Vec<iced_native::Element<Message, iced::Renderer>> = vec![
+        let mut left_column_after_screens = vec![
             iced::widget::text_input(
                 "Bitpanda Api Key",
                 &self
@@ -553,18 +552,18 @@ impl Application for AwesomeDisplay {
             .width(Length::Fixed(200f32))
             .on_press(Message::SaveConfig)
             .into(),
-            iced_native::widget::Row::with_children(vec![
+            iced::widget::Row::with_children(vec![
                 iced::widget::Text::new("Teensy")
                     .width(Length::Fixed(146f32))
-                    .font(MONO)
+                    .font(iced::Font::MONOSPACE)
                     .into(),
                 device_connected_icon(DEVICES.get(TEENSY).unwrap().is_connected()),
             ])
             .into(),
-            iced_native::widget::Row::with_children(vec![
+            iced::widget::Row::with_children(vec![
                 iced::widget::Text::new("ESP32")
                     .width(Length::Fixed(146f32))
-                    .font(MONO)
+                    .font(iced::Font::MONOSPACE)
                     .into(),
                 device_connected_icon(DEVICES.get(ESP32).unwrap().is_connected()),
             ])
@@ -573,7 +572,7 @@ impl Application for AwesomeDisplay {
 
         column_parts.append(&mut left_column_after_screens);
 
-        let col1 = iced_native::widget::Column::with_children(column_parts)
+        let col1 = iced::widget::Column::with_children(column_parts)
             .padding(20)
             .align_items(iced::Alignment::Center)
             .spacing(10);
@@ -597,7 +596,7 @@ impl Application for AwesomeDisplay {
                     .height(Length::Fixed(170f32)),
             );
 
-        iced_native::widget::Row::new().push(col1).push(col2).into()
+        iced::widget::Row::new().push(col1).push(col2).into()
     }
 }
 
@@ -605,7 +604,7 @@ fn special_checkbox<'a>(
     checked: bool,
     key: String,
     description: String,
-) -> iced_native::Element<'a, Message, iced::Renderer> {
+) -> iced::Element<'a, Message, iced::Renderer> {
     iced::widget::checkbox(description, checked, move |value: bool| {
         Message::ScreenStatusChanged(value, key.clone())
     })
@@ -614,14 +613,13 @@ fn special_checkbox<'a>(
     .into()
 }
 
-fn device_connected_icon<'a>(
-    is_connected: bool,
-) -> iced_native::Element<'a, Message, iced::Renderer> {
-    iced::widget::Text::new(if is_connected {
+fn device_connected_icon<'a>(is_connected: bool) -> iced::Element<'a, Message, iced::Renderer> {
+    iced::widget::text(if is_connected {
         String::from("\u{f26c} \u{f058}")
     } else {
         String::from("\u{f26c} \u{f057}")
     })
     .font(ICONS)
+    .shaping(iced::widget::text::Shaping::Advanced)
     .into()
 }

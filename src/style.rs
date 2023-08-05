@@ -40,7 +40,7 @@ impl iced::widget::checkbox::StyleSheet for Checkbox {
         iced::widget::checkbox::Appearance {
             background: iced::Color::WHITE.into(),
             icon_color: iced::Color::BLACK,
-            border_radius: 0f32,
+            border_radius: 0f32.into(),
             border_width: 1f32,
             border_color: iced::Color::BLACK,
             text_color: None,
@@ -58,7 +58,7 @@ impl iced::widget::checkbox::StyleSheet for Checkbox {
                 ..iced::Color::WHITE
             }),
             icon_color: iced::Color::BLACK,
-            border_radius: 0f32,
+            border_radius: 0f32.into(),
             border_width: 1f32,
             border_color: iced::Color::BLACK,
             text_color: None,
@@ -72,7 +72,7 @@ impl iced::widget::text_input::StyleSheet for TextInput {
     fn active(&self, _style: &Self::Style) -> iced::widget::text_input::Appearance {
         iced::widget::text_input::Appearance {
             background: iced::Color::WHITE.into(),
-            border_radius: 0f32,
+            border_radius: 0f32.into(),
             border_width: 1f32,
             border_color: iced::Color::BLACK,
             icon_color: iced::Color::BLACK,
@@ -87,7 +87,7 @@ impl iced::widget::text_input::StyleSheet for TextInput {
     fn focused(&self, _style: &Self::Style) -> iced::widget::text_input::Appearance {
         iced::widget::text_input::Appearance {
             background: iced::Color::WHITE.into(),
-            border_radius: 0f32,
+            border_radius: 0f32.into(),
             border_width: 1f32,
             border_color: iced::Color::BLACK,
             icon_color: iced::Color::WHITE,
@@ -110,10 +110,10 @@ impl iced::widget::text_input::StyleSheet for TextInput {
         iced::Color::from_rgb8(235, 235, 228)
     }
 
-    fn disabled(&self, style: &Self::Style) -> iced_style::text_input::Appearance {
+    fn disabled(&self, style: &Self::Style) -> iced::widget::text_input::Appearance {
         iced::widget::text_input::Appearance {
             background: self.disabled_color(style).into(),
-            border_radius: 0f32,
+            border_radius: 0f32.into(),
             border_width: 1f32,
             border_color: iced::Color::BLACK,
             icon_color: iced::Color::WHITE,

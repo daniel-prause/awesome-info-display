@@ -36,7 +36,11 @@ pub fn adjust_brightness_rgb(bytes: &Vec<u8>, brightness: f32) -> Vec<u8> {
     converted_sb_rgb
 }
 
-pub fn rgb_bytes_to_rgba_image(bytes: &Vec<u8>, width: u32, height: u32) -> iced::widget::Image {
+pub fn rgb_bytes_to_rgba_image(
+    bytes: &Vec<u8>,
+    width: u32,
+    height: u32,
+) -> iced::widget::Image<iced::widget::image::Handle> {
     let mut converted_sb_rgba = Vec::with_capacity(width as usize * height as usize * 3usize);
     // build rgba for preview
     for chunk in bytes.chunks(3) {
@@ -51,6 +55,7 @@ pub fn rgb_bytes_to_rgba_image(bytes: &Vec<u8>, width: u32, height: u32) -> iced
         height,
         converted_sb_rgba,
     ))
+    .into()
 }
 
 pub fn swap_rgb(bytes: &Vec<u8>, width: u32, height: u32) -> Vec<u8> {
