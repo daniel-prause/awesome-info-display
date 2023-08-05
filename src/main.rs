@@ -552,7 +552,7 @@ impl Application for AwesomeDisplay {
             .width(Length::Fixed(200f32))
             .on_press(Message::SaveConfig)
             .into(),
-            iced::widget::Row::with_children(vec![iced::widget::vertical_space(40).into()]).into(),
+            iced::widget::Row::with_children(vec![iced::widget::vertical_space(10).into()]).into(),
             iced::widget::Row::with_children(vec![iced::widget::text("Devices").into()]).into(),
             iced::widget::Row::with_children(vec![
                 iced::widget::Text::new(TEENSY.to_uppercase())
