@@ -100,4 +100,30 @@ impl ConfigManager {
             _ => {}
         }
     }
+
+    pub fn get_value(&self, key: &str) -> String {
+        match key {
+            "bitpanda_api_key" => {
+                return self.config.bitpanda_api_key.to_string();
+            }
+            "weather_location" => {
+                return self.config.weather_location.to_string();
+            }
+            _ => String::new(),
+        }
+    }
+
+    // TODO: implement me for Boolean/Float values!
+    pub fn set_value(&mut self, key: String, value: String) {
+        let key = &*key;
+        match key {
+            "bitpanda_api_key" => {
+                self.config.bitpanda_api_key = value;
+            }
+            "weather_location" => {
+                self.config.weather_location = value;
+            }
+            _ => {}
+        }
+    }
 }

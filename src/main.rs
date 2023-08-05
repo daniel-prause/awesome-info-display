@@ -181,8 +181,7 @@ enum Message {
     ScreenStatusChanged(bool, String),
     KeyboardEventOccurred(iced::keyboard::KeyCode, u32),
     WindowEventOccurred(iced_native::Event),
-    BitpandaApiKeyChanged(String),
-    WeatherLocationChanged(String),
+    ConfigValueChanged(String, String),
 }
 
 impl Application for AwesomeDisplay {
@@ -394,11 +393,8 @@ impl Application for AwesomeDisplay {
                     screen_manager.set_status_for_screen(&screen, status);
                 }
             }
-            Message::BitpandaApiKeyChanged(message) => {
-                self.config_manager.write().unwrap().config.bitpanda_api_key = message;
-            }
-            Message::WeatherLocationChanged(message) => {
-                self.config_manager.write().unwrap().config.weather_location = message;
+            Message::ConfigValueChanged(key, value) => {
+                self.config_manager.write().unwrap().set_value(key, value);
             }
         }
 
@@ -519,9 +515,16 @@ impl Application for AwesomeDisplay {
         let mut left_column_after_screens: Vec<iced_native::Element<Message, iced::Renderer>> = vec![
             iced::widget::text_input(
                 "Bitpanda Api Key",
-                &self.config_manager.read().unwrap().config.bitpanda_api_key,
+                &self
+                    .config_manager
+                    .read()
+                    .unwrap()
+                    .get_value("bitpanda_api_key")
+                    .to_string(),
             )
-            .on_input(Message::BitpandaApiKeyChanged)
+            .on_input(move |value: String| {
+                Message::ConfigValueChanged("bitpanda_api_key".into(), value)
+            })
             .password()
             .width(Length::Fixed(200f32))
             .style(iced::theme::TextInput::Custom(Box::new(
@@ -529,10 +532,16 @@ impl Application for AwesomeDisplay {
             )))
             .into(),
             iced::widget::TextInput::new(
-                "weather Location",
-                &self.config_manager.read().unwrap().config.weather_location,
+                "Weather Location",
+                &self
+                    .config_manager
+                    .read()
+                    .unwrap()
+                    .get_value("weather_location"),
             )
-            .on_input(Message::WeatherLocationChanged)
+            .on_input(move |value: String| {
+                Message::ConfigValueChanged("weather_location".into(), value)
+            })
             .style(iced::theme::TextInput::Custom(Box::new(
                 style::TextInput {},
             )))
@@ -549,13 +558,7 @@ impl Application for AwesomeDisplay {
                     .width(Length::Fixed(146f32))
                     .font(MONO)
                     .into(),
-                iced::widget::Text::new(if DEVICES.get(TEENSY).unwrap().is_connected() {
-                    String::from("\u{f26c} \u{f058}")
-                } else {
-                    String::from("\u{f26c} \u{f057}")
-                })
-                .font(ICONS)
-                .into(),
+                device_connected_icon(DEVICES.get(TEENSY).unwrap().is_connected()),
             ])
             .into(),
             iced_native::widget::Row::with_children(vec![
@@ -563,13 +566,7 @@ impl Application for AwesomeDisplay {
                     .width(Length::Fixed(146f32))
                     .font(MONO)
                     .into(),
-                iced::widget::Text::new(if DEVICES.get(ESP32).unwrap().is_connected() {
-                    String::from("\u{f26c} \u{f058}")
-                } else {
-                    String::from("\u{f26c} \u{f057}")
-                })
-                .font(ICONS)
-                .into(),
+                device_connected_icon(DEVICES.get(ESP32).unwrap().is_connected()),
             ])
             .into(),
         ];
@@ -614,5 +611,17 @@ fn special_checkbox<'a>(
     })
     .style(iced::theme::Checkbox::Custom(Box::new(style::Checkbox {})))
     .width(Length::Fixed(200f32))
+    .into()
+}
+
+fn device_connected_icon<'a>(
+    is_connected: bool,
+) -> iced_native::Element<'a, Message, iced::Renderer> {
+    iced::widget::Text::new(if is_connected {
+        String::from("\u{f26c} \u{f058}")
+    } else {
+        String::from("\u{f26c} \u{f057}")
+    })
+    .font(ICONS)
     .into()
 }
