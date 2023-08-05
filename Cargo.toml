@@ -9,38 +9,38 @@ version = "0.1.0"
 
 [dependencies]
 audiotags = "0.4.1"
-chrono = {version = "0.4.24", features = ["serde"]}
-chrono-tz = "0.8.2"
+chrono = {version = "0.4.26", features = ["serde"]}
+chrono-tz = "0.8.3"
 confy = "0.5.1"
-cpu-monitor = "0.1"
+cpu-monitor = "0.1.1"
 crc32fast = "1.3.2"
-crossbeam-channel = "0.5"
+crossbeam-channel = "0.5.8"
 debounce = "0.2.2"
-encoding = "0.2"
-error-chain = "0.12"
-futures = "0.3"
+encoding = "0.2.33"
+error-chain = "0.12.4"
+futures = "0.3.28"
 hex-literal = "0.4.1"
 iced = {version = "0.10.0", features = ["canvas", "tokio", "image", "debug"]}
 image = {version = "0.24.6", default-features = false, features = ["ico", "webp-encoder"]}
-imageproc = "0.23"
-lazy_static = "1.4"
-once_cell = "1.17.1"
+imageproc = "0.23.0"
+lazy_static = "1.4.0"
+once_cell = "1.18.0"
 open-meteo-rs = "0.0.2"
-rdev = {version = "0.5", features = ["unstable_grab"]}
-regex = "1"
-reqwest = {version = "0.11.17", features = ["blocking", "json"]}
-rusttype = "0.9"
-scraper = "0.17.0"
+rdev = {version = "0.5.3", features = ["unstable_grab"]}
+regex = "1.9.2"
+reqwest = {version = "0.11.18", features = ["blocking", "json"]}
+rusttype = "0.9.3"
+scraper = "0.17.1"
 serde = {version = "1.0", features = ["derive"]}
-serde_json = "1.0.96"
+serde_json = "1.0.104"
 serialport = {git = "https://github.com/serialport/serialport-rs"}
-signal-hook = "0.3.15"
+signal-hook = "0.3.17"
 systemstat = "0.2.3"
-tokio = "1.28.0"
-unicode-segmentation = "1"
+tokio = "1.29.1"
+unicode-segmentation = "1.10.1"
 winsafe = {git = "https://github.com/rodrigocfd/winsafe", features = ['user', 'ole']}
 [target.'cfg(windows)'.dependencies]
 winapi = {version = "0.3.9", features = ["winuser", "mmdeviceapi", "combaseapi", "objbase", "endpointvolume", "memoryapi"]}
 [build-dependencies]
-static_vcruntime = "2.0"
-winres = "0.1"
+static_vcruntime = "2.0.0"
+winres = "0.1.12"
