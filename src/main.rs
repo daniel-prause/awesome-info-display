@@ -554,22 +554,8 @@ impl Application for AwesomeDisplay {
             .into(),
             iced::widget::Row::with_children(vec![iced::widget::vertical_space(10).into()]).into(),
             iced::widget::Row::with_children(vec![iced::widget::text("Devices").into()]).into(),
-            iced::widget::Row::with_children(vec![
-                iced::widget::Text::new(TEENSY.to_uppercase())
-                    .width(Length::Fixed(146f32))
-                    .font(iced::Font::MONOSPACE)
-                    .into(),
-                device_connected_icon(DEVICES.get(TEENSY).unwrap().is_connected()),
-            ])
-            .into(),
-            iced::widget::Row::with_children(vec![
-                iced::widget::Text::new(ESP32.to_uppercase())
-                    .width(Length::Fixed(146f32))
-                    .font(iced::Font::MONOSPACE)
-                    .into(),
-                device_connected_icon(DEVICES.get(ESP32).unwrap().is_connected()),
-            ])
-            .into(),
+            iced::widget::Row::with_children(device_status(TEENSY)).into(),
+            iced::widget::Row::with_children(device_status(ESP32)).into(),
         ];
 
         column_parts.append(&mut left_column_after_screens);
@@ -624,4 +610,14 @@ fn device_connected_icon<'a>(is_connected: bool) -> iced::Element<'a, Message, i
     .font(ICONS)
     .shaping(iced::widget::text::Shaping::Advanced)
     .into()
+}
+
+fn device_status<'a>(device: &str) -> Vec<iced::Element<'a, Message, iced::Renderer>> {
+    vec![
+        iced::widget::Text::new(device.to_uppercase())
+            .width(Length::Fixed(146f32))
+            .font(iced::Font::MONOSPACE)
+            .into(),
+        device_connected_icon(DEVICES.get(device).unwrap().is_connected()),
+    ]
 }
