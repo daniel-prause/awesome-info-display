@@ -14,3 +14,4 @@ Currently, this project only works on Windows, but it is planned to be used on L
 
 This project is licensed under the MIT license. It further uses Font Awesome.
 Please have a look at https://github.com/FortAwesome/Font-Awesome/blob/5.x/LICENSE.txt.
+It further uses the Liberation Font (https://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=ofl).
