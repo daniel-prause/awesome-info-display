@@ -9,3 +9,8 @@ This project - currently "work in progress" - is aiming to achieve exactly that.
 <p>
 Currently, this project only works on Windows, but it is planned to be used on Linux and MacOS as well.
 </p>
+
+### Licenses
+
+This project is licensed under the MIT license. It further uses Font Awesome.
+Please have a look at https://github.com/FortAwesome/Font-Awesome/blob/5.x/LICENSE.txt.
