@@ -54,34 +54,64 @@ pub fn extract_current_cover_path(mut winamp_process_handle: HANDLE) -> String {
 
 pub fn extract_cover_image(path: &String) -> Option<Cover> {
     match Tag::new().read_from_path(path) {
-        Ok(tag) => {
-            match tag.album_cover() {
-                Some(cover) => {
-                    let cover_as_image = image::load_from_memory(cover.data as &[u8]);
-                    match cover_as_image {
-                        Ok(cover_image) => {
-                            match cover_image
-                                .resize_exact(170, 170, image::imageops::FilterType::Lanczos3)
-                                .as_mut_rgb8()
-                            {
-                                Some(resized_cover) => {
-                                    return Some(Cover {
-                                        data: resized_cover.as_bytes().to_vec(),
-                                        filepath: path.clone(),
-                                    });
-                                }
-                                None => {}
+        Ok(tag) => match tag.album_cover() {
+            Some(cover) => {
+                let cover_as_image = image::load_from_memory(cover.data as &[u8]);
+                match cover_as_image {
+                    Ok(cover_image) => {
+                        match cover_image
+                            .resize_exact(170, 170, image::imageops::FilterType::Lanczos3)
+                            .as_mut_rgb8()
+                        {
+                            Some(resized_cover) => {
+                                return Some(Cover {
+                                    data: resized_cover.as_bytes().to_vec(),
+                                    filepath: path.clone(),
+                                });
                             }
+                            None => {}
                         }
-                        Err(_) => {}
                     }
-                }
-                None => {
-                    // do nothing - just like self help singh!
+                    Err(_) => {}
                 }
             }
-        }
+            None => match alternative_cover(path) {
+                Ok(cover) => return Some(cover),
+                Err(_) => {} // cover not found, we don't care for now, why
+            },
+        },
         Err(_) => {}
     }
     None
+}
+
+pub fn alternative_cover(original_path: &String) -> Result<Cover, std::io::Error> {
+    let path = std::path::Path::new(original_path).parent();
+    match path {
+        Some(p) => {
+            let folder_image = p.join("folder.jpg");
+            if folder_image.clone().exists() {
+                let image = image::open(folder_image.clone());
+                if image.is_ok() {
+                    return Result::Ok(Cover {
+                        data: image
+                            .unwrap()
+                            .resize_exact(170, 170, image::imageops::FilterType::Lanczos3)
+                            .as_mut_rgb8()
+                            .unwrap()
+                            .to_vec(),
+                        filepath: folder_image
+                            .into_os_string()
+                            .into_string()
+                            .unwrap_or(original_path.into()),
+                    });
+                }
+            }
+        }
+        None => {}
+    }
+    return Result::Err(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        "Cover not found",
+    ));
 }
