@@ -18,16 +18,16 @@ use helpers::power::window_proc;
 use helpers::{convert_image::*, power::register_power_broadcast};
 use iced::widget::Text;
 use iced::{executor, time, window, Application, Command, Element, Length, Settings};
-
 use image::ImageFormat;
 use lazy_static::lazy_static;
+use named_lock::NamedLock;
+use named_lock::Result;
 use once_cell::sync::Lazy;
 
 use rusttype::Font as ft;
 use std::{
     collections::HashMap,
     error::Error,
-    ffi::CString,
     fmt,
     rc::Rc,
     sync::{atomic::AtomicBool, Arc, Mutex, RwLock},
@@ -123,39 +123,43 @@ pub fn main() -> iced::Result {
         Err(_) => {}
     }
 
-    unsafe {
-        let app_image = ::image::load_from_memory(include_bytes!("../icon.ico") as &[u8]);
+    let app_image = ::image::load_from_memory(include_bytes!("../icon.ico") as &[u8]);
+    let lock = NamedLock::create("AwesomeInfoDisplay");
+    match lock {
+        Ok(l) => match l.try_lock() {
+            Ok(_) => {
+                // register power callback
+                register_power_broadcast(window_proc);
 
-        let lp_text = CString::new("AwesomeInfoDisplay").unwrap_or_default();
-        winapi::um::synchapi::CreateMutexA(std::ptr::null_mut(), 1, lp_text.as_ptr());
-        if winapi::um::errhandlingapi::GetLastError()
-            == winapi::shared::winerror::ERROR_ALREADY_EXISTS
-        {
-            Err(iced::Error::WindowCreationFailed(Box::new(
+                let settings = Settings {
+                    exit_on_close_request: false,
+                    window: window::Settings {
+                        resizable: false,
+                        decorations: true,
+                        icon: Some(
+                            iced::window::icon::from_rgba(
+                                app_image.unwrap().to_rgba8().to_vec(),
+                                256,
+                                256,
+                            )
+                            .unwrap(),
+                        ),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                return AwesomeDisplay::run(settings);
+            }
+            Err(_) => {
+                return Err(iced::Error::WindowCreationFailed(Box::new(
+                    get_super_error(),
+                )))
+            }
+        },
+        Err(_) => {
+            return Err(iced::Error::WindowCreationFailed(Box::new(
                 get_super_error(),
             )))
-        } else {
-            // register power callback
-            register_power_broadcast(window_proc);
-
-            let settings = Settings {
-                exit_on_close_request: false,
-                window: window::Settings {
-                    resizable: false,
-                    decorations: true,
-                    icon: Some(
-                        iced::window::icon::from_rgba(
-                            app_image.unwrap().to_rgba8().to_vec(),
-                            256,
-                            256,
-                        )
-                        .unwrap(),
-                    ),
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
-            AwesomeDisplay::run(settings)
         }
     }
 }
