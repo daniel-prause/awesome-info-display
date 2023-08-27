@@ -85,34 +85,77 @@ pub fn extract_cover_image(path: &String) -> Option<Cover> {
     None
 }
 
+pub fn extract_cover_path(original_path: &String) -> Option<String> {
+    let patterns = [
+        "Folder.jpg",
+        "AlbumArtSmall.jpg",
+        "AlbumArt.jpg",
+        "Album.jpg",
+        ".folder.png",
+        "cover.jpg",
+        "thumb.jpg",
+        "*.jpg",
+    ];
+
+    for pattern in &patterns {
+        // Glob-Muster erstellen
+        let glob_pattern = format!("\\{}", pattern);
+        match std::path::Path::new(original_path).parent() {
+            Some(p) => match p.to_str() {
+                Some(p) => {
+                    let complete_path = format!("{}{}", p, glob_pattern);
+                    if let Ok(entries) = glob::glob(&complete_path) {
+                        for entry in entries {
+                            if let Ok(path) = entry {
+                                if path.is_file() {
+                                    match path.into_os_string().into_string() {
+                                        Ok(p) => return Some(p),
+                                        Err(_) => {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                None => {}
+            },
+            None => {}
+        }
+    }
+
+    None
+}
+
 pub fn alternative_cover(original_path: &String) -> Result<Cover, std::io::Error> {
-    let path = std::path::Path::new(original_path).parent();
-    match path {
-        Some(p) => {
-            // since NTFS does not differentiate between case sensitivity,
-            // folder.jpg will be as appropriate as Folder.jpg.
-            // TODO: replace me with a Dir.glob based approach.
-            let folder_image = p.join("folder.jpg");
-            if folder_image.clone().exists() {
-                let image = image::open(folder_image.clone());
-                if image.is_ok() {
+    // since NTFS does not differentiate between case sensitivity,
+    // folder.jpg will be as appropriate as Folder.jpg.
+    // TODO: replace me with a Dir.glob based approach.
+    let folder_image = extract_cover_path(original_path);
+    match folder_image {
+        Some(path) => {
+            let image = image::open(path.clone());
+            match image {
+                Ok(img) => {
                     return Result::Ok(Cover {
-                        data: image
-                            .unwrap()
+                        data: img
                             .resize_exact(170, 170, image::imageops::FilterType::Lanczos3)
                             .as_mut_rgb8()
                             .unwrap()
                             .to_vec(),
-                        filepath: folder_image
-                            .into_os_string()
-                            .into_string()
-                            .unwrap_or(original_path.into()),
+                        filepath: path,
                     });
+                }
+                Err(e) => {
+                    return Result::Err(std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        format!("Cover not found! Reason: {:?}", e),
+                    ));
                 }
             }
         }
         None => {}
     }
+
     return Result::Err(std::io::Error::new(
         std::io::ErrorKind::NotFound,
         "Cover not found",

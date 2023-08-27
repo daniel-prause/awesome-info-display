@@ -35,6 +35,7 @@ serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0.104"
 serialport = {git = "https://github.com/serialport/serialport-rs"}
 signal-hook = "0.3.17"
+glob="0.3.1"
 systemstat = "0.2.3"
 tokio = "1.29.1"
 unicode-segmentation = "1.10.1"
