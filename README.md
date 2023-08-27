@@ -1,4 +1,4 @@
-# AwesomeInfoDisplay
+# Awesome Info Display
 
 <p>
 Hi there :-)!
