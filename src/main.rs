@@ -123,8 +123,9 @@ pub fn main() -> iced::Result {
         Err(_) => {}
     }
 
-    let app_image = ::image::load_from_memory(include_bytes!("../icon.ico") as &[u8]);
-    let lock = NamedLock::create("AwesomeInfoDisplay");
+    let app_image: Result<image::DynamicImage, image::ImageError> =
+        ::image::load_from_memory(include_bytes!("../icon.ico") as &[u8]);
+    let lock: Result<NamedLock> = NamedLock::create("AwesomeInfoDisplay");
     match lock {
         Ok(l) => match l.try_lock() {
             Ok(_) => {
