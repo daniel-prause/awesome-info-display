@@ -148,7 +148,7 @@ pub fn alternative_cover(original_path: &String) -> Result<Cover, std::io::Error
                 Err(e) => {
                     return Result::Err(std::io::Error::new(
                         std::io::ErrorKind::NotFound,
-                        format!("Cover not found! Reason: {:?}", e),
+                        format!("Could not open image! Reason: {:?}", e),
                     ));
                 }
             }

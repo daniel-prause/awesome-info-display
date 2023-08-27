@@ -151,18 +151,14 @@ pub fn main() -> iced::Result {
                 };
                 return AwesomeDisplay::run(settings);
             }
-            Err(_) => {
-                return Err(iced::Error::WindowCreationFailed(Box::new(
-                    get_super_error(),
-                )))
-            }
+            Err(_) => {}
         },
-        Err(_) => {
-            return Err(iced::Error::WindowCreationFailed(Box::new(
-                get_super_error(),
-            )))
-        }
+        Err(_) => {}
     }
+
+    return Err(iced::Error::WindowCreationFailed(Box::new(
+        get_super_error(),
+    )));
 }
 
 struct AwesomeDisplay {
