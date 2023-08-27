@@ -89,6 +89,9 @@ pub fn alternative_cover(original_path: &String) -> Result<Cover, std::io::Error
     let path = std::path::Path::new(original_path).parent();
     match path {
         Some(p) => {
+            // since NTFS does not differentiate between case sensitivity,
+            // folder.jpg will be as appropriate as Folder.jpg.
+            // TODO: replace me with a Dir.glob based approach.
             let folder_image = p.join("folder.jpg");
             if folder_image.clone().exists() {
                 let image = image::open(folder_image.clone());

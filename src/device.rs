@@ -184,6 +184,7 @@ impl Device {
                                 return;
                             }
                             if *HIBERNATING.lock().unwrap() {
+                                last_sum = 0;
                                 self.stand_by();
                             } else {
                                 let crc_of_buf = crc32fast::hash(&b);
