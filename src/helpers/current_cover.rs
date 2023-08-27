@@ -75,14 +75,14 @@ pub fn extract_cover_image(path: &String) -> Option<Cover> {
                     Err(_) => {}
                 }
             }
-            None => match alternative_cover(path) {
-                Ok(cover) => return Some(cover),
-                Err(_) => {} // cover not found, we don't care for now, why
-            },
+            None => {}
         },
         Err(_) => {}
     }
-    None
+    match alternative_cover(path) {
+        Ok(cover) => return Some(cover),
+        Err(_) => return None, // cover not found, we don't care for now, why
+    }
 }
 
 pub fn extract_cover_path(original_path: &String) -> Option<String> {
