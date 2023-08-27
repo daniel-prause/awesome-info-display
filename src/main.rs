@@ -213,6 +213,7 @@ impl Application for AwesomeDisplay {
             String::from("Bitpanda Info"),
             String::from("bitpanda_screen"),
             font.clone(),
+            symbols.clone(),
             config_manager.clone(),
         )));
         screens.push(Box::new(screens::weather_screen::WeatherScreen::new(

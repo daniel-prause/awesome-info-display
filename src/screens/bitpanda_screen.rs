@@ -66,12 +66,33 @@ impl BitpandaScreen {
     fn draw_screen(&mut self, wallet_info: WalletInfo) {
         // draw initial image
         let mut image = RgbImage::new(256, 64);
+        let mut companion_image = RgbImage::new(320, 170);
         let scale = Scale { x: 16.0, y: 16.0 };
+        let companion_scale = Scale { x: 64.0, y: 64.0 };
 
         self.draw_wallet_value(wallet_info.wallet_value, &mut image, scale);
         self.draw_updated_at(wallet_info.last_update, &mut image, scale);
+        self.draw_companion_screen(&mut companion_image, companion_scale);
         self.screen.main_screen_bytes = image.into_vec();
+        self.screen.companion_screen_bytes = companion_image.into_vec();
     }
+
+    pub fn draw_companion_screen(
+        &mut self,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        scale: Scale,
+    ) {
+        draw_text_mut(
+            image,
+            Rgb([128u8, 64u8, 0u8]),
+            ((320f32 - scale.x) / 2f32) as i32,
+            ((170f32 - scale.y) / 2f32) as i32,
+            scale,
+            &self.screen.symbols,
+            &String::from("\u{f555}"),
+        );
+    }
+
     pub fn draw_wallet_value(
         &mut self,
         wallet_value: f64,
@@ -130,6 +151,7 @@ impl BitpandaScreen {
         description: String,
         key: String,
         font: Rc<Font<'static>>,
+        symbols: Rc<Font<'static>>,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> BitpandaScreen {
         let (tx, rx): (Sender<WalletInfo>, Receiver<WalletInfo>) = bounded(1);
@@ -138,6 +160,7 @@ impl BitpandaScreen {
             screen: Screen {
                 description,
                 font,
+                symbols,
                 config_manager: config_manager.clone(),
                 key,
                 active: active.clone(),

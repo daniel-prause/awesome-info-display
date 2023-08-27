@@ -17,6 +17,7 @@ pub struct Screen {
     pub main_screen_bytes: Vec<u8>,
     pub companion_screen_bytes: Vec<u8>,
     pub font: Rc<Font<'static>>,
+    pub symbols: Rc<Font<'static>>,
     pub active: Arc<AtomicBool>,
     pub handle: Option<JoinHandle<()>>,
     pub mode: u32,
@@ -34,6 +35,9 @@ impl Default for Screen {
             font: Rc::new(
                 Font::try_from_vec(Vec::from(include_bytes!("../Liberation.ttf") as &[u8]))
                     .unwrap(),
+            ),
+            symbols: Rc::new(
+                Font::try_from_vec(Vec::from(include_bytes!("../symbols.otf") as &[u8])).unwrap(),
             ),
             active: Arc::new(AtomicBool::new(false)),
             handle: None,
