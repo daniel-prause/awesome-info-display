@@ -23,6 +23,7 @@ pub struct IceScreen {
 #[derive(Default, Clone)]
 struct IceInfo {
     sorts: Vec<String>,
+    images: Vec<image::DynamicImage>,
 }
 
 impl Screenable for IceScreen {
@@ -41,6 +42,7 @@ impl BasicScreen for IceScreen {
             Err(_) => {}
         }
         self.draw_screen(self.last_ice_info.clone());
+        self.draw_companion_screen(self.last_ice_info.clone());
     }
 }
 
@@ -51,6 +53,34 @@ impl IceScreen {
         self.draw_ice_info(ice_info, &mut image);
         self.screen.main_screen_bytes = image.into_vec();
     }
+
+    fn calc_next_image_x(&mut self, current_x: &mut i64, current_y: &mut i64) {
+        if *current_x + 56 * 2 > 320 {
+            *current_x = 5;
+            *current_y += 56;
+        } else {
+            *current_x += 61;
+        }
+    }
+
+    fn draw_companion_screen(&mut self, ice_info: IceInfo) {
+        // draw initial image
+        let mut image = image::DynamicImage::new_rgb8(320, 170);
+        imageproc::drawing::draw_filled_rect_mut(
+            &mut image,
+            imageproc::rect::Rect::at(0, 0).of_size(320, 170),
+            image::Rgba([255u8, 255u8, 255u8, 255]),
+        );
+        let mut x = -53;
+        let mut y = 0;
+        for ice_image in ice_info.images {
+            self.calc_next_image_x(&mut x, &mut y);
+
+            image::imageops::overlay(&mut image, &ice_image, x, y);
+        }
+        self.screen.companion_screen_bytes = image.as_bytes().to_vec();
+    }
+
     fn draw_ice_info(&mut self, ice_info: IceInfo, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>) {
         let sorts = ice_info.sorts.join(" · ");
         let title_len = sorts.graphemes(true).count();
@@ -102,14 +132,36 @@ impl IceScreen {
                             match body {
                                 Ok(response) => {
                                     let fragment = Html::parse_fragment(&response.text().unwrap());
-                                    let selector =
+                                    let sorts_selector =
                                         Selector::parse(".fusion-text-14 .tlp-content a").unwrap();
+                                    let sort_images_selector = Selector::parse(
+                                        ".fusion-text-14 .tlp-portfolio-item a.tlp-zoom",
+                                    )
+                                    .unwrap();
 
+                                    let mut images: Vec<image::DynamicImage> = Vec::new();
+                                    for image in fragment.select(&sort_images_selector) {
+                                        let mut buffer = Vec::new();
+                                        reqwest::blocking::get(image.value().attr("href").unwrap())
+                                            .unwrap()
+                                            .copy_to(&mut buffer)
+                                            .unwrap();
+                                        let image = image::load_from_memory_with_format(
+                                            &buffer,
+                                            image::ImageFormat::Jpeg,
+                                        )
+                                        .unwrap();
+                                        images.push(image.resize_exact(
+                                            56,
+                                            56,
+                                            image::imageops::FilterType::Lanczos3,
+                                        ));
+                                    }
                                     let mut sorts: Vec<String> = Vec::new();
-                                    for element in fragment.select(&selector) {
+                                    for element in fragment.select(&sorts_selector) {
                                         sorts.push(element.inner_html())
                                     }
-                                    sender.send(IceInfo { sorts }).unwrap_or_default();
+                                    sender.send(IceInfo { sorts, images }).unwrap_or_default();
                                 }
                                 Err(_) => {}
                             }
@@ -125,6 +177,7 @@ impl IceScreen {
             receiver: rx,
             last_ice_info: IceInfo {
                 sorts: vec![String::from("Loading")],
+                images: vec![],
             },
         };
 
