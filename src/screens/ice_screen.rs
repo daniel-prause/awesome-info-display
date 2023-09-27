@@ -156,6 +156,9 @@ impl IceScreen {
                                             56,
                                             image::imageops::FilterType::Lanczos3,
                                         ));
+                                        if images.len() == 15 {
+                                            break;
+                                        }
                                     }
                                     let mut sorts: Vec<String> = Vec::new();
                                     for element in fragment.select(&sorts_selector) {
