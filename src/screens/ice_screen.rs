@@ -1,5 +1,8 @@
 extern crate encoding;
-use crate::screens::{BasicScreen, Screen, Screenable};
+use crate::{
+    config_manager::ConfigManager,
+    screens::{BasicScreen, Screen, Screenable},
+};
 use crossbeam_channel::{bounded, Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
@@ -7,7 +10,7 @@ use rusttype::{Font, Scale};
 use scraper::{Html, Selector};
 use std::{
     rc::Rc,
-    sync::{atomic::AtomicBool, atomic::Ordering, Arc},
+    sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
     thread,
     time::{Duration, SystemTime},
 };
@@ -109,7 +112,12 @@ impl IceScreen {
         );
     }
 
-    pub fn new(description: String, key: String, font: Rc<Font<'static>>) -> IceScreen {
+    pub fn new(
+        description: String,
+        key: String,
+        font: Rc<Font<'static>>,
+        config_manager: Arc<RwLock<ConfigManager>>,
+    ) -> IceScreen {
         let (tx, rx): (Sender<IceInfo>, Receiver<IceInfo>) = bounded(1);
         let active = Arc::new(AtomicBool::new(false));
         let mut this = IceScreen {
@@ -174,6 +182,7 @@ impl IceScreen {
                         thread::sleep(Duration::from_millis(1000));
                     }
                 })),
+                config_manager,
                 ..Default::default()
             },
             sort_x: 0,

@@ -24,6 +24,7 @@ iced = {version = "0.10.0", features = ["canvas", "tokio", "image", "debug"]}
 image = {version = "0.24.7", default-features = false, features = ["ico", "webp-encoder"]}
 imageproc = "0.23.0"
 lazy_static = "1.4.0"
+libloading = "0.8.1"
 once_cell = "1.19.0"
 open-meteo-rs = "0.0.2"
 rdev = {version = "0.5.3", features = ["unstable_grab"]}

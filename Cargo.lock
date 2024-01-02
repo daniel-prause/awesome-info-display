@@ -183,6 +183,7 @@ dependencies = [
  "image",
  "imageproc",
  "lazy_static",
+ "libloading 0.8.1",
  "named-lock",
  "once_cell",
  "open-meteo-rs",

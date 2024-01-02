@@ -1,8 +1,11 @@
-use crate::config::Config;
+use crate::config::{Config, ScreenConfig};
 
 use serde::{Deserialize, Serialize};
 
-use std::fs;
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ConfigManager {
@@ -14,22 +17,28 @@ pub struct ConfigManager {
 impl ConfigManager {
     pub fn new(filepath: Option<&str>) -> Self {
         let config = Config {
-            bitpanda_api_key: String::new(),
-            bitpanda_screen_active: true,
-            weather_location: String::new(),
-            media_screen_active: true,
-            weather_screen_active: true,
-            ice_screen_active: true,
-            system_info_screen_active: true,
-            current_date_screen_active: true,
             brightness: 100,
             companion_brightness: 100,
+            screens: HashMap::new(),
         };
         let mut this = ConfigManager {
             config,
             config_hash: String::new(),
             config_path: String::from("./settings.json"),
         };
+
+        // check, if file exists; if not -> create it
+        let file_exists = std::path::Path::new(filepath.unwrap_or("./settings.json")).exists();
+        if !file_exists {
+            match File::create(filepath.unwrap_or("./settings.json")) {
+                Ok(_) => {
+                    println!("Settings file created!")
+                }
+                Err(err) => {
+                    eprintln!("Error creating file: {}", err);
+                }
+            }
+        }
         let contents = fs::read_to_string(filepath.unwrap_or("./settings.json"));
         match contents {
             Ok(config) => {
@@ -64,66 +73,37 @@ impl ConfigManager {
     }
 
     pub fn screen_enabled(&mut self, screen: String) -> bool {
-        let screen = &*screen;
-        match screen {
-            "bitpanda_screen" => self.config.bitpanda_screen_active,
-            "weather_screen" => self.config.weather_screen_active,
-            "media_info_screen" => self.config.media_screen_active,
-            "system_info_screen" => self.config.system_info_screen_active,
-            "current_date_screen" => self.config.current_date_screen_active,
-            "ice_screen" => self.config.ice_screen_active,
-            _ => false,
+        match self.config.screens.get(&screen) {
+            Some(val) => val.active,
+            None => match self.config.screens.insert(
+                screen,
+                ScreenConfig {
+                    active: true,
+                    config_attributes: HashMap::new(),
+                },
+            ) {
+                Some(screen_config) => screen_config.active,
+                None => false,
+            },
         }
     }
 
     pub fn set_screen_status(&mut self, screen: String, enabled: bool) {
-        let screen = &*screen;
-        match screen {
-            "bitpanda_screen" => {
-                self.config.bitpanda_screen_active = enabled;
-            }
-            "weather_screen" => {
-                self.config.weather_screen_active = enabled;
-            }
-            "media_info_screen" => {
-                self.config.media_screen_active = enabled;
-            }
-            "system_info_screen" => {
-                self.config.system_info_screen_active = enabled;
-            }
-            "current_date_screen" => {
-                self.config.current_date_screen_active = enabled;
-            }
-            "ice_screen" => {
-                self.config.ice_screen_active = enabled;
-            }
-            _ => {}
-        }
+        self.config.set_screen_active(screen, enabled);
     }
 
-    pub fn get_value(&self, key: &str) -> String {
-        match key {
-            "bitpanda_api_key" => {
-                return self.config.bitpanda_api_key.to_string();
-            }
-            "weather_location" => {
-                return self.config.weather_location.to_string();
-            }
-            _ => String::new(),
+    pub fn get_value(&self, screen: &str, key: &str) -> String {
+        match self.config.screens.get(screen) {
+            Some(screen_config) => match screen_config.config_attributes.get(key) {
+                Some(value) => value.clone(),
+                None => "".into(),
+            },
+            None => "".into(),
         }
     }
 
     // TODO: implement me for Boolean/Float values!
-    pub fn set_value(&mut self, key: String, value: String) {
-        let key = &*key;
-        match key {
-            "bitpanda_api_key" => {
-                self.config.bitpanda_api_key = value;
-            }
-            "weather_location" => {
-                self.config.weather_location = value;
-            }
-            _ => {}
-        }
+    pub fn set_value(&mut self, screen: String, key: String, value: String) {
+        self.config.set_screen_value(screen, key, value);
     }
 }

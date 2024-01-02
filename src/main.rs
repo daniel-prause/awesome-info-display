@@ -13,6 +13,7 @@ mod weather;
 
 use debounce::EventDebouncer;
 use device::*;
+use glob::glob;
 use helpers::keyboard::{self, set_last_key, start_global_key_grabber};
 use helpers::power::window_proc;
 use helpers::{convert_image::*, power::register_power_broadcast};
@@ -23,7 +24,6 @@ use lazy_static::lazy_static;
 use named_lock::NamedLock;
 use named_lock::Result;
 use once_cell::sync::Lazy;
-
 use rusttype::Font as ft;
 use std::{
     collections::HashMap,
@@ -179,7 +179,7 @@ enum Message {
     ScreenStatusChanged(bool, String),
     KeyboardEventOccurred(iced::keyboard::KeyCode, u32),
     WindowEventOccurred(iced::Event),
-    ConfigValueChanged(String, String),
+    ConfigValueChanged(String, String, String),
 }
 
 impl Application for AwesomeDisplay {
@@ -235,7 +235,23 @@ impl Application for AwesomeDisplay {
             String::from("Ice Sorts"),
             String::from("ice_screen"),
             font.clone(),
+            config_manager.clone(),
         )));
+
+        // look for plugins - windows only right now
+        for entry in glob("./*.dll").expect("Failed to read glob pattern") {
+            match entry {
+                Ok(path) => {
+                    // load email screen
+                    screens.push(Box::new(screens::plugin_screen::PluginScreen::new(
+                        font.clone(),
+                        config_manager.clone(),
+                        path,
+                    )));
+                }
+                Err(e) => println!("Failed to load plugins: {:?}", e),
+            }
+        }
 
         let this = AwesomeDisplay {
             screens: Mutex::new(screen_manager::ScreenManager::new(screens)),
@@ -393,8 +409,11 @@ impl Application for AwesomeDisplay {
                     screen_manager.set_status_for_screen(&screen, status);
                 }
             }
-            Message::ConfigValueChanged(key, value) => {
-                self.config_manager.write().unwrap().set_value(key, value);
+            Message::ConfigValueChanged(screen, key, value) => {
+                self.config_manager
+                    .write()
+                    .unwrap()
+                    .set_value(screen, key, value);
             }
             _ => (),
         }
@@ -520,11 +539,15 @@ impl Application for AwesomeDisplay {
                     .config_manager
                     .read()
                     .unwrap()
-                    .get_value("bitpanda_api_key")
+                    .get_value("bitpanda_screen", "bitpanda_api_key")
                     .to_string(),
             )
             .on_input(move |value: String| {
-                Message::ConfigValueChanged("bitpanda_api_key".into(), value)
+                Message::ConfigValueChanged(
+                    "bitpanda_screen".into(),
+                    "bitpanda_api_key".into(),
+                    value,
+                )
             })
             .password()
             .width(Length::Fixed(200f32))
@@ -538,10 +561,14 @@ impl Application for AwesomeDisplay {
                     .config_manager
                     .read()
                     .unwrap()
-                    .get_value("weather_location"),
+                    .get_value("weather_screen", "weather_location"),
             )
             .on_input(move |value: String| {
-                Message::ConfigValueChanged("weather_location".into(), value)
+                Message::ConfigValueChanged(
+                    "weather_screen".into(),
+                    "weather_location".into(),
+                    value,
+                )
             })
             .style(iced::theme::TextInput::Custom(Box::new(
                 style::TextInput {},

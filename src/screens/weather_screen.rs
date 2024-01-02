@@ -253,7 +253,7 @@ impl WeatherScreen {
         let mut this = WeatherScreen {
             screen: Screen {
                 description,
-                key,
+                key: key.clone(),
                 font,
                 config_manager: config_manager.clone(),
                 active: active.clone(),
@@ -281,8 +281,7 @@ impl WeatherScreen {
                             let location = config_manager
                                 .read()
                                 .unwrap()
-                                .config
-                                .weather_location
+                                .get_value(key.clone().as_str(), "weather_location")
                                 .clone();
                             // get locations first
                             //let locations = weather::location::get_location(location.into());

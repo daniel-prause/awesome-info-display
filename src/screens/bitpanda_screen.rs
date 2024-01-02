@@ -162,7 +162,7 @@ impl BitpandaScreen {
                 font,
                 symbols,
                 config_manager: config_manager.clone(),
-                key,
+                key: key.clone(),
                 active: active.clone(),
                 handle: Some(thread::spawn(move || {
                     let mut last_update = SystemTime::UNIX_EPOCH;
@@ -175,8 +175,7 @@ impl BitpandaScreen {
                         let bitpanda_api_key = config_manager
                             .read()
                             .unwrap()
-                            .config
-                            .bitpanda_api_key
+                            .get_value(key.clone().as_str(), "bitpanda_api_key")
                             .clone();
 
                         if !bitpanda_api_key.is_empty() {
