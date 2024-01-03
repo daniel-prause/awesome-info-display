@@ -19,13 +19,18 @@ pub struct PluginScreen {
     receiver: Receiver<ExchangeFormat>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ExchangeFormat {
-    pub texts: Vec<Text>,
-    pub images: Vec<Image>,
+    pub items: Vec<Item>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Clone, Serialize, Deserialize)]
+pub enum Item {
+    Text(Text),
+    Image(Image),
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Text {
     pub value: String,
     pub x: i32,
@@ -36,7 +41,7 @@ pub struct Text {
     pub symbol: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Image {
     pub value: Vec<u8>,
     pub x: u32,
@@ -47,10 +52,7 @@ pub struct Image {
 
 impl Default for ExchangeFormat {
     fn default() -> ExchangeFormat {
-        ExchangeFormat {
-            texts: vec![],
-            images: vec![],
-        }
+        ExchangeFormat { items: vec![] }
     }
 }
 
@@ -85,46 +87,47 @@ impl PluginScreen {
         image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
         exchange_format: ExchangeFormat,
     ) {
-        // draw text parts
-        for text in exchange_format.texts.iter() {
-            // determine color
-            let color;
-            if text.color.len() != 3 {
-                color = Rgb([text.color[0], text.color[1], text.color[2]]);
-            } else {
-                color = Rgb([255, 255, 255])
+        for item in exchange_format.items.iter() {
+            match item {
+                Item::Text(text) => {
+                    // determine color
+                    let color;
+                    if text.color.len() != 3 {
+                        color = Rgb([text.color[0], text.color[1], text.color[2]]);
+                    } else {
+                        color = Rgb([255, 255, 255])
+                    }
+
+                    // determine font
+                    let font;
+                    if text.symbol {
+                        font = &self.screen.symbols;
+                    } else {
+                        font = &self.screen.font;
+                    }
+
+                    // draw text
+                    draw_text_mut(
+                        image,
+                        color,
+                        text.x,
+                        text.y,
+                        Scale {
+                            x: text.scale_x,
+                            y: text.scale_y,
+                        },
+                        font,
+                        &text.value,
+                    );
+                }
+                Item::Image(overlay_image) => {
+                    let mut overlay = RgbImage::new(overlay_image.width, overlay_image.height);
+                    overlay.copy_from_slice(overlay_image.value.as_bytes());
+                    image
+                        .copy_from(&overlay, overlay_image.x, overlay_image.y)
+                        .unwrap_or_default();
+                }
             }
-
-            // determine font
-            let font;
-            if text.symbol {
-                font = &self.screen.symbols;
-            } else {
-                font = &self.screen.font;
-            }
-
-            // draw text
-            draw_text_mut(
-                image,
-                color,
-                text.x,
-                text.y,
-                Scale {
-                    x: text.scale_x,
-                    y: text.scale_y,
-                },
-                font,
-                &text.value,
-            );
-        }
-
-        // draw images
-        for overlay_image in exchange_format.images.iter() {
-            let mut overlay = RgbImage::new(overlay_image.width, overlay_image.height);
-            overlay.copy_from_slice(overlay_image.value.as_bytes());
-            image
-                .copy_from(&overlay, overlay_image.x, overlay_image.y)
-                .unwrap_or_default();
         }
     }
 
