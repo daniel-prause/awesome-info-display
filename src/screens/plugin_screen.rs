@@ -1,7 +1,7 @@
 use crate::config_manager::ConfigManager;
 use crate::screens::{BasicScreen, Screen, Screenable};
 use crossbeam_channel::{bounded, Receiver, Sender};
-use image::{ImageBuffer, Rgb, RgbImage};
+use image::{EncodableLayout, GenericImage, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use rusttype::{Font, Scale};
 use serde::{Deserialize, Serialize};
@@ -39,8 +39,8 @@ pub struct Text {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Image {
     pub value: Vec<u8>,
-    pub x: i32,
-    pub y: i32,
+    pub x: u32,
+    pub y: u32,
     pub width: u32,
     pub height: u32,
 }
@@ -102,6 +102,7 @@ impl PluginScreen {
             } else {
                 font = &self.screen.font;
             }
+
             // draw text
             draw_text_mut(
                 image,
@@ -116,7 +117,15 @@ impl PluginScreen {
                 &text.value,
             );
         }
-        // TODO: draw images!
+
+        // draw images
+        for overlay_image in exchange_format.images.iter() {
+            let mut overlay = RgbImage::new(overlay_image.width, overlay_image.height);
+            overlay.copy_from_slice(overlay_image.value.as_bytes());
+            image
+                .copy_from(&overlay, overlay_image.x, overlay_image.y)
+                .unwrap_or_default();
+        }
     }
 
     pub fn new(
