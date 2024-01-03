@@ -245,6 +245,7 @@ impl Application for AwesomeDisplay {
                     // load email screen
                     screens.push(Box::new(screens::plugin_screen::PluginScreen::new(
                         font.clone(),
+                        symbols.clone(),
                         config_manager.clone(),
                         path,
                     )));
