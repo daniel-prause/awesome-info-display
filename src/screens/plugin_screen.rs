@@ -1,10 +1,10 @@
 use crate::config_manager::ConfigManager;
 use crate::screens::{BasicScreen, Screen, Screenable};
 use crossbeam_channel::{bounded, Receiver, Sender};
+use exchange_format::*;
 use image::{EncodableLayout, GenericImage, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use rusttype::{Font, Scale};
-use serde::{Deserialize, Serialize};
 use std::ffi::CString;
 use std::path::PathBuf;
 use std::{
@@ -17,43 +17,6 @@ use std::{
 pub struct PluginScreen {
     screen: Screen,
     receiver: Receiver<ExchangeFormat>,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct ExchangeFormat {
-    pub items: Vec<Item>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum Item {
-    Text(Text),
-    Image(Image),
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Text {
-    pub value: String,
-    pub x: i32,
-    pub y: i32,
-    pub scale_x: f32,
-    pub scale_y: f32,
-    pub color: Vec<u8>, // RGB
-    pub symbol: bool,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Image {
-    pub value: Vec<u8>,
-    pub x: u32,
-    pub y: u32,
-    pub width: u32,
-    pub height: u32,
-}
-
-impl Default for ExchangeFormat {
-    fn default() -> ExchangeFormat {
-        ExchangeFormat { items: vec![] }
-    }
 }
 
 impl Screenable for PluginScreen {
