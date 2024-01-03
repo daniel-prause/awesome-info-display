@@ -115,7 +115,7 @@ impl PluginScreen {
                 .get(b"get_description")
                 .expect("Get description not found!");
         }
-        let this = PluginScreen {
+        let mut this = PluginScreen {
             screen: Screen {
                 description: unsafe {
                     CString::from_raw(get_description())
@@ -157,6 +157,8 @@ impl PluginScreen {
             },
             receiver: rx,
         };
+        let exchange_format = ExchangeFormat::default();
+        this.draw_screen(exchange_format);
         this
     }
 }
