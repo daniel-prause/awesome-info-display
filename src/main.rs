@@ -17,7 +17,9 @@ use exchange_format::ConfigParam;
 use glob::glob;
 use helpers::keyboard::{self, set_last_key, start_global_key_grabber};
 use helpers::power::window_proc;
-use helpers::{convert_image::*, power::register_power_broadcast};
+use helpers::{
+    convert_image::*, power::register_power_broadcast, text_manipulation::humanize_string,
+};
 use iced::widget::Text;
 use iced::{executor, time, window, Application, Command, Element, Length, Settings};
 use image::ImageFormat;
@@ -579,33 +581,39 @@ impl Application for AwesomeDisplay {
         }
 
         let mut left_column_after_screens = vec![
-            iced::widget::text_input("Bitpanda Api Key", bitpanda_api_key.as_str())
-                .on_input(move |value: String| {
-                    Message::ConfigValueChanged(
-                        "bitpanda_screen".into(),
-                        "bitpanda_api_key".into(),
-                        exchange_format::ConfigParam::String(value),
-                    )
-                })
-                .password()
-                .width(Length::Fixed(200f32))
-                .style(iced::theme::TextInput::Custom(Box::new(
-                    style::TextInput {},
-                )))
-                .into(),
-            iced::widget::TextInput::new("Weather Location", weather_location.as_str())
-                .on_input(move |value: String| {
-                    Message::ConfigValueChanged(
-                        "weather_screen".into(),
-                        "weather_location".into(),
-                        exchange_format::ConfigParam::String(value),
-                    )
-                })
-                .style(iced::theme::TextInput::Custom(Box::new(
-                    style::TextInput {},
-                )))
-                .width(Length::Fixed(200f32))
-                .into(),
+            iced::widget::text_input(
+                humanize_string("bitpanda_api_key").as_str(),
+                bitpanda_api_key.as_str(),
+            )
+            .on_input(move |value: String| {
+                Message::ConfigValueChanged(
+                    "bitpanda_screen".into(),
+                    "bitpanda_api_key".into(),
+                    exchange_format::ConfigParam::String(value),
+                )
+            })
+            .password()
+            .width(Length::Fixed(200f32))
+            .style(iced::theme::TextInput::Custom(Box::new(
+                style::TextInput {},
+            )))
+            .into(),
+            iced::widget::TextInput::new(
+                humanize_string("weather_location").as_str(),
+                weather_location.as_str(),
+            )
+            .on_input(move |value: String| {
+                Message::ConfigValueChanged(
+                    "weather_screen".into(),
+                    "weather_location".into(),
+                    exchange_format::ConfigParam::String(value),
+                )
+            })
+            .style(iced::theme::TextInput::Custom(Box::new(
+                style::TextInput {},
+            )))
+            .width(Length::Fixed(200f32))
+            .into(),
             iced::widget::button(
                 Text::new("Save config").horizontal_alignment(iced::alignment::Horizontal::Center),
             )
