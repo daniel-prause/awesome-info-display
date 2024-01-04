@@ -172,11 +172,25 @@ impl BitpandaScreen {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
                         }
-                        let bitpanda_api_key = config_manager
+                        let bitpanda_api_key_option = config_manager
                             .read()
                             .unwrap()
                             .get_value(key.clone().as_str(), "bitpanda_api_key")
                             .clone();
+                        let bitpanda_api_key: String;
+                        match bitpanda_api_key_option {
+                            Some(config_param) => match config_param {
+                                exchange_format::ConfigParam::String(key) => {
+                                    bitpanda_api_key = key;
+                                }
+                                _ => {
+                                    bitpanda_api_key = String::new();
+                                }
+                            },
+                            None => {
+                                bitpanda_api_key = String::new();
+                            }
+                        }
 
                         if !bitpanda_api_key.is_empty() {
                             match is_overdue(last_update) {

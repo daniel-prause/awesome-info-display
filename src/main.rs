@@ -13,6 +13,7 @@ mod weather;
 
 use debounce::EventDebouncer;
 use device::*;
+use exchange_format::ConfigParam;
 use glob::glob;
 use helpers::keyboard::{self, set_last_key, start_global_key_grabber};
 use helpers::power::window_proc;
@@ -179,7 +180,7 @@ enum Message {
     ScreenStatusChanged(bool, String),
     KeyboardEventOccurred(iced::keyboard::KeyCode, u32),
     WindowEventOccurred(iced::Event),
-    ConfigValueChanged(String, String, String),
+    ConfigValueChanged(String, String, ConfigParam),
 }
 
 impl Application for AwesomeDisplay {
@@ -533,49 +534,78 @@ impl Application for AwesomeDisplay {
             column_parts.push(special_checkbox(screen.2, screen.1, screen.0));
         }
 
+        // TODO: find a way to generate these fields dynamically
+        let bitpanda_api_key_option = &self
+            .config_manager
+            .read()
+            .unwrap()
+            .get_value("bitpanda_screen", "bitpanda_api_key");
+
+        let bitpanda_api_key;
+        match bitpanda_api_key_option {
+            Some(config_param) => match config_param {
+                exchange_format::ConfigParam::String(key) => {
+                    bitpanda_api_key = key.clone();
+                }
+                _ => {
+                    bitpanda_api_key = String::new();
+                }
+            },
+            None => {
+                bitpanda_api_key = String::new();
+            }
+        }
+
+        // TODO: find a way to generate these fields dynamically
+        let weather_location_option = &self
+            .config_manager
+            .read()
+            .unwrap()
+            .get_value("weather_screen", "weather_location");
+
+        let weather_location;
+        match weather_location_option {
+            Some(config_param) => match config_param {
+                exchange_format::ConfigParam::String(key) => {
+                    weather_location = key.clone();
+                }
+                _ => {
+                    weather_location = String::new();
+                }
+            },
+            None => {
+                weather_location = String::new();
+            }
+        }
+
         let mut left_column_after_screens = vec![
-            iced::widget::text_input(
-                "Bitpanda Api Key",
-                &self
-                    .config_manager
-                    .read()
-                    .unwrap()
-                    .get_value("bitpanda_screen", "bitpanda_api_key")
-                    .to_string(),
-            )
-            .on_input(move |value: String| {
-                Message::ConfigValueChanged(
-                    "bitpanda_screen".into(),
-                    "bitpanda_api_key".into(),
-                    value,
-                )
-            })
-            .password()
-            .width(Length::Fixed(200f32))
-            .style(iced::theme::TextInput::Custom(Box::new(
-                style::TextInput {},
-            )))
-            .into(),
-            iced::widget::TextInput::new(
-                "Weather Location",
-                &self
-                    .config_manager
-                    .read()
-                    .unwrap()
-                    .get_value("weather_screen", "weather_location"),
-            )
-            .on_input(move |value: String| {
-                Message::ConfigValueChanged(
-                    "weather_screen".into(),
-                    "weather_location".into(),
-                    value,
-                )
-            })
-            .style(iced::theme::TextInput::Custom(Box::new(
-                style::TextInput {},
-            )))
-            .width(Length::Fixed(200f32))
-            .into(),
+            iced::widget::text_input("Bitpanda Api Key", bitpanda_api_key.as_str())
+                .on_input(move |value: String| {
+                    Message::ConfigValueChanged(
+                        "bitpanda_screen".into(),
+                        "bitpanda_api_key".into(),
+                        exchange_format::ConfigParam::String(value),
+                    )
+                })
+                .password()
+                .width(Length::Fixed(200f32))
+                .style(iced::theme::TextInput::Custom(Box::new(
+                    style::TextInput {},
+                )))
+                .into(),
+            iced::widget::TextInput::new("Weather Location", weather_location.as_str())
+                .on_input(move |value: String| {
+                    Message::ConfigValueChanged(
+                        "weather_screen".into(),
+                        "weather_location".into(),
+                        exchange_format::ConfigParam::String(value),
+                    )
+                })
+                .style(iced::theme::TextInput::Custom(Box::new(
+                    style::TextInput {},
+                )))
+                .width(Length::Fixed(200f32))
+                .into(),
             iced::widget::button(
                 Text::new("Save config").horizontal_alignment(iced::alignment::Horizontal::Center),
             )

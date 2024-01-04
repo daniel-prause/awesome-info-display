@@ -1,5 +1,6 @@
 use crate::config::{Config, ScreenConfig};
 
+use exchange_format::ConfigParam;
 use serde::{Deserialize, Serialize};
 
 use std::{
@@ -92,18 +93,17 @@ impl ConfigManager {
         self.config.set_screen_active(screen, enabled);
     }
 
-    pub fn get_value(&self, screen: &str, key: &str) -> String {
+    pub fn get_value(&self, screen: &str, key: &str) -> Option<ConfigParam> {
         match self.config.screens.get(screen) {
             Some(screen_config) => match screen_config.config_attributes.get(key) {
-                Some(value) => value.clone(),
-                None => "".into(),
+                Some(value) => Some(value.clone()),
+                None => None,
             },
-            None => "".into(),
+            None => None,
         }
     }
 
-    // TODO: implement me for Boolean/Float values!
-    pub fn set_value(&mut self, screen: String, key: String, value: String) {
+    pub fn set_value(&mut self, screen: String, key: String, value: ConfigParam) {
         self.config.set_screen_value(screen, key, value);
     }
 }

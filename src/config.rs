@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use exchange_format::ConfigParam;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -12,7 +13,7 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ScreenConfig {
     pub active: bool,
-    pub config_attributes: HashMap<String, String>, // for now, we will only allow string attributes
+    pub config_attributes: HashMap<String, ConfigParam>,
 }
 
 impl Config {
@@ -31,7 +32,7 @@ impl Config {
         }
     }
 
-    pub fn set_screen_value(&mut self, screen: String, key: String, value: String) {
+    pub fn set_screen_value(&mut self, screen: String, key: String, value: ConfigParam) {
         match self.screens.get_mut(&screen) {
             Some(config) => {
                 config.config_attributes.insert(key, value);

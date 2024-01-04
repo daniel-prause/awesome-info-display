@@ -278,11 +278,27 @@ impl WeatherScreen {
                         // get current weather for location
                         if last_update.is_none() || last_update.unwrap().elapsed().as_secs() > 60 {
                             last_update = Some(Instant::now());
-                            let location = config_manager
+
+                            let location_option = config_manager
                                 .read()
                                 .unwrap()
                                 .get_value(key.clone().as_str(), "weather_location")
                                 .clone();
+
+                            let location: String;
+                            match location_option {
+                                Some(config_param) => match config_param {
+                                    exchange_format::ConfigParam::String(key) => {
+                                        location = key;
+                                    }
+                                    _ => {
+                                        location = String::new();
+                                    }
+                                },
+                                None => {
+                                    location = String::new();
+                                }
+                            }
                             // get locations first
                             //let locations = weather::location::get_location(location.into());
                             let locations = location::get_location(location);
