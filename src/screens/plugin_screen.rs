@@ -107,6 +107,7 @@ impl PluginScreen {
         // load library
         let get_key: libloading::Symbol<unsafe extern "C" fn() -> *mut i8>;
         let get_description: libloading::Symbol<unsafe extern "C" fn() -> *mut i8>;
+        let get_config_layout: libloading::Symbol<unsafe extern "C" fn() -> *mut i8>;
         let lib: Arc<libloading::Library>;
         unsafe {
             lib = Arc::new(libloading::Library::new(library_path).expect("Failed to load library"));
@@ -114,6 +115,9 @@ impl PluginScreen {
             get_description = lib
                 .get(b"get_description")
                 .expect("Get description not found!");
+            get_config_layout = lib
+                .get(b"get_config_layout")
+                .expect("Get config layout not found!");
         }
         let mut this = PluginScreen {
             screen: Screen {
@@ -128,6 +132,14 @@ impl PluginScreen {
                         .to_owned()
                         .to_string_lossy()
                         .to_string()
+                },
+                config_layout: unsafe {
+                    ExchangeableConfig::from(
+                        CString::from_raw(get_config_layout())
+                            .to_owned()
+                            .to_string_lossy()
+                            .to_string(),
+                    )
                 },
                 font,
                 symbols,

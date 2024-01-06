@@ -546,8 +546,8 @@ impl Application for AwesomeDisplay {
         let bitpanda_api_key;
         match bitpanda_api_key_option {
             Some(config_param) => match config_param {
-                exchange_format::ConfigParam::String(key) => {
-                    bitpanda_api_key = key.clone();
+                exchange_format::ConfigParam::String(value) => {
+                    bitpanda_api_key = value.clone();
                 }
                 _ => {
                     bitpanda_api_key = String::new();
@@ -568,8 +568,8 @@ impl Application for AwesomeDisplay {
         let weather_location;
         match weather_location_option {
             Some(config_param) => match config_param {
-                exchange_format::ConfigParam::String(key) => {
-                    weather_location = key.clone();
+                exchange_format::ConfigParam::String(value) => {
+                    weather_location = value.clone();
                 }
                 _ => {
                     weather_location = String::new();
@@ -633,7 +633,7 @@ impl Application for AwesomeDisplay {
             .align_items(iced::Alignment::Center)
             .spacing(10);
 
-        let col2: iced::widget::Column<Message> = iced::widget::Column::new()
+        let mut col2: iced::widget::Column<Message> = iced::widget::Column::new()
             .padding(20)
             .align_items(iced::Alignment::Center)
             .width(Length::Fill)
@@ -650,8 +650,93 @@ impl Application for AwesomeDisplay {
                 companion_screen_image
                     .width(Length::Fixed(320f32))
                     .height(Length::Fixed(170f32)),
-            );
+            )
+            .push(iced::widget::Row::new().height(50));
+        // push config fields:
+        for (key, item) in screen_manager.current_screen().config_layout().params {
+            let screen_key: String = screen_manager.current_screen().key().clone();
+            let config_param_option = &self
+                .config_manager
+                .read()
+                .unwrap()
+                .get_value(&screen_key, key.as_str());
 
+            match item {
+                ConfigParam::String(value) => {
+                    let field_value: String;
+                    match config_param_option {
+                        Some(config_param) => match config_param {
+                            ConfigParam::String(saved_value) => {
+                                field_value = saved_value.clone();
+                            }
+                            _ => {
+                                field_value = value;
+                            }
+                        },
+                        _ => {
+                            field_value = value;
+                        }
+                    }
+                    col2 = col2.push(
+                        iced::widget::TextInput::new(
+                            humanize_string(&key).as_str(),
+                            field_value.as_str(),
+                        )
+                        .on_input(move |value: String| {
+                            Message::ConfigValueChanged(
+                                screen_key.clone(),
+                                key.clone(),
+                                exchange_format::ConfigParam::String(value),
+                            )
+                        })
+                        .style(iced::theme::TextInput::Custom(Box::new(
+                            style::TextInput {},
+                        )))
+                        .width(Length::Fixed(200f32)),
+                    );
+                }
+                ConfigParam::Password(value) => {
+                    let field_value: String;
+                    match config_param_option {
+                        Some(config_param) => match config_param {
+                            ConfigParam::Password(saved_value) => {
+                                field_value = saved_value.clone();
+                            }
+                            _ => {
+                                field_value = value;
+                            }
+                        },
+                        _ => {
+                            field_value = value;
+                        }
+                    }
+                    col2 = col2.push(
+                        iced::widget::TextInput::new(
+                            humanize_string(&key).as_str(),
+                            field_value.as_str(),
+                        )
+                        .on_input(move |value: String| {
+                            Message::ConfigValueChanged(
+                                screen_key.clone(),
+                                key.clone(),
+                                exchange_format::ConfigParam::Password(value),
+                            )
+                        })
+                        .password()
+                        .style(iced::theme::TextInput::Custom(Box::new(
+                            style::TextInput {},
+                        )))
+                        .width(Length::Fixed(200f32)),
+                    );
+                }
+                _ => {} /*
+                        ConfigParam::Integer(value) => {}
+                        ConfigParam::Float(value) => {}
+                        ConfigParam::Password(value) => {}
+                         */
+            }
+        }
+        // TODO: check, which screen is the current screen and render only the elements of this screen.
         iced::widget::Row::new().push(col1).push(col2).into()
     }
 }

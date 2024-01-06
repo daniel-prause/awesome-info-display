@@ -1,4 +1,5 @@
 use crate::config_manager::ConfigManager;
+use exchange_format::ExchangeableConfig;
 use rusttype::Font;
 use std::rc::Rc;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
@@ -24,6 +25,7 @@ pub struct Screen {
     pub mode: u32,
     pub mode_timeout: Option<Instant>,
     pub config_manager: Arc<RwLock<ConfigManager>>,
+    pub config_layout: ExchangeableConfig,
 }
 
 impl Default for Screen {
@@ -45,6 +47,7 @@ impl Default for Screen {
             mode: 0,
             mode_timeout: Some(Instant::now()),
             config_manager: Arc::new(RwLock::new(ConfigManager::new(None))),
+            config_layout: ExchangeableConfig::default(),
         }
     }
 }
@@ -59,6 +62,11 @@ pub trait BasicScreen: Screenable {
     fn description(&mut self) -> String {
         let screen = self.get_screen();
         screen.description.clone()
+    }
+
+    fn config_layout(&mut self) -> exchange_format::ExchangeableConfig {
+        let screen = self.get_screen();
+        screen.config_layout.clone()
     }
 
     fn key(&mut self) -> String {
