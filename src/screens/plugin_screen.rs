@@ -15,7 +15,7 @@ use std::{
     time::Duration,
 };
 
-pub struct Lib {
+struct Lib {
     library: Library,
 }
 
