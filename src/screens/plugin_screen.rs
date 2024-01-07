@@ -108,9 +108,9 @@ impl PluginScreen {
         let get_key: libloading::Symbol<unsafe extern "C" fn() -> *mut i8>;
         let get_description: libloading::Symbol<unsafe extern "C" fn() -> *mut i8>;
         let get_config_layout: libloading::Symbol<unsafe extern "C" fn() -> *mut i8>;
-        let lib: Arc<libloading::Library>;
+        let lib: libloading::Library;
         unsafe {
-            lib = Arc::new(libloading::Library::new(library_path).expect("Failed to load library"));
+            lib = libloading::Library::new(library_path).expect("Failed to load library");
             get_key = lib.get(b"get_key").expect("Get key not found!");
             get_description = lib
                 .get(b"get_description")
@@ -148,18 +148,19 @@ impl PluginScreen {
                 handle: Some(thread::spawn(move || {
                     let sender = tx.to_owned();
                     let active = active;
-                    let lib: Arc<libloading::Library> = lib.clone();
+                    let set_current_config: libloading::Symbol<extern "C" fn(*mut i8)> =
+                        unsafe { lib.get(b"set_current_config").expect("Function gone :(") };
+                    let get_key: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> =
+                        unsafe { lib.get(b"get_key").expect("Function gone :(") };
+                    let get_screen: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> =
+                        unsafe { lib.get(b"get_screen").expect("Function gone :(") };
+
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
                         }
 
                         unsafe {
-                            // 1 - set current config
-                            let set_current_config: libloading::Symbol<extern "C" fn(*mut i8)> =
-                                lib.get(b"set_current_config").expect("Function gone :(");
-                            let get_key: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> =
-                                lib.get(b"get_key").expect("Function gone :(");
                             let serialized_screen_config = config_manager
                                 .read()
                                 .unwrap()
@@ -168,8 +169,6 @@ impl PluginScreen {
                             set_current_config(serialized_screen_config);
 
                             // 2 - get current screen
-                            let get_screen: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> =
-                                lib.get(b"get_screen").expect("Function gone :(");
                             let data = CString::from_raw(get_screen()); // TODO: give copy of config to get_screen
                             let exchange_format =
                                 serde_json::from_str(&data.to_str().unwrap_or_default())
