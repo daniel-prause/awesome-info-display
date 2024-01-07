@@ -101,24 +101,22 @@ impl PluginScreen {
         library_path: PathBuf,
     ) -> PluginScreen {
         let (tx, rx): (Sender<ExchangeFormat>, Receiver<ExchangeFormat>) = bounded(1);
-        // load library:
-
         let active = Arc::new(AtomicBool::new(false));
+
         // load library
-        let get_key: libloading::Symbol<unsafe extern "C" fn() -> *mut i8>;
-        let get_description: libloading::Symbol<unsafe extern "C" fn() -> *mut i8>;
-        let get_config_layout: libloading::Symbol<unsafe extern "C" fn() -> *mut i8>;
-        let lib: libloading::Library;
-        unsafe {
-            lib = libloading::Library::new(library_path).expect("Failed to load library");
-            get_key = lib.get(b"get_key").expect("Get key not found!");
-            get_description = lib
-                .get(b"get_description")
-                .expect("Get description not found!");
-            get_config_layout = lib
-                .get(b"get_config_layout")
-                .expect("Get config layout not found!");
-        }
+        let lib: libloading::Library =
+            unsafe { libloading::Library::new(library_path).expect("Failed to load library") };
+        let get_key: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> =
+            unsafe { lib.get(b"get_key").expect("Get key not found!") };
+        let get_description: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> = unsafe {
+            lib.get(b"get_description")
+                .expect("Get description not found!")
+        };
+        let get_config_layout: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> = unsafe {
+            lib.get(b"get_config_layout")
+                .expect("Get config layout not found!")
+        };
+
         let mut this = PluginScreen {
             screen: Screen {
                 description: unsafe {
