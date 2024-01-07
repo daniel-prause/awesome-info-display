@@ -143,6 +143,7 @@ impl PluginScreen {
                 },
                 font,
                 symbols,
+                config_manager: config_manager.clone(),
                 active: active.clone(),
                 handle: Some(thread::spawn(move || {
                     let sender = tx.to_owned();
@@ -152,7 +153,21 @@ impl PluginScreen {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
                         }
+
                         unsafe {
+                            // 1 - set current config
+                            let set_current_config: libloading::Symbol<extern "C" fn(*mut i8)> =
+                                lib.get(b"set_current_config").expect("Function gone :(");
+                            let get_key: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> =
+                                lib.get(b"get_key").expect("Function gone :(");
+                            let serialized_screen_config = config_manager
+                                .read()
+                                .unwrap()
+                                .get_screen_config(CString::from_raw(get_key()).to_str().unwrap())
+                                .to_raw();
+                            set_current_config(serialized_screen_config);
+
+                            // 2 - get current screen
                             let get_screen: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> =
                                 lib.get(b"get_screen").expect("Function gone :(");
                             let data = CString::from_raw(get_screen()); // TODO: give copy of config to get_screen
@@ -164,13 +179,11 @@ impl PluginScreen {
                         thread::sleep(Duration::from_millis(1000));
                     }
                 })),
-                config_manager,
                 ..Default::default()
             },
             receiver: rx,
         };
-        let exchange_format = ExchangeFormat::default();
-        this.draw_screen(exchange_format);
+        this.draw_screen(ExchangeFormat::default());
         this
     }
 }

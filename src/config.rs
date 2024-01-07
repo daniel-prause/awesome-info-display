@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-
 use exchange_format::ConfigParam;
+use indexmap::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -13,7 +13,7 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ScreenConfig {
     pub active: bool,
-    pub config_attributes: HashMap<String, ConfigParam>,
+    pub config_attributes: IndexMap<String, ConfigParam>,
 }
 
 impl Config {
@@ -25,7 +25,7 @@ impl Config {
             None => {
                 let new_config = ScreenConfig {
                     active: true,
-                    config_attributes: HashMap::new(),
+                    config_attributes: IndexMap::new(),
                 };
                 self.screens.insert(screen, new_config);
             }
@@ -40,7 +40,7 @@ impl Config {
             None => {
                 let mut new_config = ScreenConfig {
                     active: true,
-                    config_attributes: HashMap::new(),
+                    config_attributes: IndexMap::new(),
                 };
                 new_config.config_attributes.insert(key, value);
                 self.screens.insert(screen, new_config);

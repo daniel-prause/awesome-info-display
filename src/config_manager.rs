@@ -1,6 +1,7 @@
 use crate::config::{Config, ScreenConfig};
 
 use exchange_format::ConfigParam;
+use indexmap::*;
 use serde::{Deserialize, Serialize};
 
 use std::{
@@ -80,7 +81,7 @@ impl ConfigManager {
                 screen,
                 ScreenConfig {
                     active: true,
-                    config_attributes: HashMap::new(),
+                    config_attributes: IndexMap::new(),
                 },
             ) {
                 Some(screen_config) => screen_config.active,
@@ -100,6 +101,18 @@ impl ConfigManager {
                 None => None,
             },
             None => None,
+        }
+    }
+
+    pub fn get_screen_config(&self, screen: &str) -> exchange_format::ExchangeableConfig {
+        exchange_format::ExchangeableConfig {
+            params: self
+                .config
+                .screens
+                .get(screen)
+                .unwrap()
+                .config_attributes
+                .clone(),
         }
     }
 
