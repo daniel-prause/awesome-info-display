@@ -4,6 +4,7 @@ use crossbeam_channel::{bounded, Receiver, Sender};
 use exchange_format::*;
 use image::{EncodableLayout, GenericImage, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
+use libloading::Library;
 use rusttype::{Font, Scale};
 use std::ffi::CString;
 use std::path::PathBuf;
@@ -13,6 +14,79 @@ use std::{
     thread,
     time::Duration,
 };
+
+pub struct Lib {
+    library: Library,
+}
+
+impl Lib {
+    fn new(path_buf: PathBuf) -> Lib {
+        Lib {
+            library: unsafe { libloading::Library::new(path_buf).expect("Failed to load library") },
+        }
+    }
+
+    fn get_key(&self) -> String {
+        let get_key: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> =
+            unsafe { self.library.get(b"get_key").expect("Get key not found!") };
+        unsafe {
+            CString::from_raw(get_key())
+                .to_owned()
+                .to_string_lossy()
+                .to_string()
+        }
+    }
+
+    fn get_description(&self) -> String {
+        let get_description: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> = unsafe {
+            self.library
+                .get(b"get_description")
+                .expect("Get key not found!")
+        };
+        unsafe {
+            CString::from_raw(get_description())
+                .to_owned()
+                .to_string_lossy()
+                .to_string()
+        }
+    }
+
+    fn get_config_layout(&self) -> ExchangeableConfig {
+        let get_config_layout: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> = unsafe {
+            self.library
+                .get(b"get_config_layout")
+                .expect("Get config layout not found!")
+        };
+
+        unsafe {
+            ExchangeableConfig::from(
+                CString::from_raw(get_config_layout())
+                    .to_owned()
+                    .to_string_lossy()
+                    .to_string(),
+            )
+        }
+    }
+
+    fn get_screen(&self) -> ExchangeFormat {
+        let get_screen: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> = unsafe {
+            self.library
+                .get(b"get_screen")
+                .expect("Get screen not found!")
+        };
+
+        unsafe {
+            serde_json::from_str(
+                CString::from_raw(get_screen())
+                    .to_owned()
+                    .to_string_lossy()
+                    .to_string()
+                    .as_str(),
+            )
+            .unwrap_or_default()
+        }
+    }
+}
 
 pub struct PluginScreen {
     screen: Screen,
@@ -104,41 +178,12 @@ impl PluginScreen {
         let active = Arc::new(AtomicBool::new(false));
 
         // load library
-        let lib: libloading::Library =
-            unsafe { libloading::Library::new(library_path).expect("Failed to load library") };
-        let get_key: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> =
-            unsafe { lib.get(b"get_key").expect("Get key not found!") };
-        let get_description: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> = unsafe {
-            lib.get(b"get_description")
-                .expect("Get description not found!")
-        };
-        let get_config_layout: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> = unsafe {
-            lib.get(b"get_config_layout")
-                .expect("Get config layout not found!")
-        };
-
+        let lib: Lib = Lib::new(library_path);
         let mut this = PluginScreen {
             screen: Screen {
-                description: unsafe {
-                    CString::from_raw(get_description())
-                        .to_owned()
-                        .to_string_lossy()
-                        .to_string()
-                },
-                key: unsafe {
-                    CString::from_raw(get_key())
-                        .to_owned()
-                        .to_string_lossy()
-                        .to_string()
-                },
-                config_layout: unsafe {
-                    ExchangeableConfig::from(
-                        CString::from_raw(get_config_layout())
-                            .to_owned()
-                            .to_string_lossy()
-                            .to_string(),
-                    )
-                },
+                description: lib.get_description(),
+                key: lib.get_key(),
+                config_layout: lib.get_config_layout(),
                 font,
                 symbols,
                 config_manager: config_manager.clone(),
@@ -146,33 +191,22 @@ impl PluginScreen {
                 handle: Some(thread::spawn(move || {
                     let sender = tx.to_owned();
                     let active = active;
-                    let set_current_config: libloading::Symbol<extern "C" fn(*mut i8)> =
-                        unsafe { lib.get(b"set_current_config").expect("Function gone :(") };
-                    let get_key: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> =
-                        unsafe { lib.get(b"get_key").expect("Function gone :(") };
-                    let get_screen: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> =
-                        unsafe { lib.get(b"get_screen").expect("Function gone :(") };
 
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
                         }
 
-                        unsafe {
-                            let serialized_screen_config = config_manager
-                                .read()
-                                .unwrap()
-                                .get_screen_config(CString::from_raw(get_key()).to_str().unwrap())
-                                .to_raw();
-                            set_current_config(serialized_screen_config);
+                        let serialized_screen_config = config_manager
+                            .read()
+                            .unwrap()
+                            .get_screen_config(&lib.get_key())
+                            .to_raw();
+                        set_current_config(serialized_screen_config);
 
-                            // 2 - get current screen
-                            let data = CString::from_raw(get_screen()); // TODO: give copy of config to get_screen
-                            let exchange_format =
-                                serde_json::from_str(&data.to_str().unwrap_or_default())
-                                    .unwrap_or_default();
-                            sender.try_send(exchange_format).unwrap_or_default();
-                        }
+                        let exchange_format = lib.get_screen();
+
+                        sender.try_send(exchange_format).unwrap_or_default();
                         thread::sleep(Duration::from_millis(1000));
                     }
                 })),
