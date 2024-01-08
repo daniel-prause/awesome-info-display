@@ -136,12 +136,11 @@ impl PluginScreen {
                     }
 
                     // determine font
-                    let font;
-                    if text.symbol {
-                        font = &self.screen.symbols;
+                    let font = if text.symbol {
+                        &self.screen.symbols
                     } else {
-                        font = &self.screen.font;
-                    }
+                        &self.screen.font
+                    };
 
                     // draw text
                     draw_text_mut(
