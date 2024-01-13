@@ -17,6 +17,7 @@ use exchange_format::ConfigParam;
 use glob::glob;
 use helpers::keyboard::{self, set_last_key, start_global_key_grabber};
 use helpers::power::window_proc;
+use helpers::text_manipulation::determine_field_value;
 use helpers::{
     convert_image::*, power::register_power_broadcast, text_manipulation::humanize_string,
 };
@@ -687,6 +688,47 @@ impl Application for AwesomeDisplay {
                                 screen_key.clone(),
                                 key.clone(),
                                 exchange_format::ConfigParam::String(value),
+                            )
+                        })
+                        .style(iced::theme::TextInput::Custom(Box::new(
+                            style::TextInput {},
+                        )))
+                        .width(Length::Fixed(200f32)),
+                    );
+                }
+                ConfigParam::Integer(value) => {
+                    let field_value: u32;
+                    match config_param_option {
+                        Some(config_param) => match config_param {
+                            ConfigParam::Integer(saved_value) => {
+                                field_value = *saved_value;
+                            }
+                            _ => {
+                                field_value = value;
+                            }
+                        },
+                        _ => {
+                            field_value = value;
+                        }
+                    }
+                    col2 = col2.push(
+                        iced::widget::TextInput::new(
+                            humanize_string(&key).as_str(),
+                            determine_field_value(&field_value.to_string().as_str()).as_str(),
+                        )
+                        .on_input(move |value: String| {
+                            Message::ConfigValueChanged(
+                                screen_key.clone(),
+                                key.clone(),
+                                exchange_format::ConfigParam::Integer({
+                                    let val: String = value
+                                        .to_string()
+                                        .chars()
+                                        .filter(|c| c.is_numeric())
+                                        .collect();
+
+                                    val.parse().unwrap_or(0)
+                                }),
                             )
                         })
                         .style(iced::theme::TextInput::Custom(Box::new(

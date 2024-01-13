@@ -36,3 +36,19 @@ pub fn humanize_string(input: &str) -> String {
 
     filtered_result
 }
+
+pub fn determine_field_value(input: &str) -> String {
+    if input.to_string() == "0" {
+        return "".into();
+    } else {
+        let val: String = input
+            .to_string()
+            .chars()
+            .filter(|c| c.is_numeric())
+            .collect();
+
+        let parsed_val = val.parse().unwrap_or(0);
+
+        parsed_val.min(65535).to_string()
+    }
+}
