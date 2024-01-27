@@ -86,7 +86,6 @@ impl Lib {
     }
 
     fn get_companion_screen(&self) -> ExchangeFormat {
-        // Versuche, das Symbol zu laden
         match unsafe {
             self.library
                 .get::<libloading::Symbol<unsafe extern "C" fn() -> *mut i8>>(
@@ -106,6 +105,16 @@ impl Lib {
                 }
             }
             Err(_) => return ExchangeFormat::default(),
+        }
+    }
+
+    fn set_current_config(&self, config: *mut i8) {
+        match unsafe {
+            self.library
+                .get::<libloading::Symbol<unsafe extern "C" fn(*mut i8)>>(b"set_current_config")
+        } {
+            Ok(set_current_config) => unsafe { set_current_config(config) },
+            Err(_) => {}
         }
     }
 }
@@ -131,7 +140,9 @@ impl BasicScreen for PluginScreen {
             .unwrap()
             .get_screen_config(&self.screen.key)
             .to_raw();
-        set_current_config(serialized_screen_config);
+        self.lib
+            .clone()
+            .set_current_config(serialized_screen_config);
         self.draw_screen(self.lib.clone().get_screen());
         self.draw_companion_screen(self.lib.clone().get_companion_screen());
     }
