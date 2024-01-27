@@ -213,13 +213,6 @@ impl Application for AwesomeDisplay {
             symbols.clone(),
             config_manager.clone(),
         )));
-        screens.push(Box::new(screens::bitpanda_screen::BitpandaScreen::new(
-            String::from("Bitpanda Info"),
-            String::from("bitpanda_screen"),
-            font.clone(),
-            symbols.clone(),
-            config_manager.clone(),
-        )));
         screens.push(Box::new(screens::weather_screen::WeatherScreen::new(
             String::from("Weather Info"),
             String::from("weather_screen"),
@@ -532,28 +525,6 @@ impl Application for AwesomeDisplay {
         }
 
         // TODO: find a way to generate these fields dynamically
-        let bitpanda_api_key_option = &self
-            .config_manager
-            .read()
-            .unwrap()
-            .get_value("bitpanda_screen", "bitpanda_api_key");
-
-        let bitpanda_api_key;
-        match bitpanda_api_key_option {
-            Some(config_param) => match config_param {
-                exchange_format::ConfigParam::String(value) => {
-                    bitpanda_api_key = value.clone();
-                }
-                _ => {
-                    bitpanda_api_key = String::new();
-                }
-            },
-            None => {
-                bitpanda_api_key = String::new();
-            }
-        }
-
-        // TODO: find a way to generate these fields dynamically
         let weather_location_option = &self
             .config_manager
             .read()
@@ -576,23 +547,6 @@ impl Application for AwesomeDisplay {
         }
 
         let mut left_column_after_screens = vec![
-            iced::widget::text_input(
-                humanize_string("bitpanda_api_key").as_str(),
-                bitpanda_api_key.as_str(),
-            )
-            .on_input(move |value: String| {
-                Message::ConfigValueChanged(
-                    "bitpanda_screen".into(),
-                    "bitpanda_api_key".into(),
-                    exchange_format::ConfigParam::String(value),
-                )
-            })
-            .password()
-            .width(Length::Fixed(200f32))
-            .style(iced::theme::TextInput::Custom(Box::new(
-                style::TextInput {},
-            )))
-            .into(),
             iced::widget::TextInput::new(
                 humanize_string("weather_location").as_str(),
                 weather_location.as_str(),

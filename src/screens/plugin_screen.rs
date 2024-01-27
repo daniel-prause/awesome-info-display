@@ -172,7 +172,7 @@ impl PluginScreen {
                 Item::Text(text) => {
                     // determine color
                     let color;
-                    if text.color.len() != 3 {
+                    if text.color.len() == 3 {
                         color = Rgb([text.color[0], text.color[1], text.color[2]]);
                     } else {
                         color = Rgb([255, 255, 255])
