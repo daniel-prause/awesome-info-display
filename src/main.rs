@@ -235,12 +235,6 @@ impl Application for AwesomeDisplay {
                 config_manager.clone(),
             ),
         ));
-        screens.push(Box::new(screens::ice_screen::IceScreen::new(
-            String::from("Ice Sorts"),
-            String::from("ice_screen"),
-            font.clone(),
-            config_manager.clone(),
-        )));
 
         // look for plugins - windows only right now
         for entry in glob("./*.dll").expect("Failed to read glob pattern") {
@@ -772,9 +766,8 @@ impl Application for AwesomeDisplay {
                     );
                 }
                 _ => {} /*
-                        ConfigParam::Integer(value) => {}
+                        TODO: built float value!
                         ConfigParam::Float(value) => {}
-                        ConfigParam::Password(value) => {}
                          */
             }
         }

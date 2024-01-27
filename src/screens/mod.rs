@@ -7,7 +7,6 @@ use std::thread::JoinHandle;
 use std::time::Instant;
 pub mod bitpanda_screen;
 pub mod current_date_screen;
-pub mod ice_screen;
 pub mod media_info_screen;
 pub mod plugin_screen;
 pub mod system_info_screen;

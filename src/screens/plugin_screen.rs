@@ -1,6 +1,5 @@
 use crate::config_manager::ConfigManager;
 use crate::screens::{BasicScreen, Screen, Screenable};
-use crossbeam_channel::{bounded, Receiver, Sender};
 use exchange_format::*;
 use image::{EncodableLayout, GenericImage, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
@@ -10,9 +9,7 @@ use std::ffi::CString;
 use std::path::PathBuf;
 use std::{
     rc::Rc,
-    sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
-    thread,
-    time::Duration,
+    sync::{atomic::AtomicBool, Arc, RwLock},
 };
 
 struct Lib {
@@ -52,22 +49,23 @@ impl Lib {
     }
 
     fn get_config_layout(&self) -> ExchangeableConfig {
-        let get_config_layout: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> = unsafe {
-            self.library
-                .get(b"get_config_layout")
-                .expect("Get config layout not found!")
-        };
+        let get_config_layout: std::result::Result<
+            libloading::Symbol<unsafe extern "C" fn() -> *mut i8>,
+            libloading::Error,
+        > = unsafe { self.library.get(b"get_config_layout") };
 
-        unsafe {
-            ExchangeableConfig::from(
-                CString::from_raw(get_config_layout())
+        match get_config_layout {
+            Ok(config) => ExchangeableConfig::from(unsafe {
+                CString::from_raw(config())
                     .to_owned()
                     .to_string_lossy()
-                    .to_string(),
-            )
+                    .to_string()
+            }),
+            Err(_) => ExchangeableConfig::default(),
         }
     }
 
+    // TODO: maybe give this method parameters of which screen should be drawn
     fn get_screen(&self) -> ExchangeFormat {
         let get_screen: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> = unsafe {
             self.library
@@ -86,11 +84,35 @@ impl Lib {
             .unwrap_or_default()
         }
     }
+
+    fn get_companion_screen(&self) -> ExchangeFormat {
+        // Versuche, das Symbol zu laden
+        match unsafe {
+            self.library
+                .get::<libloading::Symbol<unsafe extern "C" fn() -> *mut i8>>(
+                    b"get_companion_screen",
+                )
+        } {
+            Ok(get_companion_screen) => {
+                return unsafe {
+                    serde_json::from_str(
+                        CString::from_raw(get_companion_screen())
+                            .to_owned()
+                            .to_string_lossy()
+                            .to_string()
+                            .as_str(),
+                    )
+                    .unwrap_or_default()
+                }
+            }
+            Err(_) => return ExchangeFormat::default(),
+        }
+    }
 }
 
 pub struct PluginScreen {
     screen: Screen,
-    receiver: Receiver<ExchangeFormat>,
+    lib: Arc<Lib>,
 }
 
 impl Screenable for PluginScreen {
@@ -101,13 +123,17 @@ impl Screenable for PluginScreen {
 
 impl BasicScreen for PluginScreen {
     fn update(&mut self) {
-        let exchange_format = self.receiver.try_recv();
-        match exchange_format {
-            Ok(state) => {
-                self.draw_screen(state);
-            }
-            Err(_) => {}
-        }
+        // set config
+        let serialized_screen_config = self
+            .screen
+            .config_manager
+            .read()
+            .unwrap()
+            .get_screen_config(&self.screen.key)
+            .to_raw();
+        set_current_config(serialized_screen_config);
+        self.draw_screen(self.lib.clone().get_screen());
+        self.draw_companion_screen(self.lib.clone().get_companion_screen());
     }
 }
 
@@ -117,6 +143,12 @@ impl PluginScreen {
         let mut image = RgbImage::new(256, 64);
         self.draw_exchange_format(&mut image, exchange_format);
         self.screen.main_screen_bytes = image.into_vec();
+    }
+
+    fn draw_companion_screen(&mut self, exchange_format: ExchangeFormat) {
+        let mut image = RgbImage::new(320, 170);
+        self.draw_exchange_format(&mut image, exchange_format);
+        self.screen.companion_screen_bytes = image.into_vec();
     }
 
     pub fn draw_exchange_format(
@@ -173,45 +205,24 @@ impl PluginScreen {
         config_manager: Arc<RwLock<ConfigManager>>,
         library_path: PathBuf,
     ) -> PluginScreen {
-        let (tx, rx): (Sender<ExchangeFormat>, Receiver<ExchangeFormat>) = bounded(1);
         let active = Arc::new(AtomicBool::new(false));
 
         // load library
-        let lib: Lib = Lib::new(library_path);
+        let lib = Arc::new(Lib::new(library_path.clone()));
         let mut this = PluginScreen {
+            lib: lib.clone(),
             screen: Screen {
-                description: lib.get_description(),
-                key: lib.get_key(),
-                config_layout: lib.get_config_layout(),
+                description: lib.clone().get_description(),
+                key: lib.clone().get_key(),
+                config_layout: lib.clone().get_config_layout(),
                 font,
                 symbols,
                 config_manager: config_manager.clone(),
                 active: active.clone(),
-                handle: Some(thread::spawn(move || {
-                    let sender = tx.to_owned();
-                    let active = active;
-
-                    loop {
-                        while !active.load(Ordering::Acquire) {
-                            thread::park();
-                        }
-
-                        let serialized_screen_config = config_manager
-                            .read()
-                            .unwrap()
-                            .get_screen_config(&lib.get_key())
-                            .to_raw();
-                        set_current_config(serialized_screen_config);
-
-                        let exchange_format = lib.get_screen();
-
-                        sender.try_send(exchange_format).unwrap_or_default();
-                        thread::sleep(Duration::from_millis(1000));
-                    }
-                })),
+                // get rid of this..
+                handle: None,
                 ..Default::default()
             },
-            receiver: rx,
         };
         this.draw_screen(ExchangeFormat::default());
         this
