@@ -17,7 +17,11 @@ pub fn set_opts(opts: &mut Options, locations: &Locations) {
     };
 
     // Current weather
-    opts.current_weather = Some(true);
+    opts.current.push("temperature_2m".into());
+    opts.current.push("is_day".into());
+    opts.current.push("weather_code".into());
+    opts.current.push("wind_speed_10m".into());
+    opts.current.push("wind_direction_10m".into());
 
     // Temperature unit
     opts.temperature_unit = Some(open_meteo_rs::forecast::TemperatureUnit::Celsius); // or

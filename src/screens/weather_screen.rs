@@ -309,25 +309,59 @@ impl WeatherScreen {
                                     let closest_location = locations.results[0].clone();
                                     let result = weather::weather_and_forecast(&client, opts);
 
-                                    match result.current_weather {
+                                    match result.current {
                                         Some(current) => {
                                             let mut weather_info: WeatherInfo = Default::default();
-                                            weather_info.is_day = current.is_day.unwrap();
-                                            weather_info.weather_icon =
-                                                current.weathercode.unwrap_or_default() as u8;
+                                            weather_info.is_day = current
+                                                .values
+                                                .get("is_day")
+                                                .unwrap()
+                                                .value
+                                                .as_u64()
+                                                .unwrap()
+                                                as u8;
+                                            weather_info.weather_icon = current
+                                                .values
+                                                .get("weather_code")
+                                                .unwrap()
+                                                .value
+                                                .as_u64()
+                                                .unwrap_or_default()
+                                                as u8;
 
-                                            weather_info.temperature =
-                                                current.temperature.unwrap_or_default();
-                                            weather_info.wind =
-                                                current.windspeed.unwrap_or_default();
-                                            weather_info.wind_direction =
-                                                deg_to_dir(current.winddirection.unwrap())
-                                                    .to_string();
+                                            weather_info.temperature = current
+                                                .values
+                                                .get("temperature_2m")
+                                                .unwrap()
+                                                .value
+                                                .as_f64()
+                                                .unwrap_or_default();
+
+                                            weather_info.wind = current
+                                                .values
+                                                .get("wind_speed_10m")
+                                                .unwrap()
+                                                .value
+                                                .as_f64()
+                                                .unwrap_or_default();
+
+                                            weather_info.wind_direction = deg_to_dir(
+                                                current
+                                                    .values
+                                                    .get("wind_direction_10m")
+                                                    .unwrap()
+                                                    .value
+                                                    .as_f64()
+                                                    .unwrap_or_default(),
+                                            )
+                                            .to_string();
+
                                             weather_info.city = format!(
                                                 "{},{}",
                                                 closest_location.name,
                                                 closest_location.country_code
                                             );
+
                                             // forecast
                                             for weather in result.daily.unwrap().iter() {
                                                 weather_info.weather_forecast.push(
