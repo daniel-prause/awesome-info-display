@@ -220,14 +220,6 @@ impl Application for AwesomeDisplay {
             symbols.clone(),
             config_manager.clone(),
         )));
-        screens.push(Box::new(
-            screens::current_date_screen::CurrentDateScreen::new(
-                String::from("Time Info"),
-                String::from("current_date_screen"),
-                font.clone(),
-                config_manager.clone(),
-            ),
-        ));
 
         // look for plugins - windows only right now
         for entry in glob("./*.dll").expect("Failed to read glob pattern") {
