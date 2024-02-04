@@ -8,7 +8,7 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-audiotags = "0.4.1"
+audiotags = "0.5.0"
 chrono = {version = "0.4.31", features = ["serde"]}
 chrono-tz = "0.8.4"
 cpu-monitor = "0.1.1"
@@ -20,7 +20,7 @@ error-chain = "0.12.4"
 futures = "0.3.29"
 hex-literal = "0.4.1"
 iced = {version = "0.10.0", features = ["canvas", "tokio", "image", "debug"]}
-image = {version = "0.24.7", default-features = false, features = ["ico", "webp-encoder"]}
+image = {version = "=0.24.7", default-features = false, features = ["ico", "webp-encoder"]}
 imageproc = "0.23.0"
 lazy_static = "1.4.0"
 libloading = "0.8.1"
