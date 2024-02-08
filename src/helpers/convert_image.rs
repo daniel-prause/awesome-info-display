@@ -1,8 +1,3 @@
-use image::{
-    codecs::webp::{WebPEncoder, WebPQuality},
-    ImageEncoder,
-};
-
 pub fn convert_to_gray_scale(bytes: &Vec<u8>) -> Vec<u8> {
     let mut buffer = Vec::new();
     for chunk in bytes.chunks(6) {
@@ -70,9 +65,7 @@ pub fn swap_rgb(bytes: &Vec<u8>, width: u32, height: u32) -> Vec<u8> {
 }
 
 pub fn convert_to_webp(bytes: &Vec<u8>, width: u32, height: u32) -> Vec<u8> {
-    let mut writer = Vec::new();
-    WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(100))
-        .write_image(bytes, width, height, image::ColorType::Rgb8)
-        .expect("FAILED TO ENCODE WEBP");
-    writer
+    webp::Encoder::new(&*bytes, webp::PixelLayout::Rgb, width, height)
+        .encode(100.0)
+        .to_vec()
 }
