@@ -33,11 +33,12 @@ impl Default for Screen {
             main_screen_bytes: Vec::new(), // Oled display byte image
             companion_screen_bytes: vec![0; 320 * 170 * 3], // companion display byte image
             font: Rc::new(
-                Font::try_from_vec(Vec::from(include_bytes!("../Liberation.ttf") as &[u8]))
+                Font::try_from_vec(Vec::from(include_bytes!("../fonts/Liberation.ttf") as &[u8]))
                     .unwrap(),
             ),
             symbols: Rc::new(
-                Font::try_from_vec(Vec::from(include_bytes!("../symbols.otf") as &[u8])).unwrap(),
+                Font::try_from_vec(Vec::from(include_bytes!("../fonts/symbols.otf") as &[u8]))
+                    .unwrap(),
             ),
             active: Arc::new(AtomicBool::new(false)),
             handle: None,

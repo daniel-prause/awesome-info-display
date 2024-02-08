@@ -89,8 +89,8 @@ impl PartialEq for BrightnessEvent {
         self.event_type == other.event_type
     }
 }
-const FONT_BYTES: &[u8] = include_bytes!("Liberation.ttf");
-const SYMBOL_BYTES: &[u8] = include_bytes!("symbols.otf");
+const FONT_BYTES: &[u8] = include_bytes!("fonts/Liberation.ttf");
+const SYMBOL_BYTES: &[u8] = include_bytes!("fonts/symbols.otf");
 const ICONS: iced::Font = iced::Font {
     family: iced::font::Family::Name("Font Awesome 5 Free Solid"),
     weight: iced::font::Weight::Black,
