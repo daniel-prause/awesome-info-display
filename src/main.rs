@@ -415,7 +415,15 @@ impl Application for AwesomeDisplay {
                 self.config_manager
                     .write()
                     .unwrap()
-                    .set_value(screen, key, value);
+                    .set_value(screen, key.clone(), value);
+                let serialized_screen_config = self
+                    .config_manager
+                    .read()
+                    .unwrap()
+                    .get_screen_config(&key)
+                    .unwrap_or_default();
+
+                screen_manager.update_screen_config(&key, serialized_screen_config.clone())
             }
             _ => (),
         }

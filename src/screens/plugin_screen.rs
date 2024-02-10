@@ -132,20 +132,12 @@ impl Screenable for PluginScreen {
 
 impl BasicScreen for PluginScreen {
     fn update(&mut self) {
-        // set config
-        let serialized_screen_config = self
-            .screen
-            .config_manager
-            .read()
-            .unwrap()
-            .get_screen_config(&self.screen.key)
-            .unwrap_or_default()
-            .to_raw();
-        self.lib
-            .clone()
-            .set_current_config(serialized_screen_config);
         self.draw_screen(self.lib.clone().get_screen());
         self.draw_companion_screen(self.lib.clone().get_companion_screen());
+    }
+
+    fn set_current_config(&mut self, config: ExchangeableConfig) {
+        self.lib.clone().set_current_config(config.to_raw());
     }
 }
 
@@ -235,6 +227,19 @@ impl PluginScreen {
                 handle: None,
                 ..Default::default()
             },
+        };
+        {
+            // set initial config
+            let this = &mut this;
+            let config = this
+                .screen
+                .config_manager
+                .read()
+                .unwrap()
+                .get_screen_config(&lib.clone().get_key())
+                .unwrap_or_default()
+                .to_raw();
+            this.lib.clone().set_current_config(config);
         };
         this.draw_screen(ExchangeFormat::default());
         this

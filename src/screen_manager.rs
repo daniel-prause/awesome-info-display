@@ -1,6 +1,8 @@
 use std::time::Duration;
 use std::time::Instant;
 
+use exchange_format::ExchangeableConfig;
+
 pub struct ScreenManager {
     screens: Vec<Box<dyn super::screens::BasicScreen>>,
     current: usize,
@@ -68,7 +70,6 @@ impl ScreenManager {
     }
 
     pub fn set_screen_for_short(&mut self, key: String, mode: u32) {
-        
         let index: usize = match self.screens.iter_mut().position(|r| *r.key() == key) {
             Some(idx) => idx,
             None => return,
@@ -135,6 +136,14 @@ impl ScreenManager {
             }
         }
         count >= 1
+    }
+
+    pub fn update_screen_config(&mut self, key: &String, config: ExchangeableConfig) {
+        for screen in self.screens.iter_mut() {
+            if *key == *screen.key() {
+                screen.set_current_config(config.clone())
+            }
+        }
     }
 
     pub fn descriptions_and_keys_and_state(&mut self) -> Vec<(String, String, bool)> {

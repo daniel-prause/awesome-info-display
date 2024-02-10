@@ -121,4 +121,8 @@ pub trait BasicScreen: Screenable {
             .unwrap()
             .set_screen_status(screen.key.clone(), status)
     }
+
+    fn set_current_config(&mut self, _config: ExchangeableConfig) {
+        // implement, if needed
+    }
 }
