@@ -25,6 +25,14 @@ pub struct Device {
 }
 
 impl Device {
+    const KEEP_ALIVE: u8 = 229;
+    const SEND_NEW_IMAGE: u8 = 228;
+    const ACCESS_BME_SENSOR: u8 = 205;
+    const RESET_DISPLAY: u8 = 17;
+    const STAND_BY: u8 = 18;
+    const WAKE_UP: u8 = 19;
+    const SET_BRIGHTNESS: u8 = 20;
+
     pub fn new(
         identifier: String,
         baud: u32,
@@ -77,7 +85,7 @@ impl Device {
     }
 
     pub fn write(&self, payload: &[u8]) -> bool {
-        if self.send_command(228) {
+        if self.send_command(Self::SEND_NEW_IMAGE) {
             if self.use_dada_packet {
                 return write_screen_buffer(
                     &mut self.port.lock().unwrap(),
@@ -91,7 +99,7 @@ impl Device {
     }
 
     pub fn get_bme_info(&self) -> (String, String) {
-        if self.send_command(205) {
+        if self.send_command(Self::ACCESS_BME_SENSOR) {
             let mut result = read_bme_sensor(&mut self.port.lock().unwrap());
             result = result.trim_end_matches('\0').into();
             let mut parts = result.split(' ');
@@ -104,7 +112,8 @@ impl Device {
     }
 
     pub fn reset_display(&self) {
-        self.send_command(17);
+        // will be ignored on ESP32 since this is only necessary for the teensy display solution.
+        self.send_command(Self::RESET_DISPLAY);
     }
 
     pub fn send_command(&self, command: u8) -> bool {
@@ -116,7 +125,7 @@ impl Device {
     pub fn set_brightness(&self, brightness: u8) -> bool {
         if self.use_dada_packet {
             self.brightness.store(brightness, Ordering::Release);
-            return self.send_command(20)
+            return self.send_command(Self::SET_BRIGHTNESS)
                 && write_screen_buffer(
                     &mut self.port.lock().unwrap(),
                     &DadaPacket::new(brightness.to_le_bytes().to_vec()).as_bytes(),
@@ -127,7 +136,7 @@ impl Device {
 
     pub fn stand_by(&self) {
         if *self.awake.lock().unwrap() {
-            if !self.send_command(18) {
+            if !self.send_command(Self::STAND_BY) {
                 self.disconnect()
             } else {
                 *self.awake.lock().unwrap() = false;
@@ -138,7 +147,7 @@ impl Device {
     pub fn wake_up(&self) {
         if !*self.awake.lock().unwrap() {
             thread::sleep(std::time::Duration::from_millis(200));
-            if !self.send_command(19) {
+            if !self.send_command(Self::WAKE_UP) {
                 self.disconnect()
             } else {
                 *self.awake.lock().unwrap() = true;
@@ -205,7 +214,7 @@ impl Device {
                                     } else {
                                         self.disconnect();
                                     }
-                                } else if !self.send_command(229) {
+                                } else if !self.send_command(Self::KEEP_ALIVE) {
                                     self.disconnect();
                                 }
                                 self.wake_up();
