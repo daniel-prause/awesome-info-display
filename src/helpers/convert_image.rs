@@ -63,9 +63,3 @@ pub fn swap_rgb(bytes: &Vec<u8>, width: u32, height: u32) -> Vec<u8> {
     }
     swapped
 }
-
-pub fn convert_to_webp(bytes: &Vec<u8>, width: u32, height: u32) -> Vec<u8> {
-    webp::Encoder::new(&*bytes, webp::PixelLayout::Rgb, width, height)
-        .encode(100.0)
-        .to_vec()
-}

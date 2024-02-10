@@ -3,6 +3,7 @@ extern crate winapi;
 
 mod config;
 mod config_manager;
+mod converters;
 mod dada_packet;
 mod device;
 mod helpers;
@@ -112,11 +113,27 @@ static DEVICES: Lazy<HashMap<String, Device>> = Lazy::new(|| {
     let mut m: HashMap<String, Device> = HashMap::new();
     m.insert(
         TEENSY.into(),
-        Device::new("16c00483".into(), 4608000, false, ImageFormat::Bmp, true),
+        Device::new(
+            "16c00483".into(),
+            4608000,
+            false,
+            ImageFormat::Bmp,
+            true,
+            256,
+            64,
+        ),
     );
     m.insert(
         ESP32.into(),
-        Device::new("303a1001".into(), 921600, true, ImageFormat::WebP, false),
+        Device::new(
+            "303a1001".into(),
+            921600,
+            true,
+            ImageFormat::WebP,
+            false,
+            320,
+            170,
+        ),
     );
     m
 });

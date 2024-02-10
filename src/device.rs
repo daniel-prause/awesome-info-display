@@ -4,16 +4,18 @@ use crossbeam_channel::{bounded, Receiver, Sender};
 use image::ImageFormat;
 
 use crate::{
-    dada_packet::DadaPacket,
-    helpers::{convert_image::convert_to_webp, display_serial_com::*},
+    converters::image::ImageProcessor, dada_packet::DadaPacket, helpers::display_serial_com::*,
     CLOSE_REQUESTED, HIBERNATING, LAST_BME_INFO,
 };
+
 pub struct Device {
     identifier: String,
     baud: u32,
     use_dada_packet: bool,
     has_bme_sensor: bool,
     background_workers_started: std::sync::atomic::AtomicBool,
+    width: u32,
+    height: u32,
     pub brightness: std::sync::atomic::AtomicU8,
     pub image_format: ImageFormat,
     pub sender: Sender<Vec<u8>>,
@@ -30,6 +32,8 @@ impl Device {
         use_dada_packet: bool,
         image_format: ImageFormat,
         has_bme_sensor: bool,
+        width: u32,
+        height: u32,
     ) -> Device {
         let (sender, receiver): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         Device {
@@ -40,6 +44,8 @@ impl Device {
             receiver,
             image_format,
             has_bme_sensor,
+            height,
+            width,
             brightness: std::sync::atomic::AtomicU8::new(100),
             background_workers_started: std::sync::atomic::AtomicBool::new(false),
             awake: std::sync::Mutex::new(false),
@@ -190,9 +196,13 @@ impl Device {
                                 let crc_of_buf = crc32fast::hash(&b);
                                 let mut payload = b;
                                 if last_sum != crc_of_buf {
-                                    if self.image_format == ImageFormat::WebP {
-                                        payload = convert_to_webp(&payload, 320, 170);
-                                    }
+                                    ImageProcessor::process_image(
+                                        self.image_format,
+                                        &mut payload,
+                                        self.width,
+                                        self.height,
+                                    );
+
                                     if self.write(&payload) {
                                         last_sum = crc_of_buf;
                                     } else {

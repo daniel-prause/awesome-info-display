@@ -1,6 +1,6 @@
 use crate::config::{Config, ScreenConfig};
 
-use exchange_format::ConfigParam;
+use exchange_format::{ConfigParam};
 use indexmap::*;
 use serde::{Deserialize, Serialize};
 
@@ -104,15 +104,12 @@ impl ConfigManager {
         }
     }
 
-    pub fn get_screen_config(&self, screen: &str) -> exchange_format::ExchangeableConfig {
-        exchange_format::ExchangeableConfig {
-            params: self
-                .config
-                .screens
-                .get(screen)
-                .unwrap()
-                .config_attributes
-                .clone(),
+    pub fn get_screen_config(&self, screen: &str) -> Option<exchange_format::ExchangeableConfig> {
+        match self.config.screens.get(screen) {
+            Some(screen_config) => Some(exchange_format::ExchangeableConfig {
+                params: screen_config.config_attributes.clone(),
+            }),
+            None => None,
         }
     }
 

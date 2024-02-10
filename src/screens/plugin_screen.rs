@@ -139,6 +139,7 @@ impl BasicScreen for PluginScreen {
             .read()
             .unwrap()
             .get_screen_config(&self.screen.key)
+            .unwrap_or_default()
             .to_raw();
         self.lib
             .clone()
