@@ -1,6 +1,4 @@
-use std::sync::{Arc, Mutex};
-
-pub trait ImageConverter: Send {
+pub trait ImageConverter: Send + Sync {
     fn convert(&self, data: &mut Vec<u8>, width: u32, height: u32);
 }
 
@@ -23,15 +21,15 @@ impl ImageConverter for NoOpConverter {
 }
 
 pub struct ImageProcessor {
-    converter: Arc<Mutex<dyn ImageConverter>>,
+    converter: Box<dyn ImageConverter>,
 }
 
 impl ImageProcessor {
-    pub fn new(converter: Arc<Mutex<dyn ImageConverter>>) -> Self {
+    pub fn new(converter: Box<dyn ImageConverter>) -> Self {
         ImageProcessor { converter }
     }
 
     pub fn process_image(&self, data: &mut Vec<u8>, width: u32, height: u32) {
-        self.converter.lock().unwrap().convert(data, width, height);
+        self.converter.convert(data, width, height);
     }
 }
