@@ -12,6 +12,7 @@ mod screens;
 mod style;
 mod weather;
 
+use converters::image::{ImageProcessor, NoOpConverter, WebPConverter};
 use debounce::EventDebouncer;
 use device::*;
 use exchange_format::ConfigParam;
@@ -118,6 +119,7 @@ static DEVICES: Lazy<HashMap<String, Device>> = Lazy::new(|| {
             4608000,
             false,
             ImageFormat::Bmp,
+            ImageProcessor::new(Arc::new(Mutex::new(NoOpConverter))),
             true,
             256,
             64,
@@ -130,6 +132,7 @@ static DEVICES: Lazy<HashMap<String, Device>> = Lazy::new(|| {
             921600,
             true,
             ImageFormat::WebP,
+            ImageProcessor::new(Arc::new(Mutex::new(WebPConverter))),
             false,
             320,
             170,

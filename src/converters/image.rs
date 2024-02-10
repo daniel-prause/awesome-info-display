@@ -1,7 +1,6 @@
+use std::sync::{Arc, Mutex};
 
-use image::ImageFormat;
-
-pub trait ImageConverter {
+pub trait ImageConverter: Send {
     fn convert(&self, data: &mut Vec<u8>, width: u32, height: u32);
 }
 
@@ -15,25 +14,24 @@ impl ImageConverter for WebPConverter {
     }
 }
 
-pub struct BmpConverter;
+pub struct NoOpConverter;
 
-impl ImageConverter for BmpConverter {
+impl ImageConverter for NoOpConverter {
     fn convert(&self, _data: &mut Vec<u8>, _width: u32, _height: u32) {
-        /*
-        Since we always get Vec<u8> consistant of BMP data, we will not convert from BMP to BMP.
-        This is just the placeholder to make the strategy pattern work.
-         */
+        /* this can and will be used, if no operation is necessary */
     }
 }
 
-pub struct ImageProcessor;
+pub struct ImageProcessor {
+    converter: Arc<Mutex<dyn ImageConverter>>,
+}
 
 impl ImageProcessor {
-    pub fn process_image(format: ImageFormat, data: &mut Vec<u8>, width: u32, height: u32) {
-        match format {
-            image::ImageFormat::Bmp => BmpConverter.convert(data, width, height),
-            image::ImageFormat::WebP => WebPConverter.convert(data, width, height),
-            _ => {}
-        }
+    pub fn new(converter: Arc<Mutex<dyn ImageConverter>>) -> Self {
+        ImageProcessor { converter }
+    }
+
+    pub fn process_image(&self, data: &mut Vec<u8>, width: u32, height: u32) {
+        self.converter.lock().unwrap().convert(data, width, height);
     }
 }
