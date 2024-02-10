@@ -25,7 +25,7 @@ use helpers::{
 };
 use iced::widget::Text;
 use iced::{executor, time, window, Application, Command, Element, Length, Settings};
-use image::ImageFormat;
+
 use lazy_static::lazy_static;
 use named_lock::NamedLock;
 use named_lock::Result;
@@ -118,7 +118,6 @@ static DEVICES: Lazy<HashMap<String, Device>> = Lazy::new(|| {
             "16c00483".into(),
             4608000,
             false,
-            ImageFormat::Bmp,
             ImageProcessor::new(Arc::new(Mutex::new(NoOpConverter))),
             true,
             256,
@@ -131,7 +130,6 @@ static DEVICES: Lazy<HashMap<String, Device>> = Lazy::new(|| {
             "303a1001".into(),
             921600,
             true,
-            ImageFormat::WebP,
             ImageProcessor::new(Arc::new(Mutex::new(WebPConverter))),
             false,
             320,

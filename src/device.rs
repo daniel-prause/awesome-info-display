@@ -1,7 +1,6 @@
 use std::{sync::atomic::Ordering, thread};
 
 use crossbeam_channel::{bounded, Receiver, Sender};
-use image::ImageFormat;
 
 use crate::{
     converters::image::ImageProcessor, dada_packet::DadaPacket, helpers::display_serial_com::*,
@@ -18,7 +17,6 @@ pub struct Device {
     height: u32,
     image_processor: ImageProcessor,
     pub brightness: std::sync::atomic::AtomicU8,
-    pub image_format: ImageFormat,
     pub sender: Sender<Vec<u8>>,
     pub receiver: Receiver<Vec<u8>>,
     pub awake: std::sync::Mutex<bool>,
@@ -31,7 +29,6 @@ impl Device {
         identifier: String,
         baud: u32,
         use_dada_packet: bool,
-        image_format: ImageFormat,
         image_processor: ImageProcessor,
         has_bme_sensor: bool,
         width: u32,
@@ -44,7 +41,6 @@ impl Device {
             use_dada_packet,
             sender,
             receiver,
-            image_format,
             has_bme_sensor,
             height,
             width,
