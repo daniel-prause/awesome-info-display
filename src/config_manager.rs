@@ -1,6 +1,6 @@
 use crate::config::{Config, ScreenConfig};
 
-use exchange_format::{ConfigParam};
+use exchange_format::ConfigParam;
 use indexmap::*;
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +18,7 @@ pub struct ConfigManager {
 
 impl ConfigManager {
     pub fn new(filepath: Option<&str>) -> Self {
+        let filepath = filepath.unwrap_or("./settings.json").to_string();
         let config = Config {
             brightness: 100,
             companion_brightness: 100,
@@ -26,13 +27,13 @@ impl ConfigManager {
         let mut this = ConfigManager {
             config,
             config_hash: String::new(),
-            config_path: String::from("./settings.json"),
+            config_path: filepath.clone(),
         };
 
         // check, if file exists; if not -> create it
-        let file_exists = std::path::Path::new(filepath.unwrap_or("./settings.json")).exists();
+        let file_exists = std::path::Path::new(&filepath.clone()).exists();
         if !file_exists {
-            match File::create(filepath.unwrap_or("./settings.json")) {
+            match File::create(&filepath) {
                 Ok(_) => {
                     println!("Settings file created!")
                 }
@@ -41,7 +42,7 @@ impl ConfigManager {
                 }
             }
         }
-        let contents = fs::read_to_string(filepath.unwrap_or("./settings.json"));
+        let contents = fs::read_to_string(&filepath);
         match contents {
             Ok(config) => {
                 this.config_hash = config.clone();
