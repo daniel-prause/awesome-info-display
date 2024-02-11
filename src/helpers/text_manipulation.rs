@@ -49,6 +49,8 @@ pub fn determine_field_value(input: &str) -> String {
 
         let parsed_val = val.parse().unwrap_or(0);
 
-        parsed_val.min(65535).to_string()
+        // TODO: accept a max value?
+        // e.g. parsed_val.min(MIN_VAL).to_string()
+        parsed_val.to_string()
     }
 }
