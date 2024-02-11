@@ -118,10 +118,8 @@ static DEVICES: Lazy<HashMap<String, Device>> = Lazy::new(|| {
             "16c00483".into(),
             4608000,
             false,
-            ImageProcessor::new(Box::new(NoOpConverter)),
+            ImageProcessor::new(Box::new(NoOpConverter), 256, 64),
             true,
-            256,
-            64,
         ),
     );
     m.insert(
@@ -130,10 +128,8 @@ static DEVICES: Lazy<HashMap<String, Device>> = Lazy::new(|| {
             "303a1001".into(),
             921600,
             true,
-            ImageProcessor::new(Box::new(WebPConverter)),
+            ImageProcessor::new(Box::new(WebPConverter), 320, 170),
             false,
-            320,
-            170,
         ),
     );
     m

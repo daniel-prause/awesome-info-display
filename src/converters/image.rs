@@ -22,14 +22,20 @@ impl ImageConverter for NoOpConverter {
 
 pub struct ImageProcessor {
     converter: Box<dyn ImageConverter>,
+    width: u32,
+    height: u32,
 }
 
 impl ImageProcessor {
-    pub fn new(converter: Box<dyn ImageConverter>) -> Self {
-        ImageProcessor { converter }
+    pub fn new(converter: Box<dyn ImageConverter>, width: u32, height: u32) -> Self {
+        ImageProcessor {
+            converter,
+            width,
+            height,
+        }
     }
 
-    pub fn process_image(&self, data: &mut Vec<u8>, width: u32, height: u32) {
-        self.converter.convert(data, width, height);
+    pub fn process_image(&self, data: &mut Vec<u8>) {
+        self.converter.convert(data, self.width, self.height);
     }
 }

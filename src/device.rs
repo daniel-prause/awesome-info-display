@@ -13,8 +13,6 @@ pub struct Device {
     use_dada_packet: bool,
     has_bme_sensor: bool,
     background_workers_started: std::sync::atomic::AtomicBool,
-    width: u32,
-    height: u32,
     image_processor: ImageProcessor,
     pub brightness: std::sync::atomic::AtomicU8,
     pub sender: Sender<Vec<u8>>,
@@ -39,8 +37,6 @@ impl Device {
         use_dada_packet: bool,
         image_processor: ImageProcessor,
         has_bme_sensor: bool,
-        width: u32,
-        height: u32,
     ) -> Device {
         let (sender, receiver): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         Device {
@@ -50,8 +46,6 @@ impl Device {
             sender,
             receiver,
             has_bme_sensor,
-            height,
-            width,
             image_processor,
             brightness: std::sync::atomic::AtomicU8::new(100),
             background_workers_started: std::sync::atomic::AtomicBool::new(false),
@@ -203,11 +197,7 @@ impl Device {
                             } else {
                                 let crc_of_buf = crc32fast::hash(&b);
                                 let mut payload = b;
-                                self.image_processor.process_image(
-                                    &mut payload,
-                                    self.width,
-                                    self.height,
-                                );
+                                self.image_processor.process_image(&mut payload);
                                 if last_sum != crc_of_buf {
                                     if self.write(&payload) {
                                         last_sum = crc_of_buf;
