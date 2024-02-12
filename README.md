@@ -4,10 +4,10 @@ Welcome to Awesome Info Display, your open-source solution for creating customiz
 
 ## Features
 
-- Display various screens on an external ESP32 display. 🖥️
-- Supported screens include current memory usage, currently played track, and weather information. 📈
-- Plugin support for custom written plugins with a mini api to request config fields, if necessary. 🔌
-- Works seamlessly on Windows, with plans for Linux and MacOS support in the future. 🗔
+- 🖥️ Display various screens on an external ESP32 display.
+- 📈 Supported screens include current memory usage, currently played track, and weather information. 
+- 🔌 Plugin support for custom written plugins with a mini api to request config fields, if necessary. 
+- 🗔 Works seamlessly on Windows, with plans for Linux and MacOS support in the future. 
 
 ## Supported Devices
 
