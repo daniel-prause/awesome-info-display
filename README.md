@@ -1,6 +1,8 @@
 # Awesome Info Display
 
-Welcome to Awesome Info Display, your open-source solution for creating customizable information displays on external ESP32 devices. With this project, you can easily set up a display to show various screens, such as current memory usage, currently played tracks, or weather information. Whether you're a hobbyist, a tinkerer, or a professional, this project offers flexibility and customization to meet your needs.
+![](./example.png)
+
+### Welcome to Awesome Info Display, your open-source solution for creating customizable information displays on external ESP32 devices. With this project, you can easily set up a display to show various screens, such as current memory usage, currently played tracks, or weather information. Whether you're a hobbyist, a tinkerer, or a professional, this project offers flexibility and customization to meet your needs.
 
 ## Features
 
