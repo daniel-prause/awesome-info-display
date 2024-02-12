@@ -33,7 +33,7 @@ We welcome contributions from the community to help improve Awesome Info Display
 - Report bugs or suggest features by opening an issue on GitHub.
 - Submit pull requests to address issues or implement new features.
 
-### License
+## License
 
 This project is licensed under the MIT license.
 
