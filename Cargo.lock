@@ -1004,6 +1004,7 @@ dependencies = [
 [[package]]
 name = "exchange_format"
 version = "1.0.0"
+source = "git+https://github.com/daniel-prause/exchange-format#bf2fe9cd62598b2e60e866d779b4393a0980f82c"
 dependencies = [
  "indexmap 2.2.2",
  "lazy_static",

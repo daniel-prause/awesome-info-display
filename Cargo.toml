@@ -42,7 +42,7 @@ indexmap = { version = "2.1.0", features = ["serde"] }
 unicode-segmentation = "1.10.1"
 winsafe = {git = "https://github.com/rodrigocfd/winsafe", features = ['user', 'ole']}
 named-lock = "0.3.0"
-exchange_format = { path = "../exchange_format" }
+exchange_format = { git = "https://github.com/daniel-prause/exchange-format" }
 webp = "0.2.6"
 [target.'cfg(windows)'.dependencies]
 winapi = {version = "0.3.9", features = ["winuser", "mmdeviceapi", "combaseapi", "objbase", "endpointvolume", "memoryapi"]}
