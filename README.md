@@ -22,9 +22,11 @@ To get started with Awesome Info Display, follow these simple steps:
 
 2. Install Dependencies: Ensure you have all dependencies installed. This should be done automatically via cargo, if you build the project for the first time.
 
-3. Connect ESP32 Display: Connect your ESP32 display to your Windows machine.
+3. Clone the Repository https://github.com/daniel-prause/companion-display. Compile and move the firmware to the ESP32.
 
-4. Run the Application: Execute the application on your Windows machine. The display contents of the first available screen will be transferred to the external display, showcasing the currently active screen.
+4. Connect ESP32 Display: Connect your ESP32 display to your Windows machine.
+
+5. Run the Application: Execute the application on your Windows machine. The display contents of the first available screen will be transferred to the external display, showcasing the currently active screen.
 
 ## Contributing
 
