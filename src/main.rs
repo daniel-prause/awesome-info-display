@@ -496,9 +496,11 @@ impl Application for AwesomeDisplay {
             .width(Length::Fixed(200f32))
             .into(),
             iced::widget::text(format!(
-                "Main Brightness: {:.2}",
+                "Main brightness: {}%",
                 self.config_manager.read().unwrap().config.brightness
             ))
+            .horizontal_alignment(iced::alignment::Horizontal::Center)
+            .width(Length::Fixed(220f32))
             .into(),
             iced::widget::Slider::new(
                 20.0..=100.0,
@@ -509,7 +511,7 @@ impl Application for AwesomeDisplay {
             .step(1.0)
             .into(),
             iced::widget::text(format!(
-                "Companion Brightness: {:.2}",
+                "Companion brightness: {}%",
                 self.config_manager
                     .read()
                     .unwrap()
@@ -517,7 +519,7 @@ impl Application for AwesomeDisplay {
                     .companion_brightness
             ))
             .horizontal_alignment(iced::alignment::Horizontal::Center)
-            .width(Length::Fixed(210f32))
+            .width(Length::Fixed(220f32))
             .into(),
             iced::widget::Slider::new(
                 20.0..=100.0,
