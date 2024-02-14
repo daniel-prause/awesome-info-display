@@ -7,9 +7,9 @@
 ## Features
 
 - 🖥️ Display various screens on an external ESP32 display.
-- 📈 Supported screens include current memory usage, currently played track, and weather information. 
-- 🔌 Plugin support for custom written plugins with a mini api to request config fields, if necessary. 
-- 🗔 Works seamlessly on Windows, with plans for Linux and MacOS support in the future. 
+- 📈 Supported screens include current memory usage, currently played track, and weather information.
+- 🔌 Plugin support for custom written plugins with a mini api to request config fields, if necessary.
+- 🗔 Works seamlessly on Windows, with plans for Linux and MacOS support in the future.
 
 ## Supported Devices
 
@@ -20,15 +20,15 @@
 
 To get started with Awesome Info Display, follow these simple steps:
 
-1. Clone the Repository: Clone this repository to your local machine using git clone https://github.com/daniel-prause/awesomeinfodisplay.git.
+1. Clone this repository: Clone this repository to your local machine using git clone https://github.com/daniel-prause/awesomeinfodisplay.git.
 
-2. Install Dependencies: Ensure you have all dependencies installed. This should be done automatically via cargo, if you build the project for the first time.
+2. Install dependencies: Ensure you have all dependencies installed. This should be done automatically via cargo, if you build the project for the first time.
 
-3. Clone the Repository https://github.com/daniel-prause/companion-display. Compile and move the firmware to the ESP32.
+3. Clone the repository https://github.com/daniel-prause/companion-display. Compile and move the firmware to the ESP32.
 
-4. Connect ESP32 Display: Connect your ESP32 display to your Windows machine.
+4. Connect ESP32 display: Connect your ESP32 display to your Windows machine.
 
-5. Run the Application: Execute the application on your Windows machine. The display contents of the first available screen will be transferred to the external display, showcasing the currently active screen. You can switch to the next screen by pressing the pause button.
+5. Run the application: Execute the application on your Windows machine. The display contents of the first available screen will be transferred to the external display, showcasing the currently active screen. You can switch to the next screen by pressing the pause button.
 
 ## Contributing
 
