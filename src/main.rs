@@ -23,8 +23,10 @@ use helpers::text_manipulation::determine_field_value;
 use helpers::{
     convert_image::*, power::register_power_broadcast, text_manipulation::humanize_string,
 };
-use iced::widget::Text;
-use iced::{executor, time, window, Application, Command, Element, Length, Settings};
+use iced::widget::{Space, Text};
+use iced::{
+    executor, time, window, Application, Command, Element, Length, Settings, Subscription, Theme,
+};
 
 use lazy_static::lazy_static;
 use named_lock::NamedLock;
@@ -97,7 +99,7 @@ const ICONS: iced::Font = iced::Font {
     family: iced::font::Family::Name("Font Awesome 5 Free Solid"),
     weight: iced::font::Weight::Black,
     stretch: iced::font::Stretch::Normal,
-    monospaced: false,
+    style: iced::font::Style::Normal,
 };
 
 lazy_static! {
@@ -151,8 +153,8 @@ pub fn main() -> iced::Result {
                 register_power_broadcast(window_proc);
 
                 let settings = Settings {
-                    exit_on_close_request: false,
                     window: window::Settings {
+                        exit_on_close_request: false,
                         resizable: false,
                         decorations: true,
                         icon: Some(
@@ -195,8 +197,8 @@ enum Message {
     MainScreenBrightnessChanged(f32),
     CompanionScreenBrightnessChanged(f32),
     ScreenStatusChanged(bool, String),
-    KeyboardEventOccurred(iced::keyboard::KeyCode, u32),
-    WindowEventOccurred(iced::Event),
+    KeyboardEventOccurred(iced::keyboard::Key, u32),
+    WindowEventOccurred(iced::window::Event),
     ConfigValueChanged(String, String, ConfigParam),
 }
 
@@ -294,53 +296,56 @@ impl Application for AwesomeDisplay {
     }
 
     fn subscription(&self) -> iced::Subscription<Message> {
-        iced::Subscription::batch(
-            vec![
-                iced::subscription::events_with(|event, status| {
-                    if let iced::event::Status::Captured = status {
-                        return None;
-                    }
+        let tick = time::every(std::time::Duration::from_millis(250))
+            .map(|_| Message::UpdateCurrentScreen);
 
-                    match event {
-                        iced::Event::Keyboard(iced::keyboard::Event::KeyReleased {
-                            modifiers: _,
-                            key_code,
-                        }) => match key_code {
-                            iced::keyboard::KeyCode::PlayPause => {
-                                Some(Message::KeyboardEventOccurred(key_code, 179))
-                            }
-                            iced::keyboard::KeyCode::MediaStop => {
-                                Some(Message::KeyboardEventOccurred(key_code, 178))
-                            }
-                            iced::keyboard::KeyCode::PrevTrack => {
-                                Some(Message::KeyboardEventOccurred(key_code, 177))
-                            }
-                            iced::keyboard::KeyCode::NextTrack => {
-                                Some(Message::KeyboardEventOccurred(key_code, 176))
-                            }
-                            iced::keyboard::KeyCode::VolumeDown => {
-                                Some(Message::KeyboardEventOccurred(key_code, 174))
-                            }
-                            iced::keyboard::KeyCode::VolumeUp => {
-                                Some(Message::KeyboardEventOccurred(key_code, 175))
-                            }
-                            iced::keyboard::KeyCode::Mute => {
-                                Some(Message::KeyboardEventOccurred(key_code, 173))
-                            }
-                            iced::keyboard::KeyCode::Pause => {
-                                Some(Message::KeyboardEventOccurred(key_code, 180))
-                            }
-                            _ => None,
-                        },
-                        _ => None,
-                    }
-                }),
-                time::every(std::time::Duration::from_millis(250))
-                    .map(|_| Message::UpdateCurrentScreen),
-                iced::subscription::events().map(Message::WindowEventOccurred),
-            ]
-            .into_iter(),
-        )
+        fn handle_hotkey(
+            key: iced::keyboard::Key,
+            _modifiers: iced::keyboard::Modifiers,
+        ) -> Option<Message> {
+            match key.as_ref() {
+                iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaPlayPause) => {
+                    Some(Message::KeyboardEventOccurred(key, 179))
+                }
+                iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaStop) => {
+                    Some(Message::KeyboardEventOccurred(key, 178))
+                }
+                iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaTrackPrevious) => {
+                    Some(Message::KeyboardEventOccurred(key, 177))
+                }
+                iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaTrackNext) => {
+                    Some(Message::KeyboardEventOccurred(key, 176))
+                }
+                iced::keyboard::Key::Named(iced::keyboard::key::Named::AudioVolumeDown) => {
+                    Some(Message::KeyboardEventOccurred(key, 174))
+                }
+                iced::keyboard::Key::Named(iced::keyboard::key::Named::AudioVolumeUp) => {
+                    Some(Message::KeyboardEventOccurred(key, 175))
+                }
+                iced::keyboard::Key::Named(iced::keyboard::key::Named::AudioVolumeMute) => {
+                    Some(Message::KeyboardEventOccurred(key, 173))
+                }
+                iced::keyboard::Key::Named(iced::keyboard::key::Named::Pause) => {
+                    Some(Message::KeyboardEventOccurred(key, 180))
+                }
+                _ => None,
+            }
+        }
+        fn handle_window_event(
+            event: iced::Event,
+            _status: iced::event::Status,
+        ) -> Option<Message> {
+            match event {
+                iced::event::Event::Window(_id, event) => Some(Message::WindowEventOccurred(event)),
+                _ => None,
+            }
+        }
+        // TODO: window event missing!
+        Subscription::batch(vec![
+            tick,
+            iced::keyboard::on_key_press(handle_hotkey),
+            iced::event::listen_with(handle_window_event),
+        ])
     }
     fn update(&mut self, message: Message) -> Command<Message> {
         let mut screen_manager = self.screens.lock().unwrap();
@@ -381,7 +386,7 @@ impl Application for AwesomeDisplay {
                 screen_manager.update_current_screen();
             }
             Message::WindowEventOccurred(event) => {
-                if let iced::Event::Window(iced::window::Event::CloseRequested) = event {
+                if iced::window::Event::CloseRequested == event {
                     CLOSE_REQUESTED.store(true, std::sync::atomic::Ordering::Release);
                 }
             }
@@ -433,19 +438,22 @@ impl Application for AwesomeDisplay {
                 }
             }
             self.config_manager.write().unwrap().save();
-            return window::close();
+            return window::close(window::Id::MAIN);
         }
         Command::none()
     }
 
     fn theme(&self) -> iced::Theme {
-        iced::Theme::custom(iced::theme::Palette {
-            background: iced::Color::from_rgb(0.21, 0.22, 0.247),
-            text: iced::Color::WHITE,
-            primary: iced::Color::from_rgb(114.0 / 255.0, 137.0 / 255.0, 218.0 / 255.0),
-            success: iced::Color::from_rgb(0.0, 1.0, 0.0),
-            danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
-        })
+        iced::Theme::custom(
+            "Default".into(),
+            iced::theme::Palette {
+                background: iced::Color::from_rgb(0.21, 0.22, 0.247),
+                text: iced::Color::WHITE,
+                primary: iced::Color::from_rgb(114.0 / 255.0, 137.0 / 255.0, 218.0 / 255.0),
+                success: iced::Color::from_rgb(0.0, 1.0, 0.0),
+                danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
+            },
+        )
     }
 
     fn view(&self) -> Element<Message> {
@@ -481,7 +489,7 @@ impl Application for AwesomeDisplay {
             }
         }
 
-        let mut column_parts = vec![
+        let mut column_parts: Vec<iced::Element<Message, Theme, iced::Renderer>> = vec![
             iced::widget::button(
                 Text::new("Next screen").horizontal_alignment(iced::alignment::Horizontal::Center),
             )
@@ -539,7 +547,6 @@ impl Application for AwesomeDisplay {
         for screen in screen_manager.descriptions_and_keys_and_state().into_iter() {
             column_parts.push(special_checkbox(screen.2, screen.1, screen.0));
         }
-
         // TODO: find a way to generate these fields dynamically
         let weather_location_option = &self
             .config_manager
@@ -562,7 +569,7 @@ impl Application for AwesomeDisplay {
             }
         }
 
-        let mut left_column_after_screens = vec![
+        let mut left_column_after_screens: Vec<iced::Element<Message, Theme, iced::Renderer>> = vec![
             iced::widget::TextInput::new(
                 humanize_string("weather_location").as_str(),
                 weather_location.as_str(),
@@ -585,7 +592,7 @@ impl Application for AwesomeDisplay {
             .width(Length::Fixed(200f32))
             .on_press(Message::SaveConfig)
             .into(),
-            iced::widget::Row::with_children(vec![iced::widget::vertical_space(10).into()]).into(),
+            iced::widget::Row::with_children(vec![Space::with_height(10).into()]).into(),
             iced::widget::Row::with_children(vec![iced::widget::text("Devices").into()]).into(),
             iced::widget::Row::with_children(device_status(TEENSY)).into(),
             iced::widget::Row::with_children(device_status(ESP32)).into(),
@@ -728,7 +735,7 @@ impl Application for AwesomeDisplay {
                                 exchange_format::ConfigParam::Password(value),
                             )
                         })
-                        .password()
+                        .secure(true)
                         .style(iced::theme::TextInput::Custom(Box::new(
                             style::TextInput {},
                         )))
@@ -750,16 +757,17 @@ fn special_checkbox<'a>(
     checked: bool,
     key: String,
     description: String,
-) -> iced::Element<'a, Message, iced::Renderer> {
-    iced::widget::checkbox(description, checked, move |value: bool| {
-        Message::ScreenStatusChanged(value, key.clone())
-    })
-    .style(iced::theme::Checkbox::Custom(Box::new(style::Checkbox {})))
-    .width(Length::Fixed(200f32))
-    .into()
+) -> iced::Element<'a, Message, Theme, iced::Renderer> {
+    iced::widget::checkbox(description, checked)
+        .on_toggle(move |value: bool| Message::ScreenStatusChanged(value, key.clone()))
+        .style(iced::theme::Checkbox::Custom(Box::new(style::Checkbox {})))
+        .width(Length::Fixed(200f32))
+        .into()
 }
 
-fn device_connected_icon<'a>(is_connected: bool) -> iced::Element<'a, Message, iced::Renderer> {
+fn device_connected_icon<'a>(
+    is_connected: bool,
+) -> iced::Element<'a, Message, Theme, iced::Renderer> {
     iced::widget::text(if is_connected {
         String::from("\u{f26c} \u{f058}")
     } else {
@@ -770,7 +778,7 @@ fn device_connected_icon<'a>(is_connected: bool) -> iced::Element<'a, Message, i
     .into()
 }
 
-fn device_status<'a>(device: &str) -> Vec<iced::Element<'a, Message, iced::Renderer>> {
+fn device_status<'a>(device: &str) -> Vec<iced::Element<'a, Message, Theme, iced::Renderer>> {
     vec![
         iced::widget::Text::new(device.to_uppercase())
             .width(Length::Fixed(146f32))
