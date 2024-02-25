@@ -154,3 +154,156 @@ impl ScreenManager {
         result
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::screens::{BasicScreen, Screen};
+
+    use super::*;
+    use exchange_format::ExchangeableConfig;
+
+    struct MockScreen {
+        key: String,
+        enabled: bool,
+        screen: Screen,
+    }
+
+    impl super::super::screens::BasicScreen for MockScreen {
+        fn key(&mut self) -> String {
+            self.key.clone()
+        }
+
+        fn enabled(&mut self) -> bool {
+            self.enabled
+        }
+
+        fn start(&mut self) {}
+
+        fn stop(&mut self) {}
+
+        fn update(&mut self) {}
+
+        fn set_mode(&mut self, _mode: u32) {}
+
+        fn set_status(&mut self, _status: bool) {}
+
+        fn description(&mut self) -> String {
+            String::from("Mock Screen")
+        }
+
+        fn set_current_config(&mut self, _config: ExchangeableConfig) {}
+    }
+    impl super::super::screens::Screenable for MockScreen {
+        fn get_screen(&mut self) -> &mut Screen {
+            &mut self.screen
+        }
+    }
+
+    #[test]
+    fn test_create_screen_manager_with_enabled_screen() {
+        let screens: Vec<Box<dyn BasicScreen>> = vec![
+            Box::new(MockScreen {
+                key: String::from("screen1"),
+                enabled: false,
+                screen: Screen::default(),
+            }),
+            Box::new(MockScreen {
+                key: String::from("screen2"),
+                enabled: true,
+                screen: Screen::default(),
+            }),
+        ];
+
+        let screen_manager = ScreenManager::new(screens);
+
+        assert_eq!(screen_manager.current, 1);
+    }
+
+    #[test]
+    fn test_next_screen() {
+        let screens: Vec<Box<dyn BasicScreen>> = vec![
+            Box::new(MockScreen {
+                key: String::from("screen1"),
+                enabled: true,
+                screen: Screen::default(),
+            }),
+            Box::new(MockScreen {
+                key: String::from("screen2"),
+                enabled: true,
+                screen: Screen::default(),
+            }),
+        ];
+
+        let mut screen_manager = ScreenManager::new(screens);
+
+        assert_eq!(screen_manager.current, 0);
+        screen_manager.next_screen();
+        assert_eq!(screen_manager.current, 1);
+    }
+
+    #[test]
+    fn test_previous_screen() {
+        let screens: Vec<Box<dyn BasicScreen>> = vec![
+            Box::new(MockScreen {
+                key: String::from("screen1"),
+                enabled: true,
+                screen: Screen::default(),
+            }),
+            Box::new(MockScreen {
+                key: String::from("screen2"),
+                enabled: true,
+                screen: Screen::default(),
+            }),
+        ];
+
+        let mut screen_manager = ScreenManager::new(screens);
+
+        assert_eq!(screen_manager.current, 0);
+        screen_manager.previous_screen();
+        assert_eq!(screen_manager.current, 1);
+    }
+
+    #[test]
+    fn test_no_next_screen() {
+        let screens: Vec<Box<dyn BasicScreen>> = vec![
+            Box::new(MockScreen {
+                key: String::from("screen1"),
+                enabled: true,
+                screen: Screen::default(),
+            }),
+            Box::new(MockScreen {
+                key: String::from("screen2"),
+                enabled: false,
+                screen: Screen::default(),
+            }),
+        ];
+
+        let mut screen_manager = ScreenManager::new(screens);
+
+        assert_eq!(screen_manager.current, 0);
+        screen_manager.next_screen();
+        assert_eq!(screen_manager.current, 0);
+    }
+
+    #[test]
+    fn test_no_previous_screen() {
+        let screens: Vec<Box<dyn BasicScreen>> = vec![
+            Box::new(MockScreen {
+                key: String::from("screen1"),
+                enabled: true,
+                screen: Screen::default(),
+            }),
+            Box::new(MockScreen {
+                key: String::from("screen2"),
+                enabled: false,
+                screen: Screen::default(),
+            }),
+        ];
+
+        let mut screen_manager = ScreenManager::new(screens);
+
+        assert_eq!(screen_manager.current, 0);
+        screen_manager.previous_screen();
+        assert_eq!(screen_manager.current, 0);
+    }
+}
