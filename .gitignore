@@ -1,3 +1,4 @@
 /target
 /settings.json
 .DS_Store
+/settings_test.json

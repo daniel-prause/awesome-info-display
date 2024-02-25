@@ -118,3 +118,64 @@ impl ConfigManager {
         self.config.set_screen_value(screen, key, value);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use exchange_format::ConfigParam;
+    const PATH: Option<&str> = Some("./settings_test.json");
+    #[test]
+    fn test_create_config_manager_with_default_filepath() {
+        let mut config_manager = ConfigManager::new(PATH);
+        config_manager.save();
+        assert_eq!(config_manager.config.brightness, 100);
+        assert_eq!(config_manager.config.companion_brightness, 100);
+        assert_eq!(config_manager.config.screens.is_empty(), true);
+    }
+
+    #[test]
+    fn test_save_config() {
+        let mut config_manager = ConfigManager::new(PATH);
+        config_manager.save();
+    }
+
+    #[test]
+    fn test_screen_enabled_existing_screen() {
+        let mut config_manager = ConfigManager::new(PATH);
+        let screen_name = "screen1".to_string();
+        config_manager.set_screen_status(screen_name.clone(), true);
+        assert_eq!(config_manager.screen_enabled(screen_name.clone()), true);
+
+        config_manager.set_screen_status(screen_name.clone(), false);
+        assert_eq!(config_manager.screen_enabled(screen_name), false);
+    }
+
+    #[test]
+    fn test_get_set_value() {
+        let mut config_manager = ConfigManager::new(PATH);
+        let screen_name = "screen1".to_string();
+        let key = "key1".to_string();
+        let value = ConfigParam::Integer(42);
+
+        config_manager.set_value(screen_name.clone(), key.clone(), value.clone());
+        let retrieved_value = config_manager.get_value(&screen_name, &key);
+
+        assert!(matches!(retrieved_value.unwrap(), ConfigParam::Integer(42)));
+    }
+
+    #[test]
+    fn test_get_screen_config() {
+        let mut config_manager = ConfigManager::new(PATH);
+        let screen_name = "screen1".to_string();
+        let key = "key1".to_string();
+        let value = ConfigParam::Integer(42);
+
+        config_manager.set_value(screen_name.clone(), key.clone(), value.clone());
+        let exchangeable_config = config_manager.get_screen_config(&screen_name);
+
+        assert!(matches!(
+            exchangeable_config.unwrap().params.get(&key),
+            Some(ConfigParam::Integer(42))
+        ));
+    }
+}
