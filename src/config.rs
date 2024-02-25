@@ -48,3 +48,90 @@ impl Config {
         };
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use exchange_format::ConfigParam;
+
+    #[test]
+    fn test_set_screen_active_existing_screen() {
+        let mut config = Config {
+            brightness: 100,
+            companion_brightness: 100,
+            screens: HashMap::new(),
+        };
+
+        let screen_name = "screen1".to_string();
+        config.set_screen_active(screen_name.clone(), true);
+
+        assert_eq!(config.screens.get(&screen_name).unwrap().active, true);
+    }
+
+    #[test]
+    fn test_set_screen_active_new_screen() {
+        let mut config = Config {
+            brightness: 100,
+            companion_brightness: 100,
+            screens: HashMap::new(),
+        };
+
+        let screen_name = "screen1".to_string();
+        config.set_screen_active(screen_name.clone(), true);
+
+        assert_eq!(config.screens.len(), 1);
+        assert_eq!(config.screens.get(&screen_name).unwrap().active, true);
+    }
+
+    #[test]
+    fn test_set_screen_value_existing_screen() {
+        let mut config = Config {
+            brightness: 100,
+            companion_brightness: 100,
+            screens: HashMap::new(),
+        };
+
+        let screen_name = "screen1".to_string();
+        let key = "key1".to_string();
+        let value = ConfigParam::Integer(42);
+
+        config.set_screen_active(screen_name.clone(), true);
+        config.set_screen_value(screen_name.clone(), key.clone(), value.clone());
+
+        assert!(matches!(
+            config
+                .screens
+                .get(&screen_name)
+                .unwrap()
+                .config_attributes
+                .get(&key),
+            Some(ConfigParam::Integer(42))
+        ));
+    }
+
+    #[test]
+    fn test_set_screen_value_new_screen() {
+        let mut config = Config {
+            brightness: 100,
+            companion_brightness: 100,
+            screens: HashMap::new(),
+        };
+
+        let screen_name = "screen1".to_string();
+        let key = "key1".to_string();
+        let value = ConfigParam::Integer(42);
+
+        config.set_screen_value(screen_name.clone(), key.clone(), value.clone());
+
+        assert_eq!(config.screens.len(), 1);
+        assert!(matches!(
+            config
+                .screens
+                .get(&screen_name)
+                .unwrap()
+                .config_attributes
+                .get(&key),
+            Some(ConfigParam::Integer(42))
+        ));
+    }
+}
