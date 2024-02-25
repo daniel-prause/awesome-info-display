@@ -51,3 +51,43 @@ impl DadaPacket {
         escaped_vec
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_dada_packet() {
+        let payload = vec![1, 2, 3, 4];
+        let dada_packet = DadaPacket::new(payload);
+
+        assert_eq!(dada_packet.start_bytes, vec![68, 65, 68, 65]);
+        assert_eq!(dada_packet.end_bytes, vec![65, 68, 65, 68]);
+        assert_eq!(dada_packet.payload, vec![1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn test_as_bytes() {
+        let payload = vec![65, 68, 65];
+        let mut dada_packet = DadaPacket::new(payload);
+
+        assert_eq!(dada_packet.start_bytes, vec![68, 65, 68, 65]);
+        assert_eq!(dada_packet.end_bytes, vec![65, 68, 65, 68]);
+        assert_eq!(dada_packet.payload, vec![65, 68, 65]);
+        // length of a packet = 3 bytes (to save one byte on every transmission)
+        assert_eq!(
+            vec![14, 0, 0, 68, 65, 68, 65, 65, 65, 68, 68, 65, 65, 65, 68, 65, 68],
+            dada_packet.as_bytes()
+        );
+    }
+
+    #[test]
+    fn test_escape_bytes() {
+        let payload = vec![65, 68, 65, 66];
+        let mut dada_packet = DadaPacket::new(payload);
+
+        let escaped_bytes = dada_packet.escape_bytes();
+
+        assert_eq!(escaped_bytes, vec![65, 65, 68, 68, 65, 65, 66]);
+    }
+}
