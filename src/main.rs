@@ -501,7 +501,7 @@ impl Application for AwesomeDisplay {
             .into(),
             iced::widget::text(format!(
                 "Main brightness: {}%",
-                self.config_manager.read().unwrap().get_brightness(TEENSY) as f32
+                self.config_manager.read().unwrap().get_brightness(TEENSY)
             ))
             .horizontal_alignment(iced::alignment::Horizontal::Center)
             .width(Length::Fixed(220f32))
@@ -516,7 +516,7 @@ impl Application for AwesomeDisplay {
             .into(),
             iced::widget::text(format!(
                 "Companion brightness: {}%",
-                self.config_manager.read().unwrap().get_brightness(ESP32) as f32
+                self.config_manager.read().unwrap().get_brightness(ESP32)
             ))
             .horizontal_alignment(iced::alignment::Horizontal::Center)
             .width(Length::Fixed(220f32))
