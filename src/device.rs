@@ -64,6 +64,10 @@ impl Device {
         }
     }
 
+    pub fn adjust_brightness_on_device(&self) -> bool {
+        return self.adjust_brightness_on_device;
+    }
+
     pub fn screen_width(&self) -> u32 {
         return self.image_processor.screen_width();
     }

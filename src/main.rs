@@ -188,7 +188,7 @@ pub fn main() -> iced::Result {
 struct AwesomeDisplay {
     screens: Mutex<screen_manager::ScreenManager>,
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
-    companion_brightness_debouncer: Mutex<EventDebouncer<BrightnessEvent>>,
+    companion_brightness_debouncers: IndexMap<String, Mutex<EventDebouncer<BrightnessEvent>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -198,8 +198,7 @@ enum Message {
     UpdateCurrentScreen,
     SaveConfig,
     FontLoaded(Result<(), iced::font::Error>),
-    MainScreenBrightnessChanged(f32),
-    CompanionScreenBrightnessChanged(f32),
+    BrightnessChanged(f32, String),
     ScreenStatusChanged(bool, String),
     KeyboardEventOccurred(iced::keyboard::Key, u32),
     WindowEventOccurred(iced::window::Event),
@@ -257,20 +256,31 @@ impl Application for AwesomeDisplay {
             }
         }
 
+        let mut debouncers = IndexMap::new();
+
+        for (key, device) in DEVICES.iter() {
+            if device.adjust_brightness_on_device() {
+                debouncers.insert(
+                    key.clone(),
+                    Mutex::new(EventDebouncer::new(
+                        std::time::Duration::from_millis(500),
+                        move |event: BrightnessEvent| {
+                            if DEVICES.get(key).unwrap().is_connected() {
+                                DEVICES
+                                    .get(key)
+                                    .unwrap()
+                                    .set_brightness(event.brightness_value as u8);
+                            }
+                        },
+                    )),
+                );
+            }
+        }
+
         let this = AwesomeDisplay {
             screens: Mutex::new(screen_manager::ScreenManager::new(screens)),
             config_manager,
-            companion_brightness_debouncer: Mutex::new(EventDebouncer::new(
-                std::time::Duration::from_millis(500),
-                move |event: BrightnessEvent| {
-                    if DEVICES.get(ESP32).unwrap().is_connected() {
-                        DEVICES
-                            .get(ESP32)
-                            .unwrap()
-                            .set_brightness(event.brightness_value as u8);
-                    }
-                },
-            )),
+            companion_brightness_debouncers: debouncers,
         };
 
         // global key press listener
@@ -393,29 +403,33 @@ impl Application for AwesomeDisplay {
                     CLOSE_REQUESTED.store(true, std::sync::atomic::Ordering::Release);
                 }
             }
-            Message::MainScreenBrightnessChanged(slider_value) => {
-                self.config_manager
-                    .write()
-                    .unwrap()
-                    .set_brightness(TEENSY, slider_value as u8);
-                DEVICES
-                    .get(TEENSY)
-                    .unwrap()
-                    .set_brightness(slider_value as u8);
+
+            Message::BrightnessChanged(slider_value, key) => {
+                let device = DEVICES.get(&key);
+                match device {
+                    Some(d) => {
+                        self.config_manager
+                            .write()
+                            .unwrap()
+                            .set_brightness(key.as_str(), slider_value as u8);
+                        if d.adjust_brightness_on_device() {
+                            self.companion_brightness_debouncers
+                                .get(&key)
+                                .unwrap()
+                                .lock()
+                                .unwrap()
+                                .put(BrightnessEvent {
+                                    brightness_value: slider_value,
+                                    ..Default::default()
+                                });
+                        } else {
+                            d.set_brightness(slider_value as u8);
+                        }
+                    }
+                    _ => {}
+                }
             }
-            Message::CompanionScreenBrightnessChanged(slider_value) => {
-                self.config_manager
-                    .write()
-                    .unwrap()
-                    .set_brightness(ESP32, slider_value as u8);
-                self.companion_brightness_debouncer
-                    .lock()
-                    .unwrap()
-                    .put(BrightnessEvent {
-                        brightness_value: slider_value,
-                        ..Default::default()
-                    });
-            }
+
             Message::ScreenStatusChanged(status, screen) => {
                 if screen_manager.screen_deactivatable(&screen) {
                     screen_manager.set_status_for_screen(&screen, status);
@@ -509,7 +523,9 @@ impl Application for AwesomeDisplay {
             iced::widget::Slider::new(
                 20.0..=100.0,
                 self.config_manager.read().unwrap().get_brightness(TEENSY) as f32,
-                Message::MainScreenBrightnessChanged,
+                |slider_value| -> Message {
+                    Message::BrightnessChanged(slider_value, TEENSY.to_string())
+                },
             )
             .width(Length::Fixed(190f32))
             .step(1.0)
@@ -524,7 +540,9 @@ impl Application for AwesomeDisplay {
             iced::widget::Slider::new(
                 20.0..=100.0,
                 self.config_manager.read().unwrap().get_brightness(ESP32) as f32,
-                Message::CompanionScreenBrightnessChanged,
+                |slider_value| -> Message {
+                    Message::BrightnessChanged(slider_value, ESP32.to_string())
+                },
             )
             .width(Length::Fixed(190f32))
             .step(1.0)
@@ -582,9 +600,13 @@ impl Application for AwesomeDisplay {
             .into(),
             iced::widget::Row::with_children(vec![Space::with_height(10).into()]).into(),
             iced::widget::Row::with_children(vec![iced::widget::text("Devices").into()]).into(),
-            iced::widget::Row::with_children(device_status(TEENSY)).into(),
-            iced::widget::Row::with_children(device_status(ESP32)).into(),
         ];
+
+        for key in DEVICES.keys() {
+            let row: iced::Element<Message, Theme, iced::Renderer> =
+                iced::widget::Row::with_children(device_status(key)).into();
+            left_column_after_screens.push(row);
+        }
 
         column_parts.append(&mut left_column_after_screens);
 
