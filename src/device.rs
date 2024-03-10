@@ -132,13 +132,13 @@ impl Device {
     }
 
     pub fn set_brightness(&self, brightness: u8) -> bool {
-        let brightness = (self.brightness_calculation_adjustment)(brightness);
+        let adjusted_brightness = (self.brightness_calculation_adjustment)(brightness);
         if self.adjust_brightness_on_device {
             self.brightness.store(brightness, Ordering::Release);
             return self.send_command(Self::SET_BRIGHTNESS)
                 && write_screen_buffer(
                     &mut self.port.lock().unwrap(),
-                    &DadaPacket::new(brightness.to_le_bytes().to_vec()).as_bytes(),
+                    &DadaPacket::new(adjusted_brightness.to_le_bytes().to_vec()).as_bytes(),
                 );
         } else {
             // the teensy does not determine its brightness right now in the same way

@@ -278,23 +278,14 @@ impl Application for AwesomeDisplay {
 
         // init device objects
         for (key, device) in DEVICES.iter() {
-            match key.as_str() {
-                TEENSY => {
-                    device.set_brightness(
-                        this.config_manager.read().unwrap().config.brightness as u8,
-                    );
+            match this.config_manager.read().unwrap().config.devices.get(key) {
+                Some(device_config) => {
+                    device.set_brightness(device_config.brightness);
                 }
-                ESP32 => {
-                    device.set_brightness(
-                        this.config_manager
-                            .read()
-                            .unwrap()
-                            .config
-                            .companion_brightness as u8,
-                    );
+                None => {
+                    device.set_brightness(100);
                 }
-                _ => {}
-            }
+            };
 
             device.start_background_workers()
         }
@@ -403,7 +394,10 @@ impl Application for AwesomeDisplay {
                 }
             }
             Message::MainScreenBrightnessChanged(slider_value) => {
-                self.config_manager.write().unwrap().config.brightness = slider_value as u16;
+                self.config_manager
+                    .write()
+                    .unwrap()
+                    .set_brightness(TEENSY, slider_value as u8);
                 DEVICES
                     .get(TEENSY)
                     .unwrap()
@@ -413,8 +407,7 @@ impl Application for AwesomeDisplay {
                 self.config_manager
                     .write()
                     .unwrap()
-                    .config
-                    .companion_brightness = slider_value as u16;
+                    .set_brightness(ESP32, slider_value as u8);
                 self.companion_brightness_debouncer
                     .lock()
                     .unwrap()
@@ -508,14 +501,14 @@ impl Application for AwesomeDisplay {
             .into(),
             iced::widget::text(format!(
                 "Main brightness: {}%",
-                self.config_manager.read().unwrap().config.brightness
+                self.config_manager.read().unwrap().get_brightness(TEENSY) as f32
             ))
             .horizontal_alignment(iced::alignment::Horizontal::Center)
             .width(Length::Fixed(220f32))
             .into(),
             iced::widget::Slider::new(
                 20.0..=100.0,
-                self.config_manager.read().unwrap().config.brightness as f32,
+                self.config_manager.read().unwrap().get_brightness(TEENSY) as f32,
                 Message::MainScreenBrightnessChanged,
             )
             .width(Length::Fixed(190f32))
@@ -523,22 +516,14 @@ impl Application for AwesomeDisplay {
             .into(),
             iced::widget::text(format!(
                 "Companion brightness: {}%",
-                self.config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .companion_brightness
+                self.config_manager.read().unwrap().get_brightness(ESP32) as f32
             ))
             .horizontal_alignment(iced::alignment::Horizontal::Center)
             .width(Length::Fixed(220f32))
             .into(),
             iced::widget::Slider::new(
                 20.0..=100.0,
-                self.config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .companion_brightness as f32,
+                self.config_manager.read().unwrap().get_brightness(ESP32) as f32,
                 Message::CompanionScreenBrightnessChanged,
             )
             .width(Length::Fixed(190f32))

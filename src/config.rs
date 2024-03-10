@@ -5,8 +5,7 @@ use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
-    pub brightness: u16,
-    pub companion_brightness: u16,
+    pub devices: HashMap<String, DeviceConfig>,
     pub screens: HashMap<String, ScreenConfig>,
 }
 
@@ -14,6 +13,11 @@ pub struct Config {
 pub struct ScreenConfig {
     pub active: bool,
     pub config_attributes: IndexMap<String, ConfigParam>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct DeviceConfig {
+    pub brightness: u8,
 }
 
 impl Config {
@@ -47,6 +51,18 @@ impl Config {
             }
         };
     }
+
+    pub fn set_device_brightness(&mut self, device: &str, value: u8) {
+        match self.devices.get_mut(&device.to_string()) {
+            Some(config) => {
+                config.brightness = value;
+            }
+            None => {
+                self.devices
+                    .insert(device.to_string(), DeviceConfig { brightness: 100 });
+            }
+        };
+    }
 }
 
 #[cfg(test)]
@@ -57,8 +73,7 @@ mod tests {
     #[test]
     fn test_set_screen_active_existing_screen() {
         let mut config = Config {
-            brightness: 100,
-            companion_brightness: 100,
+            devices: HashMap::new(),
             screens: HashMap::new(),
         };
 
@@ -71,8 +86,7 @@ mod tests {
     #[test]
     fn test_set_screen_active_new_screen() {
         let mut config = Config {
-            brightness: 100,
-            companion_brightness: 100,
+            devices: HashMap::new(),
             screens: HashMap::new(),
         };
 
@@ -86,8 +100,7 @@ mod tests {
     #[test]
     fn test_set_screen_value_existing_screen() {
         let mut config = Config {
-            brightness: 100,
-            companion_brightness: 100,
+            devices: HashMap::new(),
             screens: HashMap::new(),
         };
 
@@ -112,8 +125,7 @@ mod tests {
     #[test]
     fn test_set_screen_value_new_screen() {
         let mut config = Config {
-            brightness: 100,
-            companion_brightness: 100,
+            devices: HashMap::new(),
             screens: HashMap::new(),
         };
 

@@ -20,8 +20,7 @@ impl ConfigManager {
     pub fn new(filepath: Option<&str>) -> Self {
         let filepath = filepath.unwrap_or("./settings.json").to_string();
         let config = Config {
-            brightness: 100,
-            companion_brightness: 100,
+            devices: HashMap::new(),
             screens: HashMap::new(),
         };
         let mut this = ConfigManager {
@@ -117,6 +116,17 @@ impl ConfigManager {
     pub fn set_value(&mut self, screen: String, key: String, value: ConfigParam) {
         self.config.set_screen_value(screen, key, value);
     }
+
+    pub fn get_brightness(&self, device: &str) -> u8 {
+        match self.config.devices.get(device) {
+            Some(config) => config.brightness,
+            None => 100,
+        }
+    }
+
+    pub fn set_brightness(&mut self, device: &str, value: u8) {
+        self.config.set_device_brightness(device, value)
+    }
 }
 
 #[cfg(test)]
@@ -128,8 +138,7 @@ mod tests {
     fn test_create_config_manager_with_default_filepath() {
         let mut config_manager = ConfigManager::new(PATH);
         config_manager.save();
-        assert_eq!(config_manager.config.brightness, 100);
-        assert_eq!(config_manager.config.companion_brightness, 100);
+        assert_eq!(config_manager.get_brightness("DEVICE1"), 100);
         assert_eq!(config_manager.config.screens.is_empty(), true);
     }
 
