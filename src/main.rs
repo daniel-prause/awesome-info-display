@@ -513,41 +513,31 @@ impl Application for AwesomeDisplay {
             .on_press(Message::PreviousScreen)
             .width(Length::Fixed(200f32))
             .into(),
-            iced::widget::text(format!(
-                "Main brightness: {}%",
-                self.config_manager.read().unwrap().get_brightness(TEENSY)
-            ))
-            .horizontal_alignment(iced::alignment::Horizontal::Center)
-            .width(Length::Fixed(220f32))
-            .into(),
-            iced::widget::Slider::new(
-                20.0..=100.0,
-                self.config_manager.read().unwrap().get_brightness(TEENSY) as f32,
-                |slider_value| -> Message {
-                    Message::BrightnessChanged(slider_value, TEENSY.to_string())
-                },
-            )
-            .width(Length::Fixed(190f32))
-            .step(1.0)
-            .into(),
-            iced::widget::text(format!(
-                "Companion brightness: {}%",
-                self.config_manager.read().unwrap().get_brightness(ESP32)
-            ))
-            .horizontal_alignment(iced::alignment::Horizontal::Center)
-            .width(Length::Fixed(220f32))
-            .into(),
-            iced::widget::Slider::new(
-                20.0..=100.0,
-                self.config_manager.read().unwrap().get_brightness(ESP32) as f32,
-                |slider_value| -> Message {
-                    Message::BrightnessChanged(slider_value, ESP32.to_string())
-                },
-            )
-            .width(Length::Fixed(190f32))
-            .step(1.0)
-            .into(),
         ];
+
+        for key in DEVICES.keys() {
+            let text: iced::Element<Message, Theme, iced::Renderer> = iced::widget::text(format!(
+                "{} brightness: {}%",
+                key.to_uppercase(),
+                self.config_manager.read().unwrap().get_brightness(key)
+            ))
+            .horizontal_alignment(iced::alignment::Horizontal::Center)
+            .width(Length::Fixed(220f32))
+            .into();
+            let slider: iced::Element<Message, Theme, iced::Renderer> = iced::widget::Slider::new(
+                20.0..=100.0,
+                self.config_manager.read().unwrap().get_brightness(key) as f32,
+                |slider_value| -> Message {
+                    Message::BrightnessChanged(slider_value, key.to_string())
+                },
+            )
+            .width(Length::Fixed(200f32))
+            .step(1.0)
+            .into();
+
+            column_parts.push(text);
+            column_parts.push(slider);
+        }
 
         // insert screens into left column menu
         for screen in screen_manager.descriptions_and_keys_and_state().into_iter() {
