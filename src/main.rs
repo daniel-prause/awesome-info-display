@@ -12,7 +12,7 @@ mod screens;
 mod style;
 mod weather;
 
-use converters::image::{ImageProcessor, NoOpConverter, WebPConverter};
+use converters::image::{GrayscaleConverter, ImageProcessor, WebPConverter};
 use debounce::EventDebouncer;
 use device::*;
 use exchange_format::ConfigParam;
@@ -120,8 +120,9 @@ static DEVICES: Lazy<IndexMap<String, Device>> = Lazy::new(|| {
             "16c00483".into(),
             4608000,
             false,
-            ImageProcessor::new(Box::new(NoOpConverter), 256, 64),
+            ImageProcessor::new(Box::new(GrayscaleConverter), 256, 64),
             true,
+            false,
         ),
     );
     m.insert(
@@ -132,6 +133,7 @@ static DEVICES: Lazy<IndexMap<String, Device>> = Lazy::new(|| {
             true,
             ImageProcessor::new(Box::new(WebPConverter), 320, 170),
             false,
+            true,
         ),
     );
     m
@@ -273,17 +275,28 @@ impl Application for AwesomeDisplay {
         start_global_key_grabber(keyboard::callback);
 
         // init device objects
-        for device in DEVICES.values() {
-            device.set_brightness(
-                (this
-                    .config_manager
-                    .read()
-                    .unwrap()
-                    .config
-                    .companion_brightness as f32
-                    * 2.55f32) as u8
-                    - 1,
-            );
+        for (key, device) in DEVICES.iter() {
+            match key.as_str() {
+                TEENSY => {
+                    device.set_brightness(
+                        this.config_manager.read().unwrap().config.brightness as u8,
+                    );
+                }
+                ESP32 => {
+                    device.set_brightness(
+                        (this
+                            .config_manager
+                            .read()
+                            .unwrap()
+                            .config
+                            .companion_brightness as f32
+                            * 2.55f32) as u8
+                            - 1,
+                    );
+                }
+                _ => {}
+            }
+
             device.start_background_workers()
         }
         (
@@ -392,6 +405,10 @@ impl Application for AwesomeDisplay {
             }
             Message::MainScreenBrightnessChanged(slider_value) => {
                 self.config_manager.write().unwrap().config.brightness = slider_value as u16;
+                DEVICES
+                    .get(TEENSY)
+                    .unwrap()
+                    .set_brightness(slider_value as u8);
             }
             Message::CompanionScreenBrightnessChanged(slider_value) => {
                 self.config_manager
@@ -466,23 +483,12 @@ impl Application for AwesomeDisplay {
         }
 
         for (device_name, buffer) in screen_bytes.iter() {
-            let bytes_to_be_sent;
-            // sadly, the TEENSY needs some special treatment
-            // this should be moved to the device itself
-            if *device_name == TEENSY {
-                bytes_to_be_sent = convert_to_gray_scale(&adjust_brightness_rgb(
-                    &buffer,
-                    self.config_manager.read().unwrap().config.brightness as f32,
-                ));
-            } else {
-                bytes_to_be_sent = buffer.clone();
-            }
-            if !bytes_to_be_sent.is_empty() {
+            if !buffer.is_empty() {
                 DEVICES
                     .get(*device_name)
                     .unwrap()
                     .sender
-                    .try_send(bytes_to_be_sent)
+                    .try_send(buffer.clone())
                     .unwrap_or_default();
             }
         }

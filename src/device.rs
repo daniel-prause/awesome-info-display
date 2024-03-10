@@ -3,8 +3,8 @@ use std::{sync::atomic::Ordering, thread};
 use crossbeam_channel::{bounded, Receiver, Sender};
 
 use crate::{
-    converters::image::ImageProcessor, dada_packet::DadaPacket, helpers::display_serial_com::*,
-    CLOSE_REQUESTED, HIBERNATING, LAST_BME_INFO,
+    adjust_brightness_rgb, converters::image::ImageProcessor, dada_packet::DadaPacket,
+    helpers::display_serial_com::*, CLOSE_REQUESTED, HIBERNATING, LAST_BME_INFO,
 };
 
 pub struct Device {
@@ -14,6 +14,7 @@ pub struct Device {
     has_bme_sensor: bool,
     background_workers_started: std::sync::atomic::AtomicBool,
     image_processor: ImageProcessor,
+    adjust_brightness_on_device: bool,
     pub brightness: std::sync::atomic::AtomicU8,
     pub sender: Sender<Vec<u8>>,
     pub receiver: Receiver<Vec<u8>>,
@@ -37,6 +38,7 @@ impl Device {
         use_dada_packet: bool,
         image_processor: ImageProcessor,
         has_bme_sensor: bool,
+        adjust_brightness_on_device: bool,
     ) -> Device {
         let (sender, receiver): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         Device {
@@ -47,6 +49,7 @@ impl Device {
             receiver,
             has_bme_sensor,
             image_processor,
+            adjust_brightness_on_device,
             brightness: std::sync::atomic::AtomicU8::new(100),
             background_workers_started: std::sync::atomic::AtomicBool::new(false),
             awake: std::sync::Mutex::new(false),
@@ -122,18 +125,21 @@ impl Device {
         return send_command(&mut self.port.lock().unwrap(), &command.to_le_bytes());
     }
 
-    // will be ignored from teensy for now until we find out, how the brightness for the
-    // oled display can be set oO
     pub fn set_brightness(&self, brightness: u8) -> bool {
-        if self.use_dada_packet {
+        if self.adjust_brightness_on_device {
             self.brightness.store(brightness, Ordering::Release);
             return self.send_command(Self::SET_BRIGHTNESS)
                 && write_screen_buffer(
                     &mut self.port.lock().unwrap(),
                     &DadaPacket::new(brightness.to_le_bytes().to_vec()).as_bytes(),
                 );
+        } else {
+            // the teensy does not determine its brightness right now in the same way
+            // the esp32 does. therefore, we will use this brightness in the image processor only
+            // and not send it to the device for now.
+            self.brightness.store(brightness, Ordering::Release);
+            true
         }
-        false // not implemented for teensy
     }
 
     pub fn stand_by(&self) {
@@ -203,8 +209,13 @@ impl Device {
                                 last_sum = 0;
                                 self.stand_by();
                             } else {
-                                let crc_of_buf = crc32fast::hash(&b);
                                 let mut payload = b;
+                                // adjust brightness in app instead of on device
+                                if !self.adjust_brightness_on_device {
+                                    let brightness = self.brightness.load(Ordering::Acquire);
+                                    payload = adjust_brightness_rgb(&payload, brightness as f32);
+                                }
+                                let crc_of_buf = crc32fast::hash(&payload);
                                 self.image_processor.process_image(&mut payload);
                                 if last_sum != crc_of_buf {
                                     if self.write(&payload) {

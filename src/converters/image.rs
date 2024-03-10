@@ -1,3 +1,5 @@
+use crate::convert_to_gray_scale;
+
 pub trait ImageConverter: Send + Sync {
     fn convert(&self, data: &mut Vec<u8>, width: u32, height: u32);
 }
@@ -9,6 +11,15 @@ impl ImageConverter for WebPConverter {
         *data = webp::Encoder::new(&*data, webp::PixelLayout::Rgb, width, height)
             .encode(100.0)
             .to_vec();
+    }
+}
+
+pub struct GrayscaleConverter;
+
+// since the grayscale converter is only used for the teensy, we will adjust the brightness here for now.
+impl ImageConverter for GrayscaleConverter {
+    fn convert(&self, data: &mut Vec<u8>, _width: u32, _height: u32) {
+        *data = convert_to_gray_scale(&data);
     }
 }
 
