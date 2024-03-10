@@ -123,6 +123,7 @@ static DEVICES: Lazy<IndexMap<String, Device>> = Lazy::new(|| {
             ImageProcessor::new(Box::new(GrayscaleConverter), 256, 64),
             true,
             false,
+            Arc::new(|value| value),
         ),
     );
     m.insert(
@@ -134,6 +135,7 @@ static DEVICES: Lazy<IndexMap<String, Device>> = Lazy::new(|| {
             ImageProcessor::new(Box::new(WebPConverter), 320, 170),
             false,
             true,
+            Arc::new(|value| (value as f32 * 2.55f32) as u8 - 1),
         ),
     );
     m
@@ -265,7 +267,7 @@ impl Application for AwesomeDisplay {
                         DEVICES
                             .get(ESP32)
                             .unwrap()
-                            .set_brightness((event.brightness_value * 2.55 as f32) as u8 - 1);
+                            .set_brightness(event.brightness_value as u8);
                     }
                 },
             )),
@@ -284,14 +286,11 @@ impl Application for AwesomeDisplay {
                 }
                 ESP32 => {
                     device.set_brightness(
-                        (this
-                            .config_manager
+                        this.config_manager
                             .read()
                             .unwrap()
                             .config
-                            .companion_brightness as f32
-                            * 2.55f32) as u8
-                            - 1,
+                            .companion_brightness as u8,
                     );
                 }
                 _ => {}

@@ -1,4 +1,7 @@
-use std::{sync::atomic::Ordering, thread};
+use std::{
+    sync::{atomic::Ordering, Arc},
+    thread,
+};
 
 use crossbeam_channel::{bounded, Receiver, Sender};
 
@@ -15,6 +18,7 @@ pub struct Device {
     background_workers_started: std::sync::atomic::AtomicBool,
     image_processor: ImageProcessor,
     adjust_brightness_on_device: bool,
+    brightness_calculation_adjustment: Arc<dyn Fn(u8) -> u8 + Send + Sync>,
     pub brightness: std::sync::atomic::AtomicU8,
     pub sender: Sender<Vec<u8>>,
     pub receiver: Receiver<Vec<u8>>,
@@ -39,6 +43,7 @@ impl Device {
         image_processor: ImageProcessor,
         has_bme_sensor: bool,
         adjust_brightness_on_device: bool,
+        brightness_calculation_adjustment: Arc<dyn Fn(u8) -> u8 + Send + Sync>,
     ) -> Device {
         let (sender, receiver): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = bounded(1);
         Device {
@@ -50,6 +55,7 @@ impl Device {
             has_bme_sensor,
             image_processor,
             adjust_brightness_on_device,
+            brightness_calculation_adjustment,
             brightness: std::sync::atomic::AtomicU8::new(100),
             background_workers_started: std::sync::atomic::AtomicBool::new(false),
             awake: std::sync::Mutex::new(false),
@@ -126,6 +132,7 @@ impl Device {
     }
 
     pub fn set_brightness(&self, brightness: u8) -> bool {
+        let brightness = (self.brightness_calculation_adjustment)(brightness);
         if self.adjust_brightness_on_device {
             self.brightness.store(brightness, Ordering::Release);
             return self.send_command(Self::SET_BRIGHTNESS)
