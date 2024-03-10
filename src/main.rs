@@ -367,10 +367,10 @@ impl Application for AwesomeDisplay {
                 if *LAST_KEY.lock().unwrap() {
                     *LAST_KEY.lock().unwrap() = false;
                     let val = *LAST_KEY_VALUE.lock().unwrap();
-                    if val == 174 || val == 175 {
+                    if (174..175).contains(&val) {
                         // 1 is "volume mode"
                         screen_manager.set_screen_for_short("media_info_screen".into(), 1);
-                    } else if (176..180).contains(&val) {
+                    } else if [173, 176, 177, 178, 179, 180].contains(&val) {
                         // 0 is "normal mode"
                         screen_manager.set_screen_for_short("media_info_screen".into(), 0);
                     } else if val == 180 {
