@@ -1,4 +1,5 @@
 use crate::config_manager::ConfigManager;
+use crate::{ESP32, TEENSY};
 use exchange_format::ExchangeableConfig;
 use rusttype::Font;
 use std::rc::Rc;
@@ -72,14 +73,13 @@ pub trait BasicScreen: Screenable {
         screen.key.clone()
     }
 
-    fn current_image(&mut self) -> &Vec<u8> {
+    fn current_image(&mut self, device: &str) -> Option<Vec<u8>> {
         let screen = self.get_screen();
-        &screen.main_screen_bytes
-    }
-
-    fn current_image_for_companion(&mut self) -> &Vec<u8> {
-        let screen = self.get_screen();
-        &screen.companion_screen_bytes
+        match device {
+            TEENSY => Some(screen.main_screen_bytes.clone()),
+            ESP32 => Some(screen.companion_screen_bytes.clone()),
+            _ => None,
+        }
     }
 
     fn start(&mut self) {

@@ -28,13 +28,13 @@ use iced::{
     executor, time, window, Application, Command, Element, Length, Settings, Subscription, Theme,
 };
 
+use indexmap::IndexMap;
 use lazy_static::lazy_static;
 use named_lock::NamedLock;
 use named_lock::Result;
 use once_cell::sync::Lazy;
 use rusttype::Font as ft;
 use std::{
-    collections::HashMap,
     error::Error,
     fmt,
     rc::Rc,
@@ -112,8 +112,8 @@ lazy_static! {
 const TEENSY: &str = "teensy";
 const ESP32: &str = "esp32";
 
-static DEVICES: Lazy<HashMap<String, Device>> = Lazy::new(|| {
-    let mut m: HashMap<String, Device> = HashMap::new();
+static DEVICES: Lazy<IndexMap<String, Device>> = Lazy::new(|| {
+    let mut m: IndexMap<String, Device> = IndexMap::new();
     m.insert(
         TEENSY.into(),
         Device::new(
@@ -458,33 +458,31 @@ impl Application for AwesomeDisplay {
 
     fn view(&self) -> Element<Message> {
         let mut screen_manager = self.screens.lock().unwrap();
-        let main_screen_bytes = screen_manager.current_screen().current_image().clone();
-        let companion_screen_bytes = screen_manager
-            .current_screen()
-            .current_image_for_companion()
-            .clone();
+        let mut screen_bytes: IndexMap<&str, Vec<u8>> = IndexMap::new();
 
-        // preview image
-        let main_screen_image =
-            rgb_bytes_to_rgba_image(&swap_rgb(&main_screen_bytes, 256, 64), 256, 64);
-        let companion_screen_image =
-            rgb_bytes_to_rgba_image(&swap_rgb(&companion_screen_bytes, 320, 170), 320, 170);
+        for key in DEVICES.keys() {
+            let bytes = screen_manager.current_screen().current_image(key).unwrap();
+            screen_bytes.insert(key, bytes);
+        }
 
-        // convert to gray scale for display
-        let main_screen_bytes = convert_to_gray_scale(&adjust_brightness_rgb(
-            &main_screen_bytes,
-            self.config_manager.read().unwrap().config.brightness as f32,
-        ));
-
-        for (device_name, buffer) in
-            vec![(TEENSY, main_screen_bytes), (ESP32, companion_screen_bytes)]
-        {
-            if !buffer.is_empty() {
+        for (device_name, buffer) in screen_bytes.iter() {
+            let bytes_to_be_sent;
+            // sadly, the TEENSY needs some special treatment
+            // this should be moved to the device itself
+            if *device_name == TEENSY {
+                bytes_to_be_sent = convert_to_gray_scale(&adjust_brightness_rgb(
+                    &buffer,
+                    self.config_manager.read().unwrap().config.brightness as f32,
+                ));
+            } else {
+                bytes_to_be_sent = buffer.clone();
+            }
+            if !bytes_to_be_sent.is_empty() {
                 DEVICES
-                    .get(device_name)
+                    .get(*device_name)
                     .unwrap()
                     .sender
-                    .try_send(buffer)
+                    .try_send(bytes_to_be_sent)
                     .unwrap_or_default();
             }
         }
@@ -610,20 +608,27 @@ impl Application for AwesomeDisplay {
             .align_items(iced::Alignment::Center)
             .width(Length::Fill)
             .push(iced::widget::text("Current screen").size(50))
-            .push(iced::widget::text(screen_manager.current_screen().description()).size(25))
-            .push(
-                main_screen_image
-                    .width(Length::Fixed(256f32))
-                    .height(Length::Fixed(64f32)),
+            .push(iced::widget::text(screen_manager.current_screen().description()).size(25));
+
+        for key in DEVICES.keys() {
+            let screen_width = DEVICES.get(key).unwrap().screen_width();
+            let screen_height = DEVICES.get(key).unwrap().screen_height();
+            let preview_image = rgb_bytes_to_rgba_image(
+                &swap_rgb(
+                    &screen_bytes.get(key.as_str()).unwrap(),
+                    screen_width,
+                    screen_height,
+                ),
+                screen_width,
+                screen_height,
             )
-            .spacing(10)
-            .push(
-                // companion image
-                companion_screen_image
-                    .width(Length::Fixed(320f32))
-                    .height(Length::Fixed(170f32)),
-            )
-            .push(iced::widget::Row::new().height(50));
+            .width(Length::Fixed(screen_width as f32))
+            .height(Length::Fixed(screen_height as f32));
+            col2 = col2.push(preview_image);
+        }
+        col2 = col2.spacing(10);
+        col2 = col2.push(iced::widget::Row::new().height(50));
+
         // push config fields:
         for (key, item) in screen_manager.current_screen().config_layout().params {
             let screen_key: String = screen_manager.current_screen().key().clone();

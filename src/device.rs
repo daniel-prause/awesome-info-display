@@ -55,6 +55,14 @@ impl Device {
         }
     }
 
+    pub fn screen_width(&self) -> u32 {
+        return self.image_processor.screen_width();
+    }
+
+    pub fn screen_height(&self) -> u32 {
+        return self.image_processor.screen_height();
+    }
+
     pub fn is_connected(&self) -> bool {
         return self.connected.load(Ordering::Acquire);
     }

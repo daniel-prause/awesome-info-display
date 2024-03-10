@@ -38,4 +38,12 @@ impl ImageProcessor {
     pub fn process_image(&self, data: &mut Vec<u8>) {
         self.converter.convert(data, self.width, self.height);
     }
+
+    pub fn screen_width(&self) -> u32 {
+        return self.width;
+    }
+
+    pub fn screen_height(&self) -> u32 {
+        return self.height;
+    }
 }
