@@ -205,7 +205,10 @@ impl Device {
             let mut last_sum = 0;
             let mut brightness_set = false;
             loop {
-                let buf = self.receiver.recv();
+                let buf = self
+                    .receiver
+                    .recv_timeout(std::time::Duration::from_millis(250));
+
                 if self.is_connected() {
                     if !brightness_set {
                         self.set_brightness(self.brightness.load(Ordering::Acquire));
@@ -240,7 +243,11 @@ impl Device {
                                 self.wake_up();
                             }
                         }
-                        Err(_) => {}
+                        Err(_) => {
+                            if !self.send_command(Self::KEEP_ALIVE) {
+                                self.disconnect();
+                            }
+                        }
                     }
                 } else if self.connect() {
                     brightness_set = false;
