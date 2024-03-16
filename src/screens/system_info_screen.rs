@@ -3,6 +3,7 @@ use crate::{
     config_manager::ConfigManager,
     screens::{BasicScreen, Screen, Screenable},
 };
+use ab_glyph::{FontArc, PxScale};
 use cpu_monitor::CpuInstant;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
@@ -10,9 +11,8 @@ use imageproc::{
     drawing::{draw_filled_rect_mut, draw_hollow_rect_mut, draw_text_mut},
     rect::Rect,
 };
-use rusttype::{Font, Scale};
+
 use std::{
-    rc::Rc,
     sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
     thread,
     time::Duration,
@@ -52,7 +52,7 @@ impl SystemInfoScreen {
         &mut self,
         image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
         cpu_usage: f64,
-        scale: Scale,
+        scale: PxScale,
     ) {
         let cpu_text = format!("{: >3}%", cpu_usage.to_string());
         draw_text_mut(
@@ -90,7 +90,7 @@ impl SystemInfoScreen {
         &mut self,
         image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
         ram_usage: f64,
-        scale: Scale,
+        scale: PxScale,
     ) {
         let memory_text = format!("{: >3}%", ram_usage.to_string());
         draw_text_mut(
@@ -128,7 +128,7 @@ impl SystemInfoScreen {
     fn draw_screen(&mut self, cpu_usage: f64, ram_usage: f64) {
         // draw initial image
         let mut image = RgbImage::new(256, 64);
-        let scale = Scale { x: 16.0, y: 16.0 };
+        let scale = PxScale { x: 16.0, y: 16.0 };
 
         self.draw_cpu(&mut image, cpu_usage, scale);
         self.draw_memory(&mut image, ram_usage, scale);
@@ -138,7 +138,7 @@ impl SystemInfoScreen {
     pub fn new(
         description: String,
         key: String,
-        font: Rc<Font<'static>>,
+        font: FontArc,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> SystemInfoScreen {
         let (tx, rx): (Sender<SystemInfoState>, Receiver<SystemInfoState>) = bounded(1);

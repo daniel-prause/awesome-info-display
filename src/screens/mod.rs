@@ -1,8 +1,8 @@
 use crate::config_manager::ConfigManager;
 use crate::{ESP32, TEENSY};
+use ab_glyph::{FontArc};
 use exchange_format::ExchangeableConfig;
-use rusttype::Font;
-use std::rc::Rc;
+
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
 use std::thread::JoinHandle;
 use std::time::Instant;
@@ -16,8 +16,8 @@ pub struct Screen {
     pub key: String,
     pub main_screen_bytes: Vec<u8>,
     pub companion_screen_bytes: Vec<u8>,
-    pub font: Rc<Font<'static>>,
-    pub symbols: Rc<Font<'static>>,
+    pub font: FontArc,
+    pub symbols: FontArc,
     pub active: Arc<AtomicBool>,
     pub handle: Option<JoinHandle<()>>,
     pub mode: u32,
@@ -33,14 +33,12 @@ impl Default for Screen {
             key: String::from(""),
             main_screen_bytes: Vec::new(), // Oled display byte image
             companion_screen_bytes: vec![0; 320 * 170 * 3], // companion display byte image
-            font: Rc::new(
-                Font::try_from_vec(Vec::from(include_bytes!("../fonts/Liberation.ttf") as &[u8]))
-                    .unwrap(),
-            ),
-            symbols: Rc::new(
-                Font::try_from_vec(Vec::from(include_bytes!("../fonts/symbols.otf") as &[u8]))
-                    .unwrap(),
-            ),
+            font: FontArc::try_from_slice(include_bytes!("../fonts/Liberation.ttf") as &[u8])
+                .unwrap(),
+
+            symbols: FontArc::try_from_slice(include_bytes!("../fonts/symbols.otf") as &[u8])
+                .unwrap(),
+
             active: Arc::new(AtomicBool::new(false)),
             handle: None,
             mode: 0,

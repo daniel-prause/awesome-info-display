@@ -1,14 +1,14 @@
 use crate::config_manager::ConfigManager;
 use crate::screens::{BasicScreen, Screen, Screenable};
+use ab_glyph::{FontArc, PxScale};
 use exchange_format::*;
 use image::{EncodableLayout, GenericImage, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use libloading::Library;
-use rusttype::{Font, Scale};
+
 use std::ffi::CString;
 use std::path::PathBuf;
 use std::{
-    rc::Rc,
     sync::{atomic::AtomicBool, Arc, RwLock},
 };
 
@@ -184,7 +184,7 @@ impl PluginScreen {
                         color,
                         text.x,
                         text.y,
-                        Scale {
+                        PxScale {
                             x: text.scale_x,
                             y: text.scale_y,
                         },
@@ -204,8 +204,8 @@ impl PluginScreen {
     }
 
     pub fn new(
-        font: Rc<Font<'static>>,
-        symbols: Rc<Font<'static>>,
+        font: FontArc,
+        symbols: FontArc,
         config_manager: Arc<RwLock<ConfigManager>>,
         library_path: PathBuf,
     ) -> PluginScreen {

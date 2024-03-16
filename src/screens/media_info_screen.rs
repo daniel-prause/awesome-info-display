@@ -5,6 +5,7 @@ use crate::{
     helpers::text_manipulation::rotate,
     screens::{BasicScreen, Screen, Screenable},
 };
+use ab_glyph::{FontArc, PxScale};
 use crossbeam_channel::{bounded, Receiver, Sender};
 use image::{EncodableLayout, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{
@@ -12,11 +13,10 @@ use imageproc::drawing::{
 };
 use imageproc::rect::Rect;
 use regex;
-use rusttype::{Font, Scale};
+
 use std::path::Path;
 use std::ptr::null_mut;
 use std::{
-    rc::Rc,
     sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
     thread,
     time::{Duration, Instant},
@@ -30,7 +30,7 @@ use winsafe::{co, msg::WndMsg, prelude::user_Hwnd};
 pub struct MediaInfoScreen {
     screen: Screen,
     receiver: Receiver<MusicPlayerInfo>,
-    symbols: Rc<Font<'static>>,
+    symbols: FontArc,
     title_x: u32,
     artist_x: u32,
     music_player_info: MusicPlayerInfo,
@@ -76,7 +76,7 @@ impl BasicScreen for MediaInfoScreen {
 }
 
 impl MediaInfoScreen {
-    fn draw_intro(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: Scale) {
+    fn draw_intro(&mut self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, scale: PxScale) {
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
@@ -100,7 +100,7 @@ impl MediaInfoScreen {
         &mut self,
         artist: &String,
         image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
-        scale: Scale,
+        scale: PxScale,
     ) {
         let mut position_artist = 0;
         let artist_len = artist.graphemes(true).count();
@@ -135,7 +135,7 @@ impl MediaInfoScreen {
         &mut self,
         title: &String,
         image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
-        scale: Scale,
+        scale: PxScale,
     ) {
         let title_len = title.graphemes(true).count();
         let mut position_title = 0;
@@ -189,8 +189,8 @@ impl MediaInfoScreen {
             Rgb([255u8, 255u8, 255u8]),
             4,
             37,
-            Scale { x: 10.0, y: 10.0 },
-            self.symbols.as_ref(),
+            PxScale { x: 10.0, y: 10.0 },
+            &self.symbols,
             button,
         );
     }
@@ -207,7 +207,7 @@ impl MediaInfoScreen {
             Rgb([255u8, 255u8, 255u8]),
             16,
             36,
-            Scale { x: 14.0, y: 14.0 },
+            PxScale { x: 14.0, y: 14.0 },
             &self.screen.font,
             &elapsed,
         );
@@ -224,7 +224,7 @@ impl MediaInfoScreen {
             Rgb([255u8, 255u8, 255u8]),
             166,
             36,
-            Scale { x: 14.0, y: 14.0 },
+            PxScale { x: 14.0, y: 14.0 },
             &self.screen.font,
             &total,
         );
@@ -278,8 +278,8 @@ impl MediaInfoScreen {
                 Rgb([255u8, 255u8, 255u8]),
                 118,
                 38,
-                Scale { x: 10.0, y: 10.0 },
-                self.symbols.as_ref(),
+                PxScale { x: 10.0, y: 10.0 },
+                &self.symbols,
                 mute_speaker,
             );
         }
@@ -330,8 +330,8 @@ impl MediaInfoScreen {
             Rgb([255u8, 255u8, 255u8]),
             16,
             38,
-            Scale { x: 10.0, y: 10.0 },
-            self.symbols.as_ref(),
+            PxScale { x: 10.0, y: 10.0 },
+            &self.symbols,
             small_speaker,
         );
 
@@ -340,8 +340,8 @@ impl MediaInfoScreen {
             Rgb([255u8, 255u8, 255u8]),
             240,
             37,
-            Scale { x: 10.0, y: 10.0 },
-            self.symbols.as_ref(),
+            PxScale { x: 10.0, y: 10.0 },
+            &self.symbols,
             big_speaker,
         );
         draw_filled_rect_mut(
@@ -364,7 +364,7 @@ impl MediaInfoScreen {
 
     fn draw_screen(&mut self, music_player_info: &MusicPlayerInfo) {
         let mut image = RgbImage::new(256, 64);
-        let scale = Scale { x: 16.0, y: 16.0 };
+        let scale = PxScale { x: 16.0, y: 16.0 };
         let seconds = Duration::from_secs(3);
         if self.screen.mode_timeout.unwrap_or(Instant::now()).elapsed() >= seconds {
             self.screen.mode = 0;
@@ -411,8 +411,8 @@ impl MediaInfoScreen {
     pub fn new(
         description: String,
         key: String,
-        font: Rc<Font<'static>>,
-        symbols: Rc<Font<'static>>,
+        font: FontArc,
+        symbols: FontArc,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> MediaInfoScreen {
         let (tx, rx): (Sender<MusicPlayerInfo>, Receiver<MusicPlayerInfo>) = bounded(1);
@@ -642,7 +642,7 @@ impl MediaInfoScreen {
                 ..Default::default()
             },
             music_player_info: Default::default(),
-            symbols: Rc::clone(&symbols),
+            symbols: FontArc::clone(&symbols),
             title_x: 0,
             artist_x: 0,
             receiver: rx,

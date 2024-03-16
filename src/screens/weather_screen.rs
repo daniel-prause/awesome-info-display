@@ -4,14 +4,15 @@ use crate::screens::Screen;
 use crate::screens::Screenable;
 use crate::weather::*;
 use crate::LAST_BME_INFO;
+use ab_glyph::FontArc;
+use ab_glyph::PxScale;
 use chrono::Datelike;
 use crossbeam_channel::bounded;
 use crossbeam_channel::{Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
-use rusttype::Font;
-use rusttype::Scale;
-use std::rc::Rc;
+
+
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
 use std::thread;
 use std::time::Duration;
@@ -19,7 +20,7 @@ use std::time::Instant;
 
 pub struct WeatherScreen {
     screen: Screen,
-    symbols: Rc<Font<'static>>,
+    symbols: FontArc,
     receiver: Receiver<WeatherInfo>,
 }
 
@@ -74,7 +75,7 @@ impl WeatherScreen {
                 Rgb([255u8, 255u8, 255u8]),
                 x,
                 6,
-                Scale { x: 38.0, y: 38.0 },
+                PxScale { x: 38.0, y: 38.0 },
                 &self.screen.font,
                 forecast.day.as_str(),
             );
@@ -85,7 +86,7 @@ impl WeatherScreen {
                 Rgb([255u8, 255u8, 255u8]),
                 x - 8,
                 40,
-                Scale { x: 32.0, y: 32.0 },
+                PxScale { x: 32.0, y: 32.0 },
                 &self.symbols,
                 format!(
                     "{: >3}",
@@ -100,7 +101,7 @@ impl WeatherScreen {
                 Rgb([255u8, 255u8, 255u8]),
                 x,
                 80,
-                Scale { x: 22.0, y: 22.0 },
+                PxScale { x: 22.0, y: 22.0 },
                 &self.screen.font,
                 format!("{: >2} \u{00B0}C", forecast.min.round() as i64).as_str(),
             );
@@ -111,7 +112,7 @@ impl WeatherScreen {
                 Rgb([255u8, 255u8, 255u8]),
                 x,
                 100,
-                Scale { x: 22.0, y: 22.0 },
+                PxScale { x: 22.0, y: 22.0 },
                 &self.screen.font,
                 format!("{: >2} \u{00B0}C", forecast.max.round() as i64).as_str(),
             );
@@ -139,8 +140,8 @@ impl WeatherScreen {
             Rgb([255u8, 255u8, 255u8]),
             6,
             6,
-            Scale { x: 40.0, y: 40.0 },
-            self.symbols.as_ref(),
+            PxScale { x: 40.0, y: 40.0 },
+            &self.symbols,
             WeatherScreen::get_weather_icon(weather_info.weather_icon, weather_info.is_day)
                 .as_str(),
         );
@@ -151,7 +152,7 @@ impl WeatherScreen {
             Rgb([255u8, 255u8, 255u8]),
             72,
             6,
-            Scale { x: 32.0, y: 32.0 },
+            PxScale { x: 32.0, y: 32.0 },
             &self.screen.font,
             format!("{}\u{00B0}C", (weather_info.temperature.round() as i64)).as_str(),
         );
@@ -162,7 +163,7 @@ impl WeatherScreen {
             Rgb([255u8, 255u8, 255u8]),
             4,
             50,
-            Scale { x: 14.0, y: 14.0 },
+            PxScale { x: 14.0, y: 14.0 },
             &self.screen.font,
             weather_info.city.as_str(),
         );
@@ -173,8 +174,8 @@ impl WeatherScreen {
             Rgb([255u8, 255u8, 255u8]),
             160,
             10,
-            Scale { x: 14.0, y: 14.0 },
-            self.symbols.as_ref(),
+            PxScale { x: 14.0, y: 14.0 },
+            &self.symbols,
             "\u{f72e}".to_string().as_str(),
         );
         // wind speed
@@ -183,7 +184,7 @@ impl WeatherScreen {
             Rgb([255u8, 255u8, 255u8]),
             178,
             10,
-            Scale { x: 14.0, y: 14.0 },
+            PxScale { x: 14.0, y: 14.0 },
             &self.screen.font,
             format!("{} km/h", ((weather_info.wind) * 3.6).round()).as_str(),
         );
@@ -194,7 +195,7 @@ impl WeatherScreen {
             Rgb([255u8, 255u8, 255u8]),
             178,
             24,
-            Scale { x: 14.0, y: 14.0 },
+            PxScale { x: 14.0, y: 14.0 },
             &self.screen.font,
             weather_info.wind_direction.to_string().as_str(),
         );
@@ -206,7 +207,7 @@ impl WeatherScreen {
             Rgb([255u8, 255u8, 255u8]),
             72,
             38,
-            Scale { x: 14.0, y: 14.0 },
+            PxScale { x: 14.0, y: 14.0 },
             &self.screen.font,
             format!("{}°C / {}%", temperature, humidity).as_str(),
         );
@@ -244,8 +245,8 @@ impl WeatherScreen {
     pub fn new(
         description: String,
         key: String,
-        font: Rc<Font<'static>>,
-        symbols: Rc<Font<'static>>,
+        font: FontArc,
+        symbols: FontArc,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> WeatherScreen {
         let (tx, rx): (Sender<WeatherInfo>, Receiver<WeatherInfo>) = bounded(1);
@@ -413,7 +414,7 @@ impl WeatherScreen {
                 })),
                 ..Default::default()
             },
-            symbols: Rc::clone(&symbols),
+            symbols: FontArc::clone(&symbols),
             receiver: rx,
         };
 

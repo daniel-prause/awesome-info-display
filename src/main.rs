@@ -12,6 +12,7 @@ mod screens;
 mod style;
 mod weather;
 
+use ab_glyph::FontArc;
 use converters::image::{GrayscaleConverter, ImageProcessor, WebPConverter};
 use debounce::EventDebouncer;
 use device::*;
@@ -33,11 +34,10 @@ use lazy_static::lazy_static;
 use named_lock::NamedLock;
 use named_lock::Result;
 use once_cell::sync::Lazy;
-use rusttype::Font as ft;
+
 use std::{
     error::Error,
     fmt,
-    rc::Rc,
     sync::{atomic::AtomicBool, Arc, Mutex, RwLock},
 };
 
@@ -211,8 +211,8 @@ impl Application for AwesomeDisplay {
     type Flags = ();
     type Theme = iced::Theme;
     fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
-        let font = Rc::new(ft::try_from_vec(Vec::from(FONT_BYTES as &[u8])).unwrap());
-        let symbols = Rc::new(ft::try_from_vec(Vec::from(SYMBOL_BYTES as &[u8])).unwrap());
+        let font = FontArc::try_from_vec(Vec::from(FONT_BYTES as &[u8])).unwrap();
+        let symbols = FontArc::try_from_vec(Vec::from(SYMBOL_BYTES as &[u8])).unwrap();
         let config_manager =
             std::sync::Arc::new(RwLock::new(config_manager::ConfigManager::new(None)));
         let mut screens: Vec<Box<dyn screens::BasicScreen>> = Vec::new();
