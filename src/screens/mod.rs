@@ -1,6 +1,6 @@
 use crate::config_manager::ConfigManager;
 use crate::{ESP32, TEENSY};
-use ab_glyph::{FontArc};
+use ab_glyph::FontArc;
 use exchange_format::ExchangeableConfig;
 
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};

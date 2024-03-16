@@ -211,8 +211,8 @@ impl Application for AwesomeDisplay {
     type Flags = ();
     type Theme = iced::Theme;
     fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
-        let font = FontArc::try_from_vec(Vec::from(FONT_BYTES as &[u8])).unwrap();
-        let symbols = FontArc::try_from_vec(Vec::from(SYMBOL_BYTES as &[u8])).unwrap();
+        let font = FontArc::try_from_slice(FONT_BYTES).unwrap();
+        let symbols = FontArc::try_from_slice(SYMBOL_BYTES).unwrap();
         let config_manager =
             std::sync::Arc::new(RwLock::new(config_manager::ConfigManager::new(None)));
         let mut screens: Vec<Box<dyn screens::BasicScreen>> = Vec::new();

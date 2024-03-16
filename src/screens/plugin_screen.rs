@@ -8,9 +8,7 @@ use libloading::Library;
 
 use std::ffi::CString;
 use std::path::PathBuf;
-use std::{
-    sync::{atomic::AtomicBool, Arc, RwLock},
-};
+use std::sync::{atomic::AtomicBool, Arc, RwLock};
 
 struct Lib {
     library: Library,
