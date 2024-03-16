@@ -83,7 +83,7 @@ impl Lib {
         }
     }
 
-    fn get_companion_screen(&self) -> ExchangeFormat {
+    fn get_companion_screen(&self) -> Option<ExchangeFormat> {
         match unsafe {
             self.library
                 .get::<libloading::Symbol<unsafe extern "C" fn() -> *mut i8>>(
@@ -91,18 +91,25 @@ impl Lib {
                 )
         } {
             Ok(get_companion_screen) => {
-                return unsafe {
-                    serde_json::from_str(
-                        CString::from_raw(get_companion_screen())
-                            .to_owned()
-                            .to_string_lossy()
-                            .to_string()
-                            .as_str(),
-                    )
-                    .unwrap_or_default()
+                let ptr = unsafe { get_companion_screen() };
+
+                if ptr == std::ptr::null_mut() {
+                    return None;
                 }
+                return unsafe {
+                    Some(
+                        serde_json::from_str(
+                            CString::from_raw(ptr)
+                                .to_owned()
+                                .to_string_lossy()
+                                .to_string()
+                                .as_str(),
+                        )
+                        .unwrap_or_default(),
+                    )
+                };
             }
-            Err(_) => return ExchangeFormat::default(),
+            Err(_) => return None,
         }
     }
 
@@ -131,7 +138,12 @@ impl Screenable for PluginScreen {
 impl BasicScreen for PluginScreen {
     fn update(&mut self) {
         self.draw_screen(self.lib.clone().get_screen());
-        self.draw_companion_screen(self.lib.clone().get_companion_screen());
+        match self.lib.clone().get_companion_screen() {
+            Some(screen) => {
+                self.draw_companion_screen(screen);
+            }
+            None => {}
+        }
     }
 
     fn set_current_config(&mut self, config: ExchangeableConfig) {
