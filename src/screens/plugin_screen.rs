@@ -64,22 +64,31 @@ impl Lib {
     }
 
     // TODO: maybe give this method parameters of which screen should be drawn
-    fn get_screen(&self) -> ExchangeFormat {
-        let get_screen: libloading::Symbol<unsafe extern "C" fn() -> *mut i8> = unsafe {
+    fn get_screen(&self) -> Option<ExchangeFormat> {
+        match unsafe {
             self.library
-                .get(b"get_screen")
-                .expect("Get screen not found!")
-        };
+                .get::<libloading::Symbol<unsafe extern "C" fn() -> *mut i8>>(b"get_screen")
+        } {
+            Ok(get_screen) => {
+                let ptr = unsafe { get_screen() };
 
-        unsafe {
-            serde_json::from_str(
-                CString::from_raw(get_screen())
-                    .to_owned()
-                    .to_string_lossy()
-                    .to_string()
-                    .as_str(),
-            )
-            .unwrap_or_default()
+                if ptr == std::ptr::null_mut() {
+                    return None;
+                }
+                return unsafe {
+                    Some(
+                        serde_json::from_str(
+                            CString::from_raw(ptr)
+                                .to_owned()
+                                .to_string_lossy()
+                                .to_string()
+                                .as_str(),
+                        )
+                        .unwrap_or_default(),
+                    )
+                };
+            }
+            Err(_) => return None,
         }
     }
 
@@ -137,7 +146,12 @@ impl Screenable for PluginScreen {
 
 impl BasicScreen for PluginScreen {
     fn update(&mut self) {
-        self.draw_screen(self.lib.clone().get_screen());
+        match self.lib.clone().get_screen() {
+            Some(screen) => {
+                self.draw_screen(screen);
+            }
+            None => {}
+        }
         match self.lib.clone().get_companion_screen() {
             Some(screen) => {
                 self.draw_companion_screen(screen);
