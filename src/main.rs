@@ -484,8 +484,13 @@ impl Application for AwesomeDisplay {
         let mut screen_bytes: IndexMap<&str, Vec<u8>> = IndexMap::new();
 
         for key in DEVICES.keys() {
-            let bytes = screen_manager.current_screen().current_image(key).unwrap();
-            screen_bytes.insert(key, bytes);
+            let bytes = screen_manager.current_screen().current_image(key);
+            match bytes {
+                Some(b) => {
+                    screen_bytes.insert(key, b);
+                }
+                _ => {}
+            }
         }
 
         for (device_name, buffer) in screen_bytes.iter() {
