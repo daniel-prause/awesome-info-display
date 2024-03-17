@@ -1,8 +1,9 @@
 use crate::config_manager::ConfigManager;
-use crate::{ESP32, TEENSY};
+use crate::{DEVICES};
 use ab_glyph::FontArc;
 use exchange_format::ExchangeableConfig;
 
+use std::collections::HashMap;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
 use std::thread::JoinHandle;
 use std::time::Instant;
@@ -14,8 +15,7 @@ pub mod weather_screen;
 pub struct Screen {
     pub description: String,
     pub key: String,
-    pub main_screen_bytes: Vec<u8>,
-    pub companion_screen_bytes: Vec<u8>,
+    pub device_screen_bytes: HashMap<String, Vec<u8>>,
     pub font: FontArc,
     pub symbols: FontArc,
     pub active: Arc<AtomicBool>,
@@ -28,11 +28,18 @@ pub struct Screen {
 
 impl Default for Screen {
     fn default() -> Screen {
+        let mut device_screen_bytes: HashMap<String, Vec<u8>> = HashMap::new();
+        for (key, device) in DEVICES.iter() {
+            device_screen_bytes.insert(
+                key.clone(),
+                vec![0; device.screen_height() as usize * device.screen_width() as usize * 3],
+            );
+        }
+
         Screen {
             description: String::from(""),
             key: String::from(""),
-            main_screen_bytes: Vec::new(), // Oled display byte image
-            companion_screen_bytes: vec![0; 320 * 170 * 3], // companion display byte image
+            device_screen_bytes: device_screen_bytes,
             font: FontArc::try_from_slice(include_bytes!("../fonts/Liberation.ttf") as &[u8])
                 .unwrap(),
 
@@ -73,9 +80,8 @@ pub trait BasicScreen: Screenable {
 
     fn current_image(&mut self, device: &str) -> Option<Vec<u8>> {
         let screen = self.get_screen();
-        match device {
-            TEENSY => Some(screen.main_screen_bytes.clone()),
-            ESP32 => Some(screen.companion_screen_bytes.clone()),
+        match screen.device_screen_bytes.get(device) {
+            Some(bytes) => Some(bytes.clone()),
             _ => None,
         }
     }

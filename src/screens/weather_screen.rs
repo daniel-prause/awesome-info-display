@@ -3,7 +3,9 @@ use crate::screens::BasicScreen;
 use crate::screens::Screen;
 use crate::screens::Screenable;
 use crate::weather::*;
+use crate::ESP32;
 use crate::LAST_BME_INFO;
+use crate::TEENSY;
 use ab_glyph::FontArc;
 use ab_glyph::PxScale;
 use chrono::Datelike;
@@ -119,14 +121,14 @@ impl WeatherScreen {
             x += 103;
         }
 
-        self.screen.companion_screen_bytes = image.into_vec();
+        *self.screen.device_screen_bytes.get_mut(ESP32).unwrap() = image.into_vec();
     }
 
     fn draw_screen(&mut self, weather_info: &WeatherInfo) {
         // draw initial image
         let mut image = RgbImage::new(256, 64);
         self.draw_weather_info(weather_info, &mut image);
-        self.screen.main_screen_bytes = image.into_vec();
+        *self.screen.device_screen_bytes.get_mut(TEENSY).unwrap() = image.into_vec();
     }
     fn draw_weather_info(
         &mut self,

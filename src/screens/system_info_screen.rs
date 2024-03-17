@@ -2,6 +2,7 @@ extern crate cpu_monitor;
 use crate::{
     config_manager::ConfigManager,
     screens::{BasicScreen, Screen, Screenable},
+    TEENSY,
 };
 use ab_glyph::{FontArc, PxScale};
 use cpu_monitor::CpuInstant;
@@ -132,7 +133,7 @@ impl SystemInfoScreen {
 
         self.draw_cpu(&mut image, cpu_usage, scale);
         self.draw_memory(&mut image, ram_usage, scale);
-        self.screen.main_screen_bytes = image.into_vec();
+        *self.screen.device_screen_bytes.get_mut(TEENSY).unwrap() = image.into_vec();
     }
 
     pub fn new(

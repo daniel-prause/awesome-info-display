@@ -1,5 +1,6 @@
 use crate::config_manager::ConfigManager;
 use crate::screens::{BasicScreen, Screen, Screenable};
+use crate::DEVICES;
 use ab_glyph::{FontArc, PxScale};
 use exchange_format::*;
 use image::{EncodableLayout, GenericImage, ImageBuffer, Rgb, RgbImage};
@@ -64,47 +65,18 @@ impl Lib {
     }
 
     // TODO: maybe give this method parameters of which screen should be drawn
-    fn get_screen(&self) -> Option<ExchangeFormat> {
+    fn get_screen(&self, device: &String) -> Option<ExchangeFormat> {
         match unsafe {
             self.library
-                .get::<libloading::Symbol<unsafe extern "C" fn() -> *mut i8>>(b"get_screen")
+                .get::<libloading::Symbol<unsafe extern "C" fn(&String) -> *mut i8>>(b"get_screen")
         } {
             Ok(get_screen) => {
-                let ptr = unsafe { get_screen() };
+                let ptr = unsafe { get_screen(device) };
 
                 if ptr == std::ptr::null_mut() {
                     return None;
                 }
-                return unsafe {
-                    Some(
-                        serde_json::from_str(
-                            CString::from_raw(ptr)
-                                .to_owned()
-                                .to_string_lossy()
-                                .to_string()
-                                .as_str(),
-                        )
-                        .unwrap_or_default(),
-                    )
-                };
-            }
-            Err(_) => return None,
-        }
-    }
 
-    fn get_companion_screen(&self) -> Option<ExchangeFormat> {
-        match unsafe {
-            self.library
-                .get::<libloading::Symbol<unsafe extern "C" fn() -> *mut i8>>(
-                    b"get_companion_screen",
-                )
-        } {
-            Ok(get_companion_screen) => {
-                let ptr = unsafe { get_companion_screen() };
-
-                if ptr == std::ptr::null_mut() {
-                    return None;
-                }
                 return unsafe {
                     Some(
                         serde_json::from_str(
@@ -146,17 +118,18 @@ impl Screenable for PluginScreen {
 
 impl BasicScreen for PluginScreen {
     fn update(&mut self) {
-        match self.lib.clone().get_screen() {
-            Some(screen) => {
-                self.draw_screen(screen);
+        for (key, device) in DEVICES.iter() {
+            match self.lib.clone().get_screen(key) {
+                Some(screen) => {
+                    self.draw_for_device(
+                        key,
+                        device.screen_height(),
+                        device.screen_width(),
+                        screen,
+                    );
+                }
+                None => {}
             }
-            None => {}
-        }
-        match self.lib.clone().get_companion_screen() {
-            Some(screen) => {
-                self.draw_companion_screen(screen);
-            }
-            None => {}
         }
     }
 
@@ -167,16 +140,16 @@ impl BasicScreen for PluginScreen {
 
 // TODO: think about multiple exchange formats for different devices
 impl PluginScreen {
-    fn draw_screen(&mut self, exchange_format: ExchangeFormat) {
-        let mut image = RgbImage::new(256, 64);
+    fn draw_for_device(
+        &mut self,
+        device: &String,
+        height: u32,
+        width: u32,
+        exchange_format: ExchangeFormat,
+    ) {
+        let mut image = RgbImage::new(width, height);
         self.draw_exchange_format(&mut image, exchange_format);
-        self.screen.main_screen_bytes = image.into_vec();
-    }
-
-    fn draw_companion_screen(&mut self, exchange_format: ExchangeFormat) {
-        let mut image = RgbImage::new(320, 170);
-        self.draw_exchange_format(&mut image, exchange_format);
-        self.screen.companion_screen_bytes = image.into_vec();
+        *self.screen.device_screen_bytes.get_mut(device).unwrap() = image.into_vec();
     }
 
     pub fn draw_exchange_format(
@@ -265,7 +238,14 @@ impl PluginScreen {
                 .to_raw();
             this.lib.clone().set_current_config(config);
         };
-        this.draw_screen(ExchangeFormat::default());
+        for (key, device) in DEVICES.iter() {
+            this.draw_for_device(
+                &key,
+                device.screen_height(),
+                device.screen_width(),
+                ExchangeFormat::default(),
+            );
+        }
         this
     }
 }

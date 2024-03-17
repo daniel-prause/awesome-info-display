@@ -1,9 +1,12 @@
 extern crate winapi;
 use crate::{
     config_manager::ConfigManager,
-    helpers::current_cover::{extract_cover_image, extract_current_cover_path},
-    helpers::text_manipulation::rotate,
+    helpers::{
+        current_cover::{extract_cover_image, extract_current_cover_path},
+        text_manipulation::rotate,
+    },
     screens::{BasicScreen, Screen, Screenable},
+    ESP32, TEENSY,
 };
 use ab_glyph::{FontArc, PxScale};
 use crossbeam_channel::{bounded, Receiver, Sender};
@@ -358,7 +361,8 @@ impl MediaInfoScreen {
         if music_player_info.filepath != self.music_player_info.filepath
             || (music_player_info.filepath.is_empty() && self.music_player_info.filepath.is_empty())
         {
-            self.screen.companion_screen_bytes = self.draw_cover(music_player_info);
+            *self.screen.device_screen_bytes.get_mut(ESP32).unwrap() =
+                self.draw_cover(music_player_info);
         }
     }
 
@@ -405,7 +409,7 @@ impl MediaInfoScreen {
         } else {
             self.draw_intro(&mut image, scale);
         }
-        self.screen.main_screen_bytes = image.into_vec();
+        *self.screen.device_screen_bytes.get_mut(TEENSY).unwrap() = image.into_vec();
     }
 
     pub fn new(
