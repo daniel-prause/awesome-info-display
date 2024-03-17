@@ -1,5 +1,5 @@
 use crate::config_manager::ConfigManager;
-use crate::{DEVICES};
+use crate::DEVICES;
 use ab_glyph::FontArc;
 use exchange_format::ExchangeableConfig;
 
