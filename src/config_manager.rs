@@ -119,7 +119,13 @@ impl ConfigManager {
 
     pub fn get_brightness(&self, device: &str) -> u8 {
         match self.config.devices.get(device) {
-            Some(config) => config.brightness,
+            Some(config) => match config.config_attributes.get("brightness") {
+                Some(brightness) => match brightness {
+                    ConfigParam::Integer(brightness) => return *brightness as u8,
+                    _ => 100,
+                },
+                None => 100,
+            },
             None => 100,
         }
     }

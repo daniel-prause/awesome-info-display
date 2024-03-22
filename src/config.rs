@@ -17,7 +17,7 @@ pub struct ScreenConfig {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DeviceConfig {
-    pub brightness: u8,
+    pub config_attributes: IndexMap<String, ConfigParam>,
 }
 
 impl Config {
@@ -55,11 +55,17 @@ impl Config {
     pub fn set_device_brightness(&mut self, device: &str, value: u8) {
         match self.devices.get_mut(&device.to_string()) {
             Some(config) => {
-                config.brightness = value;
+                config
+                    .config_attributes
+                    .insert("brightness".into(), ConfigParam::Integer(value as u32));
             }
             None => {
-                self.devices
-                    .insert(device.to_string(), DeviceConfig { brightness: 100 });
+                self.devices.insert(
+                    device.to_string(),
+                    DeviceConfig {
+                        config_attributes: IndexMap::new(),
+                    },
+                );
             }
         };
     }

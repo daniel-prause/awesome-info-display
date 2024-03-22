@@ -288,14 +288,7 @@ impl Application for AwesomeDisplay {
 
         // init device objects
         for (key, device) in DEVICES.iter() {
-            match this.config_manager.read().unwrap().config.devices.get(key) {
-                Some(device_config) => {
-                    device.set_brightness(device_config.brightness);
-                }
-                None => {
-                    device.set_brightness(100);
-                }
-            };
+            device.set_brightness(this.config_manager.read().unwrap().get_brightness(key));
 
             device.start_background_workers()
         }
