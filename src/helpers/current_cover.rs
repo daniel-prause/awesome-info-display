@@ -15,7 +15,6 @@ use crate::helpers::convert::to_wstring;
 
 pub struct Cover {
     pub data: Vec<u8>,
-    pub filepath: String,
 }
 
 pub fn extract_current_cover_path(mut winamp_process_handle: HANDLE) -> String {
@@ -66,7 +65,6 @@ pub fn extract_cover_image(path: &String) -> Option<Cover> {
                             Some(resized_cover) => {
                                 return Some(Cover {
                                     data: resized_cover.as_bytes().to_vec(),
-                                    filepath: path.clone(),
                                 });
                             }
                             None => {}
@@ -142,7 +140,6 @@ pub fn alternative_cover(original_path: &String) -> Result<Cover, std::io::Error
                             .as_mut_rgb8()
                             .unwrap()
                             .to_vec(),
-                        filepath: path,
                     });
                 }
                 Err(e) => {

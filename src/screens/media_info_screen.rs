@@ -483,19 +483,22 @@ impl MediaInfoScreen {
                                     Some(window) => {
                                         // 1 == playing, 3 == paused, anything else == stopped
                                         //let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
-                                        let playback_status = window.SendMessage(WndMsg {
-                                            msg_id: co::WM::USER,
-                                            wparam: 0,
-                                            lparam: 104,
-                                        });
+                                        let playback_status = unsafe {
+                                            window.SendMessage(WndMsg {
+                                                msg_id: co::WM::USER,
+                                                wparam: 0,
+                                                lparam: 104,
+                                            })
+                                        };
                                         music_player_info.playback_status = playback_status;
                                         // current position in msecs
-                                        let mut current_track_position =
+                                        let mut current_track_position = unsafe {
                                             window.SendMessage(WndMsg {
                                                 msg_id: co::WM::USER,
                                                 wparam: 0,
                                                 lparam: 105,
-                                            });
+                                            })
+                                        };
                                         if playback_status != 1 && playback_status != 3 {
                                             current_track_position = 0;
                                         }
@@ -504,23 +507,29 @@ impl MediaInfoScreen {
                                             current_track_position;
 
                                         // track length in seconds (multiply by thousand)
-                                        let track_length = window.SendMessage(WndMsg {
-                                            msg_id: co::WM::USER,
-                                            wparam: 1,
-                                            lparam: 105,
-                                        });
+                                        let track_length = unsafe {
+                                            window.SendMessage(WndMsg {
+                                                msg_id: co::WM::USER,
+                                                wparam: 1,
+                                                lparam: 105,
+                                            })
+                                        };
                                         music_player_info.track_length = track_length;
                                         // get title
-                                        let current_index = window.SendMessage(WndMsg {
-                                            msg_id: co::WM::USER,
-                                            wparam: 0,
-                                            lparam: 125,
-                                        });
-                                        let title_length = window.SendMessage(WndMsg {
-                                            msg_id: co::WM::GETTEXTLENGTH,
-                                            wparam: current_index as usize,
-                                            lparam: 0,
-                                        });
+                                        let current_index = unsafe {
+                                            window.SendMessage(WndMsg {
+                                                msg_id: co::WM::USER,
+                                                wparam: 0,
+                                                lparam: 125,
+                                            })
+                                        };
+                                        let title_length = unsafe {
+                                            window.SendMessage(WndMsg {
+                                                msg_id: co::WM::GETTEXTLENGTH,
+                                                wparam: current_index as usize,
+                                                lparam: 0,
+                                            })
+                                        };
 
                                         let path =
                                             extract_current_cover_path(winamp_process_handle);
@@ -553,11 +562,13 @@ impl MediaInfoScreen {
                                             Vec::<u16>::with_capacity(buffer_length as usize);
                                         buffer.resize(buffer_length as usize, 0);
 
-                                        window.SendMessage(WndMsg {
-                                            msg_id: co::WM::GETTEXT,
-                                            wparam: buffer_length as usize,
-                                            lparam: buffer.as_mut_ptr() as LPARAM,
-                                        });
+                                        unsafe {
+                                            window.SendMessage(WndMsg {
+                                                msg_id: co::WM::GETTEXT,
+                                                wparam: buffer_length as usize,
+                                                lparam: buffer.as_mut_ptr() as LPARAM,
+                                            })
+                                        };
 
                                         let data = String::from_utf16_lossy(&buffer);
 
