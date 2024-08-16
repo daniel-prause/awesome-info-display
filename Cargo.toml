@@ -8,7 +8,7 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ab_glyph ="0.2.23"
+ab_glyph ="0.2.28"
 audiotags = "0.5.0"
 chrono = {version = "0.4.35", features = ["serde"]}
 chrono-tz = "0.9.0"
@@ -26,7 +26,6 @@ open-meteo-rs = "0.0.4"
 rdev = {version = "0.5.3", features = ["unstable_grab"]}
 regex = "1.10.3"
 reqwest = {version = "0.12.5", features = ["blocking", "json"]}
-rusttype = "0.9.3"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0.114"
 serialport = {git = "https://github.com/serialport/serialport-rs"}
