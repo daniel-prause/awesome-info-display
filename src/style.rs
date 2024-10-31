@@ -71,7 +71,7 @@ pub fn text_field() -> iced::widget::text_input::Style {
             radius: Radius::from(0),
         },
         icon: iced::Color::WHITE,
-        placeholder: iced::Color::BLACK,
+        placeholder: iced::Color::from_rgba8(0, 0, 0, 0.7),
         selection: {
             let mut color = HOVERED;
             color.a = 0.5;
