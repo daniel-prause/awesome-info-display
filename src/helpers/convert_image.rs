@@ -45,7 +45,7 @@ pub fn rgb_bytes_to_rgba_image(
         converted_sb_rgba.push(255);
     }
 
-    iced::widget::Image::new(iced::widget::image::Handle::from_pixels(
+    iced::widget::Image::new(iced::widget::image::Handle::from_rgba(
         width,
         height,
         converted_sb_rgba,

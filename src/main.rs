@@ -25,9 +25,7 @@ use helpers::{
     convert_image::*, power::register_power_broadcast, text_manipulation::humanize_string,
 };
 use iced::widget::{Space, Text};
-use iced::{
-    executor, time, window, Application, Command, Element, Length, Settings, Subscription, Theme,
-};
+use iced::{time, window, Element, Length, Subscription, Task, Theme};
 
 use indexmap::IndexMap;
 use lazy_static::lazy_static;
@@ -156,30 +154,35 @@ pub fn main() -> iced::Result {
                 // register power callback
                 register_power_broadcast(window_proc);
 
-                let settings = Settings {
-                    window: window::Settings {
-                        exit_on_close_request: false,
-                        resizable: false,
-                        decorations: true,
-                        icon: Some(
-                            iced::window::icon::from_rgba(
-                                app_image.unwrap().to_rgba8().to_vec(),
-                                256,
-                                256,
-                            )
-                            .unwrap(),
-                        ),
-                        ..Default::default()
-                    },
+                let settings = window::Settings {
+                    exit_on_close_request: false,
+                    resizable: false,
+                    decorations: true,
+                    icon: Some(
+                        iced::window::icon::from_rgba(
+                            app_image.unwrap().to_rgba8().to_vec(),
+                            256,
+                            256,
+                        )
+                        .unwrap(),
+                    ),
                     ..Default::default()
                 };
-                return AwesomeDisplay::run(settings);
+                return iced::application(
+                    "AwesomeInfoDisplay",
+                    AwesomeDisplay::update,
+                    AwesomeDisplay::view,
+                )
+                .window(settings)
+                .subscription(AwesomeDisplay::subscription)
+                .default_font(iced::Font::DEFAULT)
+                .theme(AwesomeDisplay::theme)
+                .run_with(AwesomeDisplay::new);
             }
             Err(_) => {}
         },
         Err(_) => {}
     }
-
     return Err(iced::Error::WindowCreationFailed(Box::new(
         get_super_error(),
     )));
@@ -205,12 +208,8 @@ enum Message {
     ConfigValueChanged(String, String, ConfigParam),
 }
 
-impl Application for AwesomeDisplay {
-    type Executor = executor::Default;
-    type Message = Message;
-    type Flags = ();
-    type Theme = iced::Theme;
-    fn new(_flags: ()) -> (AwesomeDisplay, Command<Message>) {
+impl AwesomeDisplay {
+    fn new() -> (AwesomeDisplay, Task<Message>) {
         let font = FontArc::try_from_slice(FONT_BYTES).unwrap();
         let symbols = FontArc::try_from_slice(SYMBOL_BYTES).unwrap();
         let config_manager =
@@ -297,9 +296,6 @@ impl Application for AwesomeDisplay {
             iced::font::load(SYMBOL_BYTES).map(Message::FontLoaded),
         )
     }
-    fn title(&self) -> String {
-        String::from("AwesomeInfoDisplay")
-    }
 
     fn subscription(&self) -> iced::Subscription<Message> {
         let tick = time::every(std::time::Duration::from_millis(250))
@@ -340,9 +336,10 @@ impl Application for AwesomeDisplay {
         fn handle_window_event(
             event: iced::Event,
             _status: iced::event::Status,
+            _id: iced::window::Id,
         ) -> Option<Message> {
             match event {
-                iced::event::Event::Window(_id, event) => Some(Message::WindowEventOccurred(event)),
+                iced::event::Event::Window(event) => Some(Message::WindowEventOccurred(event)),
                 _ => None,
             }
         }
@@ -353,7 +350,7 @@ impl Application for AwesomeDisplay {
             iced::event::listen_with(handle_window_event),
         ])
     }
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: Message) -> Task<Message> {
         let mut screen_manager = self.screens.lock().unwrap();
         match message {
             Message::SaveConfig => {
@@ -454,9 +451,10 @@ impl Application for AwesomeDisplay {
                 }
             }
             self.config_manager.write().unwrap().save();
-            return window::close(window::Id::MAIN);
+            return iced::window::get_latest().and_then(iced::window::close);
         }
-        Command::none()
+
+        Task::none()
     }
 
     fn theme(&self) -> iced::Theme {
@@ -498,19 +496,14 @@ impl Application for AwesomeDisplay {
         }
 
         let mut column_parts: Vec<iced::Element<Message, Theme, iced::Renderer>> = vec![
-            iced::widget::button(
-                Text::new("Next screen").horizontal_alignment(iced::alignment::Horizontal::Center),
-            )
-            .on_press(Message::NextScreen)
-            .width(Length::Fixed(200f32))
-            .into(),
-            iced::widget::button(
-                Text::new("Previous screen")
-                    .horizontal_alignment(iced::alignment::Horizontal::Center),
-            )
-            .on_press(Message::PreviousScreen)
-            .width(Length::Fixed(200f32))
-            .into(),
+            iced::widget::button(Text::new("Next screen").center())
+                .on_press(Message::NextScreen)
+                .width(Length::Fixed(200f32))
+                .into(),
+            iced::widget::button(Text::new("Previous screen").center())
+                .on_press(Message::PreviousScreen)
+                .width(Length::Fixed(200f32))
+                .into(),
         ];
 
         for key in DEVICES.keys() {
@@ -519,7 +512,7 @@ impl Application for AwesomeDisplay {
                 key.to_uppercase(),
                 self.config_manager.read().unwrap().get_brightness(key)
             ))
-            .horizontal_alignment(iced::alignment::Horizontal::Center)
+            .center()
             .width(Length::Fixed(220f32))
             .into();
             let slider: iced::Element<Message, Theme, iced::Renderer> = iced::widget::Slider::new(
@@ -575,17 +568,13 @@ impl Application for AwesomeDisplay {
                     exchange_format::ConfigParam::String(value),
                 )
             })
-            .style(iced::theme::TextInput::Custom(Box::new(
-                style::TextInput {},
-            )))
+            .style(|_theme, _status| crate::style::text_field())
             .width(Length::Fixed(200f32))
             .into(),
-            iced::widget::button(
-                Text::new("Save config").horizontal_alignment(iced::alignment::Horizontal::Center),
-            )
-            .width(Length::Fixed(200f32))
-            .on_press(Message::SaveConfig)
-            .into(),
+            iced::widget::button(Text::new("Save config").center())
+                .width(Length::Fixed(200f32))
+                .on_press(Message::SaveConfig)
+                .into(),
             iced::widget::Row::with_children(vec![Space::with_height(10).into()]).into(),
             iced::widget::Row::with_children(vec![iced::widget::text("Devices").into()]).into(),
         ];
@@ -600,12 +589,12 @@ impl Application for AwesomeDisplay {
 
         let col1 = iced::widget::Column::with_children(column_parts)
             .padding(20)
-            .align_items(iced::Alignment::Center)
+            .align_x(iced::Alignment::Center)
             .spacing(10);
 
         let mut col2: iced::widget::Column<Message> = iced::widget::Column::new()
             .padding(20)
-            .align_items(iced::Alignment::Center)
+            .align_x(iced::Alignment::Center)
             .width(Length::Fill)
             .push(iced::widget::text("Current screen").size(50))
             .push(iced::widget::text(screen_manager.current_screen().description()).size(25));
@@ -666,9 +655,7 @@ impl Application for AwesomeDisplay {
                                 exchange_format::ConfigParam::String(value),
                             )
                         })
-                        .style(iced::theme::TextInput::Custom(Box::new(
-                            style::TextInput {},
-                        )))
+                        .style(|_theme, _status| crate::style::text_field())
                         .width(Length::Fixed(200f32)),
                     );
                 }
@@ -707,9 +694,7 @@ impl Application for AwesomeDisplay {
                                 }),
                             )
                         })
-                        .style(iced::theme::TextInput::Custom(Box::new(
-                            style::TextInput {},
-                        )))
+                        .style(|_theme, _status| crate::style::text_field())
                         .width(Length::Fixed(200f32)),
                     );
                 }
@@ -740,10 +725,8 @@ impl Application for AwesomeDisplay {
                                 exchange_format::ConfigParam::Password(value),
                             )
                         })
+                        .style(|_theme, _status| crate::style::text_field())
                         .secure(true)
-                        .style(iced::theme::TextInput::Custom(Box::new(
-                            style::TextInput {},
-                        )))
                         .width(Length::Fixed(200f32)),
                     );
                 }
@@ -764,8 +747,8 @@ fn special_checkbox<'a>(
     description: String,
 ) -> iced::Element<'a, Message, Theme, iced::Renderer> {
     iced::widget::checkbox(description, checked)
+        .style(|_theme, status| crate::style::checkbox_style(status))
         .on_toggle(move |value: bool| Message::ScreenStatusChanged(value, key.clone()))
-        .style(iced::theme::Checkbox::Custom(Box::new(style::Checkbox {})))
         .width(Length::Fixed(200f32))
         .into()
 }

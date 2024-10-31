@@ -1,8 +1,4 @@
 use iced::{border::Radius, Border, Color};
-#[derive(Debug, Clone, Copy)]
-
-pub struct Checkbox {}
-pub struct TextInput {}
 
 /*
 const SURFACE: Color = Color::from_rgb(
@@ -29,48 +25,63 @@ const HOVERED: Color = Color::from_rgb(
     0xC4 as f32 / 255.0,
 );
 
-impl iced::widget::checkbox::StyleSheet for Checkbox {
-    type Style = iced::Theme;
-
-    fn active(
-        &self,
-        _style: &Self::Style,
-        _is_checked: bool,
-    ) -> iced::widget::checkbox::Appearance {
-        iced::widget::checkbox::Appearance {
-            background: iced::Color::WHITE.into(),
-            icon_color: iced::Color::BLACK,
-            border: Border::from(Border {
-                color: iced::Color::BLACK,
-                width: 1f32,
-                radius: iced::border::Radius::from(0),
-            }),
-            text_color: None,
-        }
-    }
-
-    fn hovered(
-        &self,
-        _style: &Self::Style,
-        _is_checked: bool,
-    ) -> iced::widget::checkbox::Appearance {
-        iced::widget::checkbox::Appearance {
-            background: iced::Background::Color(iced::Color {
-                a: 0.8,
-                ..iced::Color::WHITE
-            }),
-            icon_color: iced::Color::BLACK,
-
-            border: Border {
-                color: iced::Color::BLACK,
-                width: 1.0,
-                radius: Radius::from(0),
-            },
-            text_color: None,
-        }
+pub fn checkbox_style(status: iced::widget::checkbox::Status) -> iced::widget::checkbox::Style {
+    match status {
+        iced::widget::checkbox::Status::Hovered { is_checked: false } => return checkbox_hovered(),
+        iced::widget::checkbox::Status::Hovered { is_checked: true } => return checkbox_hovered(),
+        _ => return checkbox_active(),
     }
 }
 
+fn checkbox_hovered() -> iced::widget::checkbox::Style {
+    iced::widget::checkbox::Style {
+        background: iced::Background::Color(iced::Color {
+            a: 0.8,
+            ..iced::Color::WHITE
+        }),
+        icon_color: iced::Color::BLACK,
+
+        border: Border {
+            color: iced::Color::BLACK,
+            width: 1.0,
+            radius: Radius::from(0),
+        },
+        text_color: None,
+    }
+}
+fn checkbox_active() -> iced::widget::checkbox::Style {
+    iced::widget::checkbox::Style {
+        background: iced::Color::WHITE.into(),
+        icon_color: iced::Color::BLACK,
+        border: Border::from(Border {
+            color: iced::Color::BLACK,
+            width: 1f32,
+            radius: iced::border::Radius::from(0),
+        }),
+        text_color: None,
+    }
+}
+
+pub fn text_field() -> iced::widget::text_input::Style {
+    return iced::widget::text_input::Style {
+        background: iced::Color::WHITE.into(),
+        border: Border {
+            color: iced::Color::BLACK,
+            width: 1.0,
+            radius: Radius::from(0),
+        },
+        icon: iced::Color::WHITE,
+        placeholder: iced::Color::BLACK,
+        selection: {
+            let mut color = HOVERED;
+            color.a = 0.5;
+            color
+        },
+        value: iced::Color::BLACK,
+    };
+}
+
+/*
 impl iced::widget::text_input::StyleSheet for TextInput {
     type Style = iced::Theme;
 
@@ -131,3 +142,4 @@ impl iced::widget::text_input::StyleSheet for TextInput {
         }
     }
 }
+ */
