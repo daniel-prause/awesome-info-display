@@ -189,6 +189,7 @@ pub fn main() -> iced::Result {
 }
 
 struct AwesomeDisplay {
+    render_preview_image: bool,
     screens: Mutex<screen_manager::ScreenManager>,
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
     companion_brightness_debouncers: IndexMap<String, Mutex<EventDebouncer<BrightnessEvent>>>,
@@ -277,6 +278,7 @@ impl AwesomeDisplay {
         }
 
         let this = AwesomeDisplay {
+            render_preview_image: true,
             screens: Mutex::new(screen_manager::ScreenManager::new(screens)),
             config_manager,
             companion_brightness_debouncers: debouncers,
@@ -389,6 +391,17 @@ impl AwesomeDisplay {
                 screen_manager.update_current_screen();
             }
             Message::WindowEventOccurred(event) => {
+                match event {
+                    iced::window::Event::Moved(position) => {
+                        if position.x < 0.0 && position.y < 0.0 {
+                            self.render_preview_image = false
+                        } else {
+                            self.render_preview_image = true
+                        }
+                    }
+                    _ => {}
+                }
+
                 if iced::window::Event::CloseRequested == event {
                     CLOSE_REQUESTED.store(true, std::sync::atomic::Ordering::Release);
                 }
@@ -602,18 +615,20 @@ impl AwesomeDisplay {
         for key in DEVICES.keys() {
             let screen_width = DEVICES.get(key).unwrap().screen_width();
             let screen_height = DEVICES.get(key).unwrap().screen_height();
-            let preview_image = rgb_bytes_to_rgba_image(
-                &swap_rgb(
-                    &screen_bytes.get(key.as_str()).unwrap(),
+            if self.render_preview_image {
+                let preview_image = rgb_bytes_to_rgba_image(
+                    &swap_rgb(
+                        &screen_bytes.get(key.as_str()).unwrap(),
+                        screen_width,
+                        screen_height,
+                    ),
                     screen_width,
                     screen_height,
-                ),
-                screen_width,
-                screen_height,
-            )
-            .width(Length::Fixed(screen_width as f32))
-            .height(Length::Fixed(screen_height as f32));
-            col2 = col2.push(preview_image);
+                )
+                .width(Length::Fixed(screen_width as f32))
+                .height(Length::Fixed(screen_height as f32));
+                col2 = col2.push(preview_image);
+            }
         }
         col2 = col2.spacing(10);
         col2 = col2.push(iced::widget::Row::new().height(50));
