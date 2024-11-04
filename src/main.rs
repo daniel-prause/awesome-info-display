@@ -20,9 +20,9 @@ use exchange_format::ConfigParam;
 use glob::glob;
 use helpers::keyboard::{self, set_last_key, start_global_key_grabber};
 use helpers::power::window_proc;
-use helpers::text_manipulation::determine_field_value;
 use helpers::{
-    convert_image::*, power::register_power_broadcast, text_manipulation::humanize_string,
+    convert_image::*, gui_helpers::*, power::register_power_broadcast,
+    text_manipulation::humanize_string,
 };
 use iced::widget::{Space, Text};
 use iced::{time, window, Element, Length, Subscription, Task, Theme};
@@ -140,57 +140,61 @@ static DEVICES: Lazy<IndexMap<String, Device>> = Lazy::new(|| {
 });
 
 pub fn main() -> iced::Result {
-    match signal_hook::flag::register(signal_hook::consts::SIGINT, CLOSE_REQUESTED.clone()) {
-        Ok(_) => {}
-        Err(_) => {}
+    // register signal hook
+    if let Err(e) =
+        signal_hook::flag::register(signal_hook::consts::SIGINT, CLOSE_REQUESTED.clone())
+    {
+        eprintln!("Error registering SIGINT: {:?}", e);
     }
 
-    let app_image: Result<image::DynamicImage, image::ImageError> =
-        ::image::load_from_memory(include_bytes!("../icon.ico") as &[u8]);
-    let lock: Result<NamedLock> = NamedLock::create("AwesomeInfoDisplay");
-    match lock {
-        Ok(l) => match l.try_lock() {
-            Ok(_) => {
-                // register power callback
-                register_power_broadcast(window_proc);
+    // load app icon
+    let app_image =
+        image::load_from_memory(include_bytes!("../icon.ico") as &[u8]).map_err(|e| {
+            eprintln!("Could not load app icon {:?}", e);
+            iced::Error::WindowCreationFailed(Box::new(e))
+        })?;
 
-                let settings = window::Settings {
-                    exit_on_close_request: false,
-                    resizable: false,
-                    decorations: true,
-                    icon: Some(
-                        iced::window::icon::from_rgba(
-                            app_image.unwrap().to_rgba8().to_vec(),
-                            256,
-                            256,
-                        )
-                        .unwrap(),
-                    ),
-                    ..Default::default()
-                };
-                return iced::application(
-                    "AwesomeInfoDisplay",
-                    AwesomeDisplay::update,
-                    AwesomeDisplay::view,
-                )
-                .window(settings)
-                .subscription(AwesomeDisplay::subscription)
-                .default_font(iced::Font::DEFAULT)
-                .theme(AwesomeDisplay::theme)
-                .run_with(AwesomeDisplay::new);
-            }
-            Err(_) => {}
-        },
-        Err(_) => {}
-    }
-    return Err(iced::Error::WindowCreationFailed(Box::new(
-        get_super_error(),
-    )));
+    // prevent opening app multiple times
+    let _lock = NamedLock::create("AwesomeInfoDisplay")
+        .and_then(|l| {
+            l.try_lock().map_err(|e| {
+                eprintln!("App probably already open: {:?}", e);
+                e
+            })
+        })
+        .map_err(|_| iced::Error::WindowCreationFailed(Box::new(get_super_error())))?;
+
+    // register power broadcast
+    register_power_broadcast(window_proc);
+
+    // set windows settings
+    let settings = window::Settings {
+        exit_on_close_request: false,
+        resizable: false,
+        decorations: true,
+        icon: Some(
+            iced::window::icon::from_rgba(app_image.to_rgba8().to_vec(), 256, 256)
+                .expect("Could not convert app icon"),
+        ),
+        ..Default::default()
+    };
+
+    // start application
+    iced::application(
+        "AwesomeInfoDisplay",
+        AwesomeDisplay::update,
+        AwesomeDisplay::view,
+    )
+    .window(settings)
+    .subscription(AwesomeDisplay::subscription)
+    .default_font(iced::Font::DEFAULT)
+    .theme(AwesomeDisplay::theme)
+    .run_with(AwesomeDisplay::new)
 }
 
 struct AwesomeDisplay {
     render_preview_image: bool,
-    screens: Mutex<screen_manager::ScreenManager>,
+    screens: Arc<Mutex<screen_manager::ScreenManager>>,
     config_manager: Arc<RwLock<config_manager::ConfigManager>>,
     companion_brightness_debouncers: IndexMap<String, Mutex<EventDebouncer<BrightnessEvent>>>,
 }
@@ -279,7 +283,7 @@ impl AwesomeDisplay {
 
         let this = AwesomeDisplay {
             render_preview_image: true,
-            screens: Mutex::new(screen_manager::ScreenManager::new(screens)),
+            screens: Arc::new(Mutex::new(screen_manager::ScreenManager::new(screens))),
             config_manager,
             companion_brightness_debouncers: debouncers,
         };
@@ -345,7 +349,7 @@ impl AwesomeDisplay {
                 _ => None,
             }
         }
-        // TODO: window event missing!
+
         Subscription::batch(vec![
             tick,
             iced::keyboard::on_key_press(handle_hotkey),
@@ -569,6 +573,7 @@ impl AwesomeDisplay {
             }
         }
 
+        // TODO: move to its own plugin
         let mut left_column_after_screens: Vec<iced::Element<Message, Theme, iced::Renderer>> = vec![
             iced::widget::TextInput::new(
                 humanize_string("weather_location").as_str(),
@@ -605,188 +610,25 @@ impl AwesomeDisplay {
             .align_x(iced::Alignment::Center)
             .spacing(10);
 
-        let mut col2: iced::widget::Column<Message> = iced::widget::Column::new()
+        let mut col2 = iced::widget::Column::new()
             .padding(20)
             .align_x(iced::Alignment::Center)
             .width(Length::Fill)
+            .spacing(10)
             .push(iced::widget::text("Current screen").size(50))
             .push(iced::widget::text(screen_manager.current_screen().description()).size(25));
 
-        for key in DEVICES.keys() {
-            let screen_width = DEVICES.get(key).unwrap().screen_width();
-            let screen_height = DEVICES.get(key).unwrap().screen_height();
-            if self.render_preview_image {
-                let preview_image = rgb_bytes_to_rgba_image(
-                    &swap_rgb(
-                        &screen_bytes.get(key.as_str()).unwrap(),
-                        screen_width,
-                        screen_height,
-                    ),
-                    screen_width,
-                    screen_height,
-                )
-                .width(Length::Fixed(screen_width as f32))
-                .height(Length::Fixed(screen_height as f32));
-                col2 = col2.push(preview_image);
-            }
+        if self.render_preview_image {
+            col2 = col2.extend(preview_images(screen_bytes));
         }
-        col2 = col2.spacing(10);
         col2 = col2.push(iced::widget::Row::new().height(50));
-
         // push config fields:
-        for (key, item) in screen_manager.current_screen().config_layout().params {
-            let screen_key: String = screen_manager.current_screen().key().clone();
-            let config_param_option = &self
-                .config_manager
-                .read()
-                .unwrap()
-                .get_value(&screen_key, key.as_str());
-
-            match item {
-                ConfigParam::String(value) => {
-                    let field_value: String;
-                    match config_param_option {
-                        Some(config_param) => match config_param {
-                            ConfigParam::String(saved_value) => {
-                                field_value = saved_value.clone();
-                            }
-                            _ => {
-                                field_value = value;
-                            }
-                        },
-                        _ => {
-                            field_value = value;
-                        }
-                    }
-                    col2 = col2.push(
-                        iced::widget::TextInput::new(
-                            humanize_string(&key).as_str(),
-                            field_value.as_str(),
-                        )
-                        .on_input(move |value: String| {
-                            Message::ConfigValueChanged(
-                                screen_key.clone(),
-                                key.clone(),
-                                exchange_format::ConfigParam::String(value),
-                            )
-                        })
-                        .style(|_theme, _status| crate::style::text_field())
-                        .width(Length::Fixed(200f32)),
-                    );
-                }
-                ConfigParam::Integer(value) => {
-                    let field_value: u32;
-                    match config_param_option {
-                        Some(config_param) => match config_param {
-                            ConfigParam::Integer(saved_value) => {
-                                field_value = *saved_value;
-                            }
-                            _ => {
-                                field_value = value;
-                            }
-                        },
-                        _ => {
-                            field_value = value;
-                        }
-                    }
-                    col2 = col2.push(
-                        iced::widget::TextInput::new(
-                            humanize_string(&key).as_str(),
-                            determine_field_value(&field_value.to_string().as_str()).as_str(),
-                        )
-                        .on_input(move |value: String| {
-                            Message::ConfigValueChanged(
-                                screen_key.clone(),
-                                key.clone(),
-                                exchange_format::ConfigParam::Integer({
-                                    let val: String = value
-                                        .to_string()
-                                        .chars()
-                                        .filter(|c| c.is_numeric())
-                                        .collect();
-
-                                    val.parse().unwrap_or(0)
-                                }),
-                            )
-                        })
-                        .style(|_theme, _status| crate::style::text_field())
-                        .width(Length::Fixed(200f32)),
-                    );
-                }
-                ConfigParam::Password(value) => {
-                    let field_value: String;
-                    match config_param_option {
-                        Some(config_param) => match config_param {
-                            ConfigParam::Password(saved_value) => {
-                                field_value = saved_value.clone();
-                            }
-                            _ => {
-                                field_value = value;
-                            }
-                        },
-                        _ => {
-                            field_value = value;
-                        }
-                    }
-                    col2 = col2.push(
-                        iced::widget::TextInput::new(
-                            humanize_string(&key).as_str(),
-                            field_value.as_str(),
-                        )
-                        .on_input(move |value: String| {
-                            Message::ConfigValueChanged(
-                                screen_key.clone(),
-                                key.clone(),
-                                exchange_format::ConfigParam::Password(value),
-                            )
-                        })
-                        .style(|_theme, _status| crate::style::text_field())
-                        .secure(true)
-                        .width(Length::Fixed(200f32)),
-                    );
-                }
-                _ => {} /*
-                        TODO: built float value!
-                        ConfigParam::Float(value) => {}
-                         */
-            }
-        }
+        col2 = col2.extend(push_config_fields(
+            self.config_manager.clone(),
+            screen_manager.current_screen().config_layout().params,
+            screen_manager.current_screen().key(),
+        ));
         // TODO: check, which screen is the current screen and render only the elements of this screen.
         iced::widget::Row::new().push(col1).push(col2).into()
     }
-}
-
-fn special_checkbox<'a>(
-    checked: bool,
-    key: String,
-    description: String,
-) -> iced::Element<'a, Message, Theme, iced::Renderer> {
-    iced::widget::checkbox(description, checked)
-        .style(|_theme, status| crate::style::checkbox_style(status))
-        .on_toggle(move |value: bool| Message::ScreenStatusChanged(value, key.clone()))
-        .width(Length::Fixed(200f32))
-        .into()
-}
-
-fn device_connected_icon<'a>(
-    is_connected: bool,
-) -> iced::Element<'a, Message, Theme, iced::Renderer> {
-    iced::widget::text(if is_connected {
-        String::from("\u{f26c} \u{f058}")
-    } else {
-        String::from("\u{f26c} \u{f057}")
-    })
-    .font(ICONS)
-    .shaping(iced::widget::text::Shaping::Advanced)
-    .into()
-}
-
-fn device_status<'a>(device: &str) -> Vec<iced::Element<'a, Message, Theme, iced::Renderer>> {
-    vec![
-        iced::widget::Text::new(device.to_uppercase())
-            .width(Length::Fixed(146f32))
-            .font(iced::Font::MONOSPACE)
-            .into(),
-        device_connected_icon(DEVICES.get(device).unwrap().is_connected()),
-    ]
 }

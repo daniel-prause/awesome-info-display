@@ -95,12 +95,11 @@ impl Lib {
     }
 
     fn set_current_config(&self, config: *mut i8) {
-        match unsafe {
+        if let Ok(set_current_config) = unsafe {
             self.library
                 .get::<libloading::Symbol<unsafe extern "C" fn(*mut i8)>>(b"set_current_config")
         } {
-            Ok(set_current_config) => unsafe { set_current_config(config) },
-            Err(_) => {}
+            unsafe { set_current_config(config) }
         }
     }
 }
