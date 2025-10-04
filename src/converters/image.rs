@@ -23,6 +23,7 @@ impl ImageConverter for GrayscaleConverter {
     }
 }
 
+/*
 pub struct NoOpConverter;
 
 impl ImageConverter for NoOpConverter {
@@ -30,7 +31,7 @@ impl ImageConverter for NoOpConverter {
         /* this can and will be used, if no operation is necessary */
     }
 }
-
+*/
 pub struct ImageProcessor {
     converter: Box<dyn ImageConverter>,
     width: u32,

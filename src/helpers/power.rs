@@ -11,6 +11,7 @@ pub fn register_power_broadcast(
     wnd_proc: unsafe extern "system" fn(*mut HWND__, u32, usize, isize) -> isize,
 ) {
     thread::spawn(move || unsafe {
+        let class_name = to_wstring("rust_window_class");
         let wc = WNDCLASSEXW {
             cbSize: std::mem::size_of::<WNDCLASSEXW>() as UINT,
             style: CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS,
@@ -22,7 +23,7 @@ pub fn register_power_broadcast(
             hCursor: LoadCursorW(std::ptr::null_mut(), IDC_ARROW),
             hbrBackground: GetStockObject(WHITE_BRUSH as i32) as HBRUSH,
             lpszMenuName: std::ptr::null_mut(),
-            lpszClassName: to_wstring("rust_window_class").as_ptr(),
+            lpszClassName: class_name.as_ptr(),
             hIconSm: std::ptr::null_mut(),
         };
         if RegisterClassExW(&wc) == 0 {

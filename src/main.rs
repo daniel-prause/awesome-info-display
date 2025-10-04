@@ -487,7 +487,7 @@ impl AwesomeDisplay {
         )
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&'_ self) -> Element<'_, Message> {
         let mut screen_manager = self.screens.lock().unwrap();
         let mut screen_bytes: IndexMap<&str, Vec<u8>> = IndexMap::new();
 

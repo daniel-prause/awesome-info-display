@@ -144,8 +144,8 @@ pub fn push_config_fields<'a>(
 }
 
 pub fn preview_images(
-    screen_bytes: IndexMap<&str, Vec<u8>>,
-) -> Vec<iced::Element<Message, Theme, iced::Renderer>> {
+    screen_bytes: IndexMap<&'_ str, Vec<u8>>,
+) -> Vec<iced::Element<'_, Message, Theme, iced::Renderer>> {
     let mut preview_images: Vec<iced::Element<Message, Theme, iced::Renderer>> = vec![];
     for key in DEVICES.keys() {
         let screen_width = DEVICES.get(key).unwrap().screen_width();
