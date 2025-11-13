@@ -1,53 +1,45 @@
-use std::ptr::null_mut;
-
 use audiotags::Tag;
 use image::EncodableLayout;
-use winapi::{
-    ctypes::c_void,
-    shared::minwindef::DWORD,
-    um::{
-        winnt::HANDLE,
-        winuser::{FindWindowW, SendMessageW, WM_USER},
-    },
-};
+use winapi::ctypes::c_void;
 
-use crate::helpers::convert::to_wstring;
-
+use winsafe::{co, msg::WndMsg, HWND};
 pub struct Cover {
     pub data: Vec<u8>,
 }
 
-pub fn extract_current_cover_path(mut winamp_process_handle: HANDLE) -> String {
-    unsafe {
-        let winname: Vec<u16> = to_wstring("Winamp v1.x");
-        // wide string
-        let hwnd: winapi::shared::windef::HWND = FindWindowW(winname.as_ptr(), null_mut());
+pub fn extract_current_cover_path(window: &winsafe::HWND) -> String {
+    let (_thread_id, process_id) = HWND::GetWindowThreadProcessId(&window);
 
-        let mut process_id: DWORD = 0;
-        winapi::um::winuser::GetWindowThreadProcessId(hwnd, &mut process_id);
+    let winamp_process_handle =
+        winsafe::HPROCESS::OpenProcess(co::PROCESS::VM_READ, false, process_id);
+    match winamp_process_handle {
+        Ok(winamp_process_handle) => {
+            let psz_name = unsafe {
+                window.SendMessage(WndMsg {
+                    msg_id: co::WM::USER,
+                    wparam: 0,
+                    lparam: 3031,
+                })
+            };
+            let mut buffer = vec![0u16; 2048];
+            let buffer_bytes: &mut [u8] = unsafe {
+                std::slice::from_raw_parts_mut(
+                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.len() * 2, // u16 = 2 Bytes
+                )
+            };
 
-        if winamp_process_handle == null_mut() {
-            winamp_process_handle =
-                winapi::um::processthreadsapi::OpenProcess(0x0010, 0, process_id);
+            match winamp_process_handle.ReadProcessMemory(psz_name as *mut c_void, buffer_bytes) {
+                Ok(_result) => {
+                    let str_len = buffer.iter().position(|&x| x == 0).unwrap_or_default();
+                    return String::from_utf16_lossy(&buffer[..str_len]);
+                }
+                Err(_) => {
+                    return String::new();
+                }
+            }
         }
-
-        let psz_name = SendMessageW(hwnd, WM_USER, 0, 3031);
-        let mut buffer = Vec::<u16>::with_capacity(2048_usize);
-        buffer.resize(2048_usize, 0);
-
-        let mut number_read = 0;
-
-        winapi::um::memoryapi::ReadProcessMemory(
-            winamp_process_handle,
-            psz_name as *const c_void,
-            buffer.as_mut_ptr().cast(),
-            2048,
-            &mut number_read,
-        );
-
-        /* str via strlen */
-        let str_len = buffer.iter().position(|x| *x == 0).unwrap_or_default();
-        String::from_utf16_lossy(&buffer[0..str_len])
+        Err(_) => return String::new(),
     }
 }
 

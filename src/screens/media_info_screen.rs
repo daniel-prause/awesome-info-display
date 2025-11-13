@@ -18,18 +18,14 @@ use imageproc::rect::Rect;
 use regex;
 
 use std::path::Path;
-use std::ptr::null_mut;
 use std::{
     sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
     thread,
     time::{Duration, Instant},
 };
 use unicode_segmentation::UnicodeSegmentation;
-use winapi::{
-    shared::minwindef::LPARAM,
-    um::{handleapi::CloseHandle, winnt::HANDLE},
-};
-use winsafe::{co, msg::WndMsg, prelude::user_Hwnd};
+use winapi::shared::minwindef::LPARAM;
+use winsafe::{co, msg::WndMsg};
 pub struct MediaInfoScreen {
     screen: Screen,
     receiver: Receiver<MusicPlayerInfo>,
@@ -435,7 +431,6 @@ impl MediaInfoScreen {
                     let match_correct_artist_and_title_format;
                     let match_artist_and_title;
                     let match_artist_or_title;
-                    let mut winamp_process_handle: HANDLE = null_mut();
 
                     match regex::Regex::new(r"\s(.*)-") {
                         Ok(regex) => {
@@ -531,8 +526,7 @@ impl MediaInfoScreen {
                                             })
                                         };
 
-                                        let path =
-                                            extract_current_cover_path(winamp_process_handle);
+                                        let path = extract_current_cover_path(&window);
 
                                         if path != cover_manager.last_path {
                                             let file_exists =
@@ -640,10 +634,6 @@ impl MediaInfoScreen {
                             Err(_) => {
                                 music_player_info.player_active = false;
                                 music_player_info.filepath.clear();
-                                unsafe {
-                                    CloseHandle(winamp_process_handle);
-                                }
-                                winamp_process_handle = null_mut();
                             }
                         }
 
