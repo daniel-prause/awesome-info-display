@@ -29,7 +29,9 @@ pub fn extract_current_cover_path(window: &winsafe::HWND) -> String {
                 )
             };
 
-            match winamp_process_handle.ReadProcessMemory(psz_name as *mut c_void, buffer_bytes) {
+            match winamp_process_handle
+                .ReadProcessMemory(psz_name as *mut std::ffi::c_void, buffer_bytes)
+            {
                 Ok(_result) => {
                     let str_len = buffer.iter().position(|&x| x == 0).unwrap_or_default();
                     return String::from_utf16_lossy(&buffer[..str_len]);

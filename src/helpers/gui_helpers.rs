@@ -13,9 +13,10 @@ pub fn special_checkbox<'a>(
     key: String,
     description: String,
 ) -> iced::Element<'a, Message, Theme, iced::Renderer> {
-    iced::widget::checkbox(description, checked)
+    iced::widget::checkbox(checked)
         .style(|_theme, status| crate::style::checkbox_style(status))
         .on_toggle(move |value: bool| Message::ScreenStatusChanged(value, key.clone()))
+        .label(description)
         .width(Length::Fixed(200f32))
         .into()
 }

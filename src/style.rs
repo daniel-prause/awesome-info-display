@@ -40,7 +40,6 @@ fn checkbox_hovered() -> iced::widget::checkbox::Style {
             ..iced::Color::WHITE
         }),
         icon_color: iced::Color::BLACK,
-
         border: Border {
             color: iced::Color::BLACK,
             width: 1.0,
@@ -81,6 +80,11 @@ pub fn text_field() -> iced::widget::text_input::Style {
     };
 }
 
+pub fn text() -> iced::widget::text::Style {
+    return iced::widget::text::Style {
+        color: iced::Color::WHITE.into(),
+    };
+}
 /*
 impl iced::widget::text_input::StyleSheet for TextInput {
     type Style = iced::Theme;

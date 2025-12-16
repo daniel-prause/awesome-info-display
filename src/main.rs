@@ -181,7 +181,7 @@ pub fn main() -> iced::Result {
 
     // start application
     iced::application(
-        "AwesomeInfoDisplay",
+        AwesomeDisplay::new,
         AwesomeDisplay::update,
         AwesomeDisplay::view,
     )
@@ -189,7 +189,8 @@ pub fn main() -> iced::Result {
     .subscription(AwesomeDisplay::subscription)
     .default_font(iced::Font::DEFAULT)
     .theme(AwesomeDisplay::theme)
-    .run_with(AwesomeDisplay::new)
+    .title(AwesomeDisplay::title)
+    .run()
 }
 
 struct AwesomeDisplay {
@@ -307,35 +308,43 @@ impl AwesomeDisplay {
         let tick = time::every(std::time::Duration::from_millis(250))
             .map(|_| Message::UpdateCurrentScreen);
 
-        fn handle_hotkey(
-            key: iced::keyboard::Key,
-            _modifiers: iced::keyboard::Modifiers,
-        ) -> Option<Message> {
-            match key.as_ref() {
-                iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaPlayPause) => {
-                    Some(Message::KeyboardEventOccurred(key, 179))
-                }
-                iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaStop) => {
-                    Some(Message::KeyboardEventOccurred(key, 178))
-                }
-                iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaTrackPrevious) => {
-                    Some(Message::KeyboardEventOccurred(key, 177))
-                }
-                iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaTrackNext) => {
-                    Some(Message::KeyboardEventOccurred(key, 176))
-                }
-                iced::keyboard::Key::Named(iced::keyboard::key::Named::AudioVolumeDown) => {
-                    Some(Message::KeyboardEventOccurred(key, 174))
-                }
-                iced::keyboard::Key::Named(iced::keyboard::key::Named::AudioVolumeUp) => {
-                    Some(Message::KeyboardEventOccurred(key, 175))
-                }
-                iced::keyboard::Key::Named(iced::keyboard::key::Named::AudioVolumeMute) => {
-                    Some(Message::KeyboardEventOccurred(key, 173))
-                }
-                iced::keyboard::Key::Named(iced::keyboard::key::Named::Pause) => {
-                    Some(Message::KeyboardEventOccurred(key, 180))
-                }
+        fn handle_hotkey(event: iced::keyboard::Event) -> Option<Message> {
+            match event {
+                iced::keyboard::Event::KeyPressed {
+                    key,
+                    modified_key: _modified_key,
+                    physical_key: _physical_key,
+                    location: _location,
+                    modifiers: _modifiers,
+                    text: _text,
+                    repeat: _repeat,
+                } => match key {
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaPlayPause) => {
+                        Some(Message::KeyboardEventOccurred(key, 179))
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaStop) => {
+                        Some(Message::KeyboardEventOccurred(key, 178))
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaTrackPrevious) => {
+                        Some(Message::KeyboardEventOccurred(key, 177))
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::MediaTrackNext) => {
+                        Some(Message::KeyboardEventOccurred(key, 176))
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::AudioVolumeDown) => {
+                        Some(Message::KeyboardEventOccurred(key, 174))
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::AudioVolumeUp) => {
+                        Some(Message::KeyboardEventOccurred(key, 175))
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::AudioVolumeMute) => {
+                        Some(Message::KeyboardEventOccurred(key, 173))
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::Pause) => {
+                        Some(Message::KeyboardEventOccurred(key, 180))
+                    }
+                    _ => None,
+                },
                 _ => None,
             }
         }
@@ -346,15 +355,12 @@ impl AwesomeDisplay {
         ) -> Option<Message> {
             match event {
                 iced::event::Event::Window(event) => Some(Message::WindowEventOccurred(event)),
+                iced::event::Event::Keyboard(event) => handle_hotkey(event),
                 _ => None,
             }
         }
 
-        Subscription::batch(vec![
-            tick,
-            iced::keyboard::on_key_press(handle_hotkey),
-            iced::event::listen_with(handle_window_event),
-        ])
+        Subscription::batch(vec![tick, iced::event::listen_with(handle_window_event)])
     }
     fn update(&mut self, message: Message) -> Task<Message> {
         let mut screen_manager = self.screens.lock().unwrap();
@@ -468,21 +474,26 @@ impl AwesomeDisplay {
                 }
             }
             self.config_manager.write().unwrap().save();
-            return iced::window::get_latest().and_then(iced::window::close);
+            return iced::window::latest().and_then(iced::window::close);
         }
 
         Task::none()
     }
 
+    fn title(&self) -> String {
+        format!("AwesomeInfoDisplay")
+    }
+
     fn theme(&self) -> iced::Theme {
         iced::Theme::custom(
-            "Default".into(),
+            "Default",
             iced::theme::Palette {
-                background: iced::Color::from_rgb(0.21, 0.22, 0.247),
+                background: iced::Color::WHITE,
                 text: iced::Color::WHITE,
                 primary: iced::Color::from_rgb(114.0 / 255.0, 137.0 / 255.0, 218.0 / 255.0),
                 success: iced::Color::from_rgb(0.0, 1.0, 0.0),
                 danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
+                warning: iced::Color::from_rgb(1.0, 1.0, 0.0),
             },
         )
     }
@@ -513,14 +524,22 @@ impl AwesomeDisplay {
         }
 
         let mut column_parts: Vec<iced::Element<Message, Theme, iced::Renderer>> = vec![
-            iced::widget::button(Text::new("Next screen").center())
-                .on_press(Message::NextScreen)
-                .width(Length::Fixed(200f32))
-                .into(),
-            iced::widget::button(Text::new("Previous screen").center())
-                .on_press(Message::PreviousScreen)
-                .width(Length::Fixed(200f32))
-                .into(),
+            iced::widget::button(
+                Text::new("Next screen")
+                    .center()
+                    .style(|_theme| crate::style::text()),
+            )
+            .on_press(Message::NextScreen)
+            .width(Length::Fixed(200f32))
+            .into(),
+            iced::widget::button(
+                Text::new("Previous screen")
+                    .center()
+                    .style(|_theme| crate::style::text()),
+            )
+            .on_press(Message::PreviousScreen)
+            .width(Length::Fixed(200f32))
+            .into(),
         ];
 
         for key in DEVICES.keys() {
@@ -589,11 +608,15 @@ impl AwesomeDisplay {
             .style(|_theme, _status| crate::style::text_field())
             .width(Length::Fixed(200f32))
             .into(),
-            iced::widget::button(Text::new("Save config").center())
-                .width(Length::Fixed(200f32))
-                .on_press(Message::SaveConfig)
-                .into(),
-            iced::widget::Row::with_children(vec![Space::with_height(10).into()]).into(),
+            iced::widget::button(
+                Text::new("Save config")
+                    .center()
+                    .style(|_theme| crate::style::text()),
+            )
+            .width(Length::Fixed(200f32))
+            .on_press(Message::SaveConfig)
+            .into(),
+            iced::widget::Row::with_children(vec![Space::new().height(10).into()]).into(),
             iced::widget::Row::with_children(vec![iced::widget::text("Devices").into()]).into(),
         ];
 
@@ -629,6 +652,18 @@ impl AwesomeDisplay {
             screen_manager.current_screen().key(),
         ));
         // TODO: check, which screen is the current screen and render only the elements of this screen.
-        iced::widget::Row::new().push(col1).push(col2).into()
+        //iced::widget::Row::new().push(col1).push(col2).into()
+
+        iced::widget::Container::new(iced::widget::Row::new().push(col1).push(col2))
+            .style(|_theme| iced::widget::container::Style {
+                background: Some(iced::Background::Color(
+                    iced::Color::from_rgb(0.21, 0.22, 0.247), // dein Wunsch-Hintergrund
+                )),
+                text_color: Some(iced::Color::WHITE),
+                ..Default::default()
+            })
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 }
