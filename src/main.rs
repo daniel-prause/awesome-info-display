@@ -485,17 +485,24 @@ impl AwesomeDisplay {
     }
 
     fn theme(&self) -> iced::Theme {
-        iced::Theme::custom(
-            "Default",
-            iced::theme::Palette {
-                background: iced::Color::WHITE,
-                text: iced::Color::WHITE,
-                primary: iced::Color::from_rgb(114.0 / 255.0, 137.0 / 255.0, 218.0 / 255.0),
-                success: iced::Color::from_rgb(0.0, 1.0, 0.0),
-                danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
-                warning: iced::Color::from_rgb(1.0, 1.0, 0.0),
-            },
-        )
+        let palette = iced::theme::Palette {
+            background: iced::Color::WHITE,
+            text: iced::Color::WHITE,
+            primary: iced::Color::from_rgb(114.0 / 255.0, 137.0 / 255.0, 218.0 / 255.0),
+            success: iced::Color::from_rgb(0.0, 1.0, 0.0),
+            danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
+            warning: iced::Color::from_rgb(1.0, 1.0, 0.0),
+        };
+        let mut extended = iced::theme::palette::Extended::generate(palette);
+        extended.primary.strong = iced::theme::palette::Pair {
+            color: iced::Color::from_rgb(114.0 / 255.0, 137.0 / 255.0, 218.0 / 255.0),
+            text: iced::Color::WHITE,
+        };
+        extended.primary.base = iced::theme::palette::Pair {
+            color: iced::Color::from_rgb(74.0 / 255.0, 103.0 / 255.0, 207.0 / 255.0),
+            text: iced::Color::WHITE,
+        };
+        iced::Theme::custom_with_fn("Default", palette, move |_p| extended)
     }
 
     fn view(&'_ self) -> Element<'_, Message> {

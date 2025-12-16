@@ -1,6 +1,5 @@
 use audiotags::Tag;
 use image::EncodableLayout;
-use winapi::ctypes::c_void;
 
 use winsafe::{co, msg::WndMsg, HWND};
 pub struct Cover {
