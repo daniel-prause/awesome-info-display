@@ -23,7 +23,7 @@ use std::time::Instant;
 pub struct WeatherScreen {
     screen: Screen,
     symbols: FontArc,
-    receiver: Receiver<WeatherInfo>,
+    receiver: Receiver<Arc<WeatherInfo>>,
 }
 
 #[derive(Default, Clone)]
@@ -177,7 +177,7 @@ impl WeatherScreen {
             10,
             PxScale { x: 14.0, y: 14.0 },
             &self.symbols,
-            "\u{f72e}".to_string().as_str(),
+            "\u{f72e}",
         );
         // wind speed
         draw_text_mut(
@@ -198,7 +198,7 @@ impl WeatherScreen {
             24,
             PxScale { x: 14.0, y: 14.0 },
             &self.screen.font,
-            weather_info.wind_direction.to_string().as_str(),
+            weather_info.wind_direction.as_str(),
         );
 
         // indoor temperature / indoor humidity
@@ -242,7 +242,7 @@ impl WeatherScreen {
         symbols: FontArc,
         config_manager: Arc<RwLock<ConfigManager>>,
     ) -> WeatherScreen {
-        let (tx, rx): (Sender<WeatherInfo>, Receiver<WeatherInfo>) = bounded(1);
+        let (tx, rx): (Sender<Arc<WeatherInfo>>, Receiver<Arc<WeatherInfo>>) = bounded(1);
         let active = Arc::new(AtomicBool::new(false));
         let mut this = WeatherScreen {
             screen: Screen {
@@ -252,157 +252,128 @@ impl WeatherScreen {
                 config_manager: config_manager.clone(),
                 active: active.clone(),
                 handle: Some(thread::spawn(move || {
-                    let sender = tx.to_owned();
+                    let runtime = tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                        .expect("Failed to create Tokio runtime");
+
+                    let sender = tx;
+                    let client = open_meteo_rs::Client::new();
+
                     let deg_to_dir = |deg: f64| {
-                        let val = ((deg / 22.5) + 0.5).floor();
-                        let arr = [
+                        const DIRS: [&str; 16] = [
                             "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW",
                             "WSW", "W", "WNW", "NW", "NNW",
                         ];
-                        arr[(val as usize) % 16]
+                        let val = ((deg / 22.5) + 0.5).floor() as usize;
+                        DIRS[val % 16]
                     };
-                    let mut last_weather_info: WeatherInfo = Default::default();
-                    let mut last_update = Instant::now().checked_sub(Duration::from_secs(61));
-                    let client = open_meteo_rs::Client::new();
-                    let result = weather::weather_and_forecast();
+
+                    let mut last_weather_info = Arc::new(WeatherInfo::default());
+                    let mut last_update = Instant::now() - Duration::from_secs(61);
+
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
                         }
-                        // TODO: make this configurable for language and metric/non-metric units
-                        // get current weather for location
-                        if last_update.is_none() || last_update.unwrap().elapsed().as_secs() > 60 {
-                            last_update = Some(Instant::now());
 
-                            let location_option = config_manager
-                                .read()
-                                .unwrap()
-                                .get_value(key.clone().as_str(), "weather_location")
-                                .clone();
+                        if last_update.elapsed().as_secs() > 60 {
+                            last_update = Instant::now();
 
-                            let location: String;
-                            match location_option {
-                                Some(config_param) => match config_param {
-                                    exchange_format::ConfigParam::String(key) => {
-                                        location = key;
-                                    }
-                                    _ => {
-                                        location = String::new();
-                                    }
-                                },
-                                None => {
-                                    location = String::new();
-                                }
-                            }
-                            // get locations first
-                            //let locations = weather::location::get_location(location.into());
-                            let locations = location::get_location(location);
-                            match locations {
-                                Ok(locations) => {
+                            let location = {
+                                let guard = config_manager.read().unwrap();
+                                guard
+                                    .get_value(&key, "weather_location")
+                                    .and_then(|v| match v {
+                                        exchange_format::ConfigParam::String(s) => Some(s.clone()),
+                                        _ => None,
+                                    })
+                                    .unwrap_or_default()
+                            };
+
+                            if let Ok(locations) = location::get_location(location) {
+                                if let Some(closest_location) = locations.results.first() {
                                     let mut opts = open_meteo_rs::forecast::Options::default();
                                     weather::set_opts(&mut opts, &locations);
-                                    let closest_location = locations.results[0].clone();
-                                    let res = result.block_on(get_weather(&client, opts));
-                                    match res.current {
-                                        Some(current) => {
-                                            let mut weather_info: WeatherInfo = Default::default();
-                                            weather_info.is_day = current
-                                                .values
-                                                .get("is_day")
-                                                .unwrap()
-                                                .value
-                                                .as_u64()
-                                                .unwrap()
-                                                as u8;
-                                            weather_info.weather_icon = current
-                                                .values
-                                                .get("weather_code")
-                                                .unwrap()
-                                                .value
-                                                .as_u64()
-                                                .unwrap_or_default()
-                                                as u8;
 
-                                            weather_info.temperature = current
-                                                .values
-                                                .get("temperature_2m")
-                                                .unwrap()
-                                                .value
-                                                .as_f64()
-                                                .unwrap_or_default();
+                                    let res = runtime.block_on(get_weather(&client, opts));
 
-                                            weather_info.wind = current
-                                                .values
-                                                .get("wind_speed_10m")
-                                                .unwrap()
-                                                .value
-                                                .as_f64()
-                                                .unwrap_or_default();
+                                    if let Some(current) = res.current {
+                                        let mut weather_info = WeatherInfo::default();
 
-                                            weather_info.wind_direction = deg_to_dir(
-                                                current
-                                                    .values
-                                                    .get("wind_direction_10m")
-                                                    .unwrap()
-                                                    .value
-                                                    .as_f64()
-                                                    .unwrap_or_default(),
-                                            )
+                                        weather_info.is_day = current
+                                            .values
+                                            .get("is_day")
+                                            .and_then(|v| v.value.as_u64())
+                                            .unwrap_or_default()
+                                            as u8;
+
+                                        weather_info.weather_icon = current
+                                            .values
+                                            .get("weather_code")
+                                            .and_then(|v| v.value.as_u64())
+                                            .unwrap_or_default()
+                                            as u8;
+
+                                        weather_info.temperature = current
+                                            .values
+                                            .get("temperature_2m")
+                                            .and_then(|v| v.value.as_f64())
+                                            .unwrap_or_default();
+
+                                        weather_info.wind = current
+                                            .values
+                                            .get("wind_speed_10m")
+                                            .and_then(|v| v.value.as_f64())
+                                            .unwrap_or_default();
+
+                                        weather_info.wind_direction = current
+                                            .values
+                                            .get("wind_direction_10m")
+                                            .and_then(|v| v.value.as_f64())
+                                            .map(deg_to_dir)
+                                            .unwrap_or("N")
                                             .to_string();
 
-                                            weather_info.city = format!(
-                                                "{},{}",
-                                                closest_location.name,
-                                                closest_location.country_code
-                                            );
+                                        weather_info.city = format!(
+                                            "{},{}",
+                                            closest_location.name, closest_location.country_code
+                                        );
 
-                                            // forecast
-                                            for weather in res.daily.unwrap().iter() {
+                                        if let Some(daily) = res.daily {
+                                            for weather in daily.iter() {
                                                 weather_info.weather_forecast.push(
                                                     WeatherForecast {
                                                         day: weather.date.weekday().to_string(),
                                                         min: weather
                                                             .values
                                                             .get("temperature_2m_min")
-                                                            .unwrap()
-                                                            .value
-                                                            .as_f64()
+                                                            .and_then(|v| v.value.as_f64())
                                                             .unwrap_or_default(),
                                                         max: weather
                                                             .values
                                                             .get("temperature_2m_max")
-                                                            .unwrap()
-                                                            .value
-                                                            .as_f64()
+                                                            .and_then(|v| v.value.as_f64())
                                                             .unwrap_or_default(),
                                                         weather_icon: weather
                                                             .values
                                                             .get("weathercode")
-                                                            .unwrap()
-                                                            .value
-                                                            .as_u64()
+                                                            .and_then(|v| v.value.as_u64())
                                                             .unwrap_or_default()
                                                             as u8,
                                                     },
                                                 );
                                             }
-                                            last_weather_info = weather_info;
                                         }
-                                        None => eprintln!("Could not fetch weather"),
+
+                                        last_weather_info = Arc::new(weather_info);
                                     }
-                                }
-                                Err(e) => {
-                                    last_update =
-                                        Instant::now().checked_sub(Duration::from_secs(61));
-                                    eprintln!("Could not fetch weather! Reason: {:?}", e)
                                 }
                             }
                         }
-                        sender
-                            .try_send(last_weather_info.clone())
-                            .unwrap_or_default();
-                        // TODO: think about whether we want to solve this like in bitpanda screen with last_update...
-                        thread::sleep(Duration::from_millis(1000));
+
+                        let _ = sender.try_send(last_weather_info.clone());
+                        thread::park_timeout(Duration::from_secs(1));
                     }
                 })),
                 ..Default::default()

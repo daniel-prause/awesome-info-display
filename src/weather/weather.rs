@@ -1,5 +1,4 @@
 use open_meteo_rs::forecast::{ForecastResult, Options};
-use tokio::runtime::Runtime;
 
 use super::location::Locations;
 
@@ -46,11 +45,4 @@ pub fn set_opts(opts: &mut Options, locations: &Locations) {
     opts.daily.push("temperature_2m_max".into());
     opts.daily.push("temperature_2m_min".into());
     opts.daily.push("weathercode".into());
-}
-
-pub fn weather_and_forecast() -> Runtime {
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .expect("Failed to create service")
 }
