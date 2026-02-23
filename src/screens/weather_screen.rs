@@ -144,8 +144,7 @@ impl WeatherScreen {
             6,
             PxScale { x: 40.0, y: 40.0 },
             &self.symbols,
-            WeatherScreen::get_weather_icon(weather_info.weather_icon, weather_info.is_day)
-                .as_str(),
+            WeatherScreen::get_weather_icon(weather_info.weather_icon, weather_info.is_day),
         );
 
         // temperature
@@ -215,33 +214,25 @@ impl WeatherScreen {
         );
     }
 
-    fn get_weather_icon(code: u8, is_day: u8) -> String {
-        if is_day == 0 {
-            // night
-            match code {
-                0 => String::from("\u{f186}"),
-                1 | 2 | 3 => String::from("\u{f6c3}"),
-                45 | 48 => String::from("\u{f75f}"),
-                51 | 53 | 55 | 56 | 57 | 61 | 63 | 65 | 66 | 67 | 80 | 81 | 82 => {
-                    String::from("\u{f73c}")
-                }
-                71 | 73 | 75 | 77 | 85 | 86 => String::from("\u{f2dc}"),
-                95 | 96 | 99 => String::from("\u{f0e7}"),
-                _ => String::from(""),
-            }
-        } else {
-            // day
-            match code {
-                0 => String::from("\u{f185}"),
-                1 | 2 | 3 => String::from("\u{f6c4}"),
-                45 | 48 => String::from("\u{f75f}"),
-                51 | 53 | 55 | 56 | 57 | 61 | 63 | 65 | 66 | 67 | 80 | 81 | 82 => {
-                    String::from("\u{f73d}")
-                }
-                71 | 73 | 75 | 77 | 85 | 86 => String::from("\u{f2dc}"),
-                95 | 96 | 99 => String::from("\u{f0e7}"),
-                _ => String::from(""),
-            }
+    fn get_weather_icon(code: u8, is_day: u8) -> &'static str {
+        match (is_day, code) {
+            // 🌙 Night
+            (0, 0) => "\u{f186}",
+            (0, 1 | 2 | 3) => "\u{f6c3}",
+            (0, 45 | 48) => "\u{f75f}",
+            (0, 51 | 53 | 55 | 56 | 57 | 61 | 63 | 65 | 66 | 67 | 80 | 81 | 82) => "\u{f73c}",
+            (0, 71 | 73 | 75 | 77 | 85 | 86) => "\u{f2dc}",
+            (0, 95 | 96 | 99) => "\u{f0e7}",
+
+            // ☀️ Day
+            (_, 0) => "\u{f185}",
+            (_, 1 | 2 | 3) => "\u{f6c4}",
+            (_, 45 | 48) => "\u{f75f}",
+            (_, 51 | 53 | 55 | 56 | 57 | 61 | 63 | 65 | 66 | 67 | 80 | 81 | 82) => "\u{f73d}",
+            (_, 71 | 73 | 75 | 77 | 85 | 86) => "\u{f2dc}",
+            (_, 95 | 96 | 99) => "\u{f0e7}",
+
+            _ => "",
         }
     }
     pub fn new(
