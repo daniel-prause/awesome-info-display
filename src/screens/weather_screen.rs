@@ -264,6 +264,7 @@ impl WeatherScreen {
                     let mut last_weather_info: WeatherInfo = Default::default();
                     let mut last_update = Instant::now().checked_sub(Duration::from_secs(61));
                     let client = open_meteo_rs::Client::new();
+                    let result = weather::weather_and_forecast();
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
@@ -301,7 +302,6 @@ impl WeatherScreen {
                                     let mut opts = open_meteo_rs::forecast::Options::default();
                                     weather::set_opts(&mut opts, &locations);
                                     let closest_location = locations.results[0].clone();
-                                    let result = weather::weather_and_forecast();
                                     let res = result.block_on(get_weather(&client, opts));
                                     match res.current {
                                         Some(current) => {
