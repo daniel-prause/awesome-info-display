@@ -2,6 +2,7 @@ use crate::config_manager::ConfigManager;
 use crate::screens::BasicScreen;
 use crate::screens::Screen;
 use crate::screens::Screenable;
+use crate::weather::weather::get_weather;
 use crate::weather::*;
 use crate::ESP32;
 use crate::LAST_BME_INFO;
@@ -309,9 +310,9 @@ impl WeatherScreen {
                                     let mut opts = open_meteo_rs::forecast::Options::default();
                                     weather::set_opts(&mut opts, &locations);
                                     let closest_location = locations.results[0].clone();
-                                    let result = weather::weather_and_forecast(&client, opts);
-
-                                    match result.current {
+                                    let result = weather::weather_and_forecast();
+                                    let res = result.block_on(get_weather(&client, opts));
+                                    match res.current {
                                         Some(current) => {
                                             let mut weather_info: WeatherInfo = Default::default();
                                             weather_info.is_day = current
@@ -365,7 +366,7 @@ impl WeatherScreen {
                                             );
 
                                             // forecast
-                                            for weather in result.daily.unwrap().iter() {
+                                            for weather in res.daily.unwrap().iter() {
                                                 weather_info.weather_forecast.push(
                                                     WeatherForecast {
                                                         day: weather.date.weekday().to_string(),
