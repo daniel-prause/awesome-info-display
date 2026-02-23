@@ -53,13 +53,10 @@ impl Screenable for WeatherScreen {
 
 impl BasicScreen for WeatherScreen {
     fn update(&mut self) {
-        let weather_info = self.receiver.try_recv();
-        match weather_info {
-            Ok(weather_info) => {
-                self.draw_screen(&weather_info);
-                self.draw_companion_screen(&weather_info);
-            }
-            Err(_) => {}
+        if let Ok(weather_info_arc) = self.receiver.try_recv() {
+            let weather_info: &WeatherInfo = &weather_info_arc;
+            self.draw_screen(weather_info);
+            self.draw_companion_screen(weather_info);
         }
     }
 }
