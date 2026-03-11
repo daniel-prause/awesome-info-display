@@ -1,5 +1,5 @@
-use crate::helpers::convert::to_wstring;
 use crate::HIBERNATING;
+use crate::helpers::convert::to_wstring;
 use std::thread;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
@@ -79,9 +79,9 @@ pub unsafe extern "system" fn window_proc(
     }
 
     if msg == WM_DESTROY {
-        PostQuitMessage(0);
+        unsafe { PostQuitMessage(0) };
         return 0;
     }
 
-    DefWindowProcW(hwnd, msg, wparam, lparam)
+    unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
 }
