@@ -1,12 +1,12 @@
+use crate::ESP32;
+use crate::LAST_BME_INFO;
+use crate::TEENSY;
 use crate::config_manager::ConfigManager;
 use crate::screens::BasicScreen;
 use crate::screens::Screen;
 use crate::screens::Screenable;
 use crate::weather::weather::get_weather;
 use crate::weather::*;
-use crate::ESP32;
-use crate::LAST_BME_INFO;
-use crate::TEENSY;
 use ab_glyph::FontArc;
 use ab_glyph::PxScale;
 use chrono::Datelike;
@@ -15,7 +15,7 @@ use crossbeam_channel::{Receiver, Sender};
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock};
+use std::sync::{Arc, RwLock, atomic::AtomicBool, atomic::Ordering};
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
@@ -267,14 +267,17 @@ impl WeatherScreen {
                     };
 
                     let mut last_weather_info = Arc::new(WeatherInfo::default());
-                    let mut last_update = Instant::now() - Duration::from_secs(61);
-
+                    let mut needs_update = true;
+                    let mut last_update = Instant::now()
+                        .checked_sub(Duration::from_secs(61))
+                        .unwrap_or_else(Instant::now);
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
                         }
 
-                        if last_update.elapsed().as_secs() > 60 {
+                        if needs_update || last_update.elapsed().as_secs() > 60 {
+                            needs_update = false;
                             last_update = Instant::now();
 
                             let location = {
