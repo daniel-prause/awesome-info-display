@@ -1,7 +1,7 @@
 use audiotags::Tag;
 use image::EncodableLayout;
 
-use winsafe::{co, msg::WndMsg, HWND};
+use winsafe::{HWND, co, msg::WndMsg};
 pub struct Cover {
     pub data: Vec<u8>,
 }
@@ -66,7 +66,38 @@ pub fn extract_cover_image(path: &String) -> Option<Cover> {
                     Err(_) => {}
                 }
             }
-            None => {}
+            None => {
+                let tag = id3::Tag::read_from_path(path);
+                match tag {
+                    Ok(tag) => {
+                        for picture in tag.pictures() {
+                            let cover_as_image = image::load_from_memory(&picture.data as &[u8]);
+                            match cover_as_image {
+                                Ok(cover_image) => {
+                                    match cover_image
+                                        .resize_exact(
+                                            170,
+                                            170,
+                                            image::imageops::FilterType::Lanczos3,
+                                        )
+                                        .as_mut_rgb8()
+                                    {
+                                        Some(resized_cover) => {
+                                            return Some(Cover {
+                                                data: resized_cover.as_bytes().to_vec(),
+                                            });
+                                        }
+                                        None => {}
+                                    }
+                                }
+                                Err(_) => {}
+                            }
+                            break;
+                        }
+                    }
+                    Err(_) => {}
+                }
+            }
         },
         Err(_) => {}
     }
