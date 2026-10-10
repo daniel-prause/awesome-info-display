@@ -25,7 +25,7 @@ use helpers::{
     text_manipulation::humanize_string,
 };
 use iced::widget::{Space, Text};
-use iced::{time, window, Element, Length, Subscription, Task, Theme};
+use iced::{Element, Length, Subscription, Task, Theme, time, window};
 
 use indexmap::IndexMap;
 use lazy_static::lazy_static;
@@ -36,7 +36,7 @@ use once_cell::sync::Lazy;
 use std::{
     error::Error,
     fmt,
-    sync::{atomic::AtomicBool, Arc, Mutex, RwLock},
+    sync::{Arc, Mutex, RwLock, atomic::AtomicBool},
 };
 
 #[derive(Debug)]
@@ -566,7 +566,7 @@ impl AwesomeDisplay {
                 },
             )
             .width(Length::Fixed(200f32))
-            .step(1.0)
+            .step(1f32)
             .into();
 
             column_parts.push(text);

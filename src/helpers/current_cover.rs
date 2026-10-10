@@ -1,7 +1,7 @@
 use audiotags::Tag;
 use image::EncodableLayout;
 
-use winsafe::{HWND, co, msg::WndMsg};
+use winsafe::{HWND, co, msg};
 pub struct Cover {
     pub data: Vec<u8>,
 }
@@ -14,7 +14,7 @@ pub fn extract_current_cover_path(window: &winsafe::HWND) -> String {
     match winamp_process_handle {
         Ok(winamp_process_handle) => {
             let psz_name = unsafe {
-                window.SendMessage(WndMsg {
+                window.SendMessage(msg::Wm {
                     msg_id: co::WM::USER,
                     wparam: 0,
                     lparam: 3031,

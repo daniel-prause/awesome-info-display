@@ -1,15 +1,15 @@
 extern crate winapi;
 use crate::{
+    ESP32, TEENSY,
     config_manager::ConfigManager,
     helpers::{
         current_cover::{extract_cover_image, extract_current_cover_path},
         text_manipulation::rotate,
     },
     screens::{BasicScreen, Screen, Screenable},
-    ESP32, TEENSY,
 };
 use ab_glyph::{FontArc, PxScale};
-use crossbeam_channel::{bounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, bounded};
 use image::{EncodableLayout, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{
     draw_filled_rect_mut, draw_hollow_rect_mut, draw_line_segment_mut, draw_text_mut,
@@ -19,13 +19,13 @@ use regex;
 
 use std::path::Path;
 use std::{
-    sync::{atomic::AtomicBool, atomic::Ordering, Arc, RwLock},
+    sync::{Arc, RwLock, atomic::AtomicBool, atomic::Ordering},
     thread,
     time::{Duration, Instant},
 };
 use unicode_segmentation::UnicodeSegmentation;
 use winapi::shared::minwindef::LPARAM;
-use winsafe::{co, msg::WndMsg};
+use winsafe::{co, msg};
 pub struct MediaInfoScreen {
     screen: Screen,
     receiver: Receiver<MusicPlayerInfo>,
@@ -479,7 +479,7 @@ impl MediaInfoScreen {
                                         // 1 == playing, 3 == paused, anything else == stopped
                                         //let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
                                         let playback_status = unsafe {
-                                            window.SendMessage(WndMsg {
+                                            window.SendMessage(msg::Wm {
                                                 msg_id: co::WM::USER,
                                                 wparam: 0,
                                                 lparam: 104,
@@ -488,7 +488,7 @@ impl MediaInfoScreen {
                                         music_player_info.playback_status = playback_status;
                                         // current position in msecs
                                         let mut current_track_position = unsafe {
-                                            window.SendMessage(WndMsg {
+                                            window.SendMessage(msg::Wm {
                                                 msg_id: co::WM::USER,
                                                 wparam: 0,
                                                 lparam: 105,
@@ -503,7 +503,7 @@ impl MediaInfoScreen {
 
                                         // track length in seconds (multiply by thousand)
                                         let track_length = unsafe {
-                                            window.SendMessage(WndMsg {
+                                            window.SendMessage(msg::Wm {
                                                 msg_id: co::WM::USER,
                                                 wparam: 1,
                                                 lparam: 105,
@@ -512,14 +512,14 @@ impl MediaInfoScreen {
                                         music_player_info.track_length = track_length;
                                         // get title
                                         let current_index = unsafe {
-                                            window.SendMessage(WndMsg {
+                                            window.SendMessage(msg::Wm {
                                                 msg_id: co::WM::USER,
                                                 wparam: 0,
                                                 lparam: 125,
                                             })
                                         };
                                         let title_length = unsafe {
-                                            window.SendMessage(WndMsg {
+                                            window.SendMessage(msg::Wm {
                                                 msg_id: co::WM::GETTEXTLENGTH,
                                                 wparam: current_index as usize,
                                                 lparam: 0,
@@ -557,7 +557,7 @@ impl MediaInfoScreen {
                                         buffer.resize(buffer_length as usize, 0);
 
                                         unsafe {
-                                            window.SendMessage(WndMsg {
+                                            window.SendMessage(msg::Wm {
                                                 msg_id: co::WM::GETTEXT,
                                                 wparam: buffer_length as usize,
                                                 lparam: buffer.as_mut_ptr() as LPARAM,
