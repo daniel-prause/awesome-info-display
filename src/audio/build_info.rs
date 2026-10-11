@@ -1,9 +1,14 @@
 #[cfg(target_os = "windows")]
-use crate::screens::media_info_screen::MusicPlayerInfo;
+use crate::{
+    helpers::master_volume::get_master_volume, screens::media_info_screen::MusicPlayerInfo,
+};
 
 #[cfg(target_os = "windows")]
 pub fn build_music_player_info(music_player_info: &mut MusicPlayerInfo) {
     use winsafe::{HWND, co};
+
+    music_player_info.system_volume = get_master_volume().0;
+    music_player_info.mute = get_master_volume().1;
 
     fn deactivate(info: &mut MusicPlayerInfo) {
         info.player_active = false;
