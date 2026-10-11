@@ -8,7 +8,7 @@ use crate::{
     config_manager::ConfigManager,
     helpers::{
         current_cover::extract_cover_image, current_cover::extract_current_cover_path,
-        master_volume::get_master_volume, text_manipulation::rotate,
+        text_manipulation::rotate,
     },
     screens::{BasicScreen, Screen, Screenable},
 };
@@ -19,7 +19,6 @@ use imageproc::drawing::{
     draw_filled_rect_mut, draw_hollow_rect_mut, draw_line_segment_mut, draw_text_mut,
 };
 use imageproc::rect::Rect;
-use regex;
 
 use std::path::Path;
 use std::{

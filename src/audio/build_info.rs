@@ -1,3 +1,5 @@
+#[cfg(target_os = "linux")]
+use crate::screens::media_info_screen::MusicPlayerInfo;
 #[cfg(target_os = "windows")]
 use crate::{
     helpers::master_volume::get_master_volume, screens::media_info_screen::MusicPlayerInfo,

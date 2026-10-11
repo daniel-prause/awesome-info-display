@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
 use zbus::blocking::Connection;
 use zbus::blocking::Proxy;
 use zbus::zvariant::OwnedValue;
 
+use crate::helpers::master_volume::get_master_volume;
 use crate::screens::media_info_screen::MusicPlayerInfo;
 
 // Status mapping:
@@ -61,31 +61,6 @@ fn read_cover(metadata: &HashMap<String, OwnedValue>) -> Vec<u8> {
     fs::read(path).unwrap_or_default()
 }
 
-fn read_system_audio() -> (f32, i32) {
-    // wpctl output example: "Volume: 0.45 [MUTED]"
-    let output = Command::new("wpctl")
-        .args(["get-volume", "@DEFAULT_AUDIO_SINK@"])
-        .output();
-
-    let Ok(output) = output else {
-        return (0.0, 0);
-    };
-
-    if !output.status.success() {
-        return (0.0, 0);
-    }
-
-    let text = String::from_utf8_lossy(&output.stdout);
-    let volume = text
-        .split_whitespace()
-        .find_map(|part| part.parse::<f32>().ok())
-        .unwrap_or(0.0);
-
-    let mute = i32::from(text.contains("[MUTED]"));
-
-    (volume, mute)
-}
-
 pub fn get_music_player_info(info: &mut MusicPlayerInfo) -> Result<bool, Box<dyn Error>> {
     let connection = Connection::session()?;
 
@@ -128,7 +103,7 @@ pub fn get_music_player_info(info: &mut MusicPlayerInfo) -> Result<bool, Box<dyn
     }
 
     let Some((name, status)) = selected else {
-        let (volume, mute) = read_system_audio();
+        let (volume, mute) = get_master_volume();
         info.system_volume = volume;
         info.mute = mute;
 
@@ -153,7 +128,7 @@ pub fn get_music_player_info(info: &mut MusicPlayerInfo) -> Result<bool, Box<dyn
     let track_length =
         (metadata_i64(&metadata, "mpris:length").unwrap_or(0).max(0) / 1_000_000) as isize;
 
-    let (volume, mute) = read_system_audio();
+    let (volume, mute) = get_master_volume();
     info.system_volume = volume;
     info.mute = mute;
     info.playback_status = status_to_int(&status);

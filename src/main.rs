@@ -20,7 +20,7 @@ use debounce::EventDebouncer;
 use device::*;
 use exchange_format::ConfigParam;
 use glob::glob;
-use helpers::keyboard::{self, set_last_key, start_global_key_grabber};
+use helpers::keyboard::{set_last_key, start_global_key_grabber};
 #[cfg(target_os = "windows")]
 use helpers::power::register_power_broadcast;
 #[cfg(target_os = "windows")]

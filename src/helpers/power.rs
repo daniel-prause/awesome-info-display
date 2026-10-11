@@ -1,6 +1,8 @@
+#[cfg(target_os = "windows")]
 use crate::HIBERNATING;
 #[cfg(target_os = "windows")]
 use crate::helpers::convert::to_wstring;
+#[cfg(target_os = "windows")]
 use std::thread;
 #[cfg(target_os = "windows")]
 use winapi::{
