@@ -506,6 +506,7 @@ impl MediaInfoScreen {
                             None,
                         );
 
+                        #[cfg(target_os = "windows")]
                         if window.is_err() || window.unwrap().is_none() {
                             music_player_info.player_active = false;
                         }
