@@ -41,6 +41,9 @@ use std::{
     sync::{Arc, Mutex, RwLock, atomic::AtomicBool},
 };
 
+#[cfg(target_os = "windows")]
+use crate::helpers::keyboard;
+
 #[derive(Debug)]
 struct SuperError {
     side: SuperErrorSideKick,

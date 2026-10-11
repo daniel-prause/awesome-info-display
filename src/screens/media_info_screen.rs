@@ -1,7 +1,5 @@
 #[cfg(target_os = "windows")]
 extern crate winapi;
-#[cfg(target_os = "windows")]
-use crate::helpers;
 use crate::{
     ESP32, TEENSY,
     audio::build_info::build_music_player_info,
@@ -28,9 +26,7 @@ use std::{
 };
 use unicode_segmentation::UnicodeSegmentation;
 #[cfg(target_os = "windows")]
-use winapi::shared::minwindef::LPARAM;
-#[cfg(target_os = "windows")]
-use winsafe::{co, msg};
+use winsafe::co;
 pub struct MediaInfoScreen {
     screen: Screen,
     receiver: Receiver<MusicPlayerInfo>,
