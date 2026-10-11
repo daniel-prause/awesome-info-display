@@ -1,10 +1,13 @@
+#[cfg(target_os = "windows")]
 extern crate winres;
 
 fn main() {
-    if cfg!(target_os = "windows") {
-        let mut res = winres::WindowsResource::new();
-        res.set_icon("icon.ico");
-        res.compile().unwrap_or_default();
-        static_vcruntime::metabuild();
-    }
+    #[cfg(target_os = "windows")]
+    let mut res = winres::WindowsResource::new();
+    #[cfg(target_os = "windows")]
+    res.set_icon("icon.ico");
+    #[cfg(target_os = "windows")]
+    res.compile().unwrap_or_default();
+    #[cfg(target_os = "windows")]
+    static_vcruntime::metabuild();
 }

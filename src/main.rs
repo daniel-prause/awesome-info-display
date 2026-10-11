@@ -1,6 +1,7 @@
-#![windows_subsystem = "windows"]
+#[cfg(target_os = "windows")]
 extern crate winapi;
 
+mod audio;
 mod config;
 mod config_manager;
 mod converters;
@@ -19,11 +20,11 @@ use device::*;
 use exchange_format::ConfigParam;
 use glob::glob;
 use helpers::keyboard::{self, set_last_key, start_global_key_grabber};
+#[cfg(target_os = "windows")]
+use helpers::power::register_power_broadcast;
+#[cfg(target_os = "windows")]
 use helpers::power::window_proc;
-use helpers::{
-    convert_image::*, gui_helpers::*, power::register_power_broadcast,
-    text_manipulation::humanize_string,
-};
+use helpers::{convert_image::*, gui_helpers::*, text_manipulation::humanize_string};
 use iced::widget::{Space, Text};
 use iced::{Element, Length, Subscription, Task, Theme, time, window};
 
@@ -165,6 +166,7 @@ pub fn main() -> iced::Result {
         .map_err(|_| iced::Error::WindowCreationFailed(Box::new(get_super_error())))?;
 
     // register power broadcast
+    #[cfg(target_os = "windows")]
     register_power_broadcast(window_proc);
 
     // set windows settings
@@ -290,7 +292,11 @@ impl AwesomeDisplay {
         };
 
         // global key press listener
+        #[cfg(target_os = "windows")]
         start_global_key_grabber(keyboard::callback);
+
+        #[cfg(target_os = "linux")]
+        start_global_key_grabber();
 
         // init device objects
         for (key, device) in DEVICES.iter() {

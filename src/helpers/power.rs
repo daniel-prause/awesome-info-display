@@ -1,12 +1,13 @@
 use crate::HIBERNATING;
+#[cfg(target_os = "windows")]
 use crate::helpers::convert::to_wstring;
 use std::thread;
-use winapi::shared::minwindef::*;
-use winapi::shared::windef::*;
-use winapi::um::libloaderapi::*;
-use winapi::um::wingdi::*;
-use winapi::um::winuser::*;
+#[cfg(target_os = "windows")]
+use winapi::{
+    shared::minwindef::*, shared::windef::*, um::libloaderapi::*, um::wingdi::*, um::winuser::*,
+};
 
+#[cfg(target_os = "windows")]
 pub fn register_power_broadcast(
     wnd_proc: unsafe extern "system" fn(*mut HWND__, u32, usize, isize) -> isize,
 ) {
@@ -68,6 +69,7 @@ pub fn register_power_broadcast(
         }
     });
 }
+#[cfg(target_os = "windows")]
 pub unsafe extern "system" fn window_proc(
     hwnd: HWND,
     msg: UINT,

@@ -1,15 +1,19 @@
+#[cfg(target_os = "windows")]
 extern crate winapi;
 use crate::{
     ESP32, TEENSY,
+    audio::build_info::build_music_player_info,
     config_manager::ConfigManager,
     helpers::{
-        current_cover::{extract_cover_image, extract_current_cover_path},
-        text_manipulation::rotate,
+        current_cover::extract_cover_image, current_cover::extract_current_cover_path,
+        master_volume::get_master_volume, text_manipulation::rotate,
     },
     screens::{BasicScreen, Screen, Screenable},
 };
 use ab_glyph::{FontArc, PxScale};
 use crossbeam_channel::{Receiver, Sender, bounded};
+#[cfg(target_os = "windows")]
+use helpers::current_cover::extract_current_cover_path;
 use image::{EncodableLayout, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{
     draw_filled_rect_mut, draw_hollow_rect_mut, draw_line_segment_mut, draw_text_mut,
@@ -24,7 +28,9 @@ use std::{
     time::{Duration, Instant},
 };
 use unicode_segmentation::UnicodeSegmentation;
+#[cfg(target_os = "windows")]
 use winapi::shared::minwindef::LPARAM;
+#[cfg(target_os = "windows")]
 use winsafe::{co, msg};
 pub struct MediaInfoScreen {
     screen: Screen,
@@ -36,17 +42,17 @@ pub struct MediaInfoScreen {
 }
 
 #[derive(Clone, Default, Debug)]
-struct MusicPlayerInfo {
-    playback_status: isize,
-    current_track_position: isize,
-    track_length: isize,
-    title: String,
-    artist: String,
-    player_active: bool,
-    system_volume: f32,
-    mute: i32,
-    cover: Vec<u8>,
-    filepath: String,
+pub struct MusicPlayerInfo {
+    pub playback_status: isize,
+    pub current_track_position: isize,
+    pub track_length: isize,
+    pub title: String,
+    pub artist: String,
+    pub player_active: bool,
+    pub system_volume: f32,
+    pub mute: i32,
+    pub cover: Vec<u8>,
+    pub filepath: String,
 }
 #[derive(Clone, Default)]
 pub struct CoverManager {
@@ -85,6 +91,7 @@ impl MediaInfoScreen {
             &self.screen.font,
             "Media Screen",
         );
+        #[cfg(target_os = "windows")]
         draw_text_mut(
             image,
             Rgb([255u8, 255u8, 255u8]),
@@ -93,6 +100,17 @@ impl MediaInfoScreen {
             scale,
             &self.screen.font,
             "Winamp inactive",
+        );
+
+        #[cfg(target_os = "linux")]
+        draw_text_mut(
+            image,
+            Rgb([255u8, 255u8, 255u8]),
+            65,
+            32,
+            scale,
+            &self.screen.font,
+            "MPRIS2 inactive",
         );
     }
     fn draw_artist(
@@ -461,186 +479,47 @@ impl MediaInfoScreen {
                         }
                     }
 
+                    #[cfg(target_os = "windows")]
                     winsafe::CoInitializeEx(co::COINIT::APARTMENTTHREADED).unwrap();
                     let mut cover_manager = CoverManager::default();
+                    let mut music_player_info: MusicPlayerInfo = MusicPlayerInfo::default();
                     loop {
                         while !active.load(Ordering::Acquire) {
                             thread::park();
                         }
-                        let mut music_player_info: MusicPlayerInfo = Default::default();
 
-                        match winsafe::HWND::FindWindow(
-                            Some(winsafe::AtomStr::from_str("Winamp v1.x")),
-                            None,
-                        ) {
-                            Ok(window) => {
-                                match window {
-                                    Some(window) => {
-                                        // 1 == playing, 3 == paused, anything else == stopped
-                                        //let playback_status = SendMessageW(hwnd, WM_USER, 0, 104);
-                                        let playback_status = unsafe {
-                                            window.SendMessage(msg::Wm {
-                                                msg_id: co::WM::USER,
-                                                wparam: 0,
-                                                lparam: 104,
-                                            })
-                                        };
-                                        music_player_info.playback_status = playback_status;
-                                        // current position in msecs
-                                        let mut current_track_position = unsafe {
-                                            window.SendMessage(msg::Wm {
-                                                msg_id: co::WM::USER,
-                                                wparam: 0,
-                                                lparam: 105,
-                                            })
-                                        };
-                                        if playback_status != 1 && playback_status != 3 {
-                                            current_track_position = 0;
-                                        }
+                        build_music_player_info(&mut music_player_info);
+                        #[cfg(target_os = "windows")]
+                        let path = extract_current_cover_path(&window);
 
-                                        music_player_info.current_track_position =
-                                            current_track_position;
+                        #[cfg(target_os = "linux")]
+                        let path = extract_current_cover_path(&music_player_info.filepath);
 
-                                        // track length in seconds (multiply by thousand)
-                                        let track_length = unsafe {
-                                            window.SendMessage(msg::Wm {
-                                                msg_id: co::WM::USER,
-                                                wparam: 1,
-                                                lparam: 105,
-                                            })
-                                        };
-                                        music_player_info.track_length = track_length;
-                                        // get title
-                                        let current_index = unsafe {
-                                            window.SendMessage(msg::Wm {
-                                                msg_id: co::WM::USER,
-                                                wparam: 0,
-                                                lparam: 125,
-                                            })
-                                        };
-                                        let title_length = unsafe {
-                                            window.SendMessage(msg::Wm {
-                                                msg_id: co::WM::GETTEXTLENGTH,
-                                                wparam: current_index as usize,
-                                                lparam: 0,
-                                            })
-                                        };
-
-                                        let path = extract_current_cover_path(&window);
-
-                                        if path != cover_manager.last_path {
-                                            let file_exists =
-                                                Path::new(std::ffi::OsStr::new(&path)).exists();
-                                            if file_exists {
-                                                music_player_info.filepath = path.clone();
-                                                match extract_cover_image(&path) {
-                                                    Some(cover) => {
-                                                        music_player_info.cover =
-                                                            cover.data.as_bytes().to_vec();
-                                                        cover_manager.last_path = path.clone();
-                                                        cover_manager.current_cover =
-                                                            cover.data.as_bytes().to_vec();
-                                                    }
-                                                    None => {}
-                                                }
-                                            } else {
-                                                music_player_info.cover = vec![211; 320 * 170 * 3];
-                                            }
-                                        } else {
-                                            music_player_info.cover =
-                                                cover_manager.current_cover.clone();
-                                        }
-
-                                        let buffer_length = title_length + 1;
-                                        let mut buffer =
-                                            Vec::<u16>::with_capacity(buffer_length as usize);
-                                        buffer.resize(buffer_length as usize, 0);
-
-                                        unsafe {
-                                            window.SendMessage(msg::Wm {
-                                                msg_id: co::WM::GETTEXT,
-                                                wparam: buffer_length as usize,
-                                                lparam: buffer.as_mut_ptr() as LPARAM,
-                                            })
-                                        };
-
-                                        let data = String::from_utf16_lossy(&buffer);
-
-                                        music_player_info.player_active = title_length > 0
-                                            && match_correct_artist_and_title_format
-                                                .is_match(&data);
-
-                                        let caps =
-                                            match_correct_artist_and_title_format.captures(&data);
-                                        match caps {
-                                            Some(caps) => {
-                                                let artist_and_title =
-                                                    caps.get(1).map_or("", |m| m.as_str()).trim();
-
-                                                let artist_and_title_caps = match_artist_and_title
-                                                    .captures(artist_and_title);
-                                                match artist_and_title_caps {
-                                                    Some(artist_and_title_caps) => {
-                                                        let artist = artist_and_title_caps
-                                                            .get(1)
-                                                            .map_or("", |m| m.as_str())
-                                                            .trim();
-                                                        let title = artist_and_title_caps
-                                                            .get(2)
-                                                            .map_or("", |m| m.as_str())
-                                                            .trim();
-
-                                                        music_player_info.artist =
-                                                            artist.to_string();
-                                                        music_player_info.title = title.to_string();
-                                                    }
-                                                    None => {
-                                                        // check, if only artist OR title are there
-                                                        let artist_or_title_caps =
-                                                            match_artist_or_title.captures(&data);
-
-                                                        match artist_or_title_caps {
-                                                            Some(artist_or_title_caps) => {
-                                                                let title = artist_or_title_caps
-                                                                    .get(1)
-                                                                    .map_or("", |m| m.as_str())
-                                                                    .trim();
-                                                                music_player_info.title =
-                                                                    title.to_string();
-                                                                music_player_info.artist =
-                                                                    "".into();
-                                                            }
-                                                            None => {
-                                                                music_player_info.player_active =
-                                                                    false;
-                                                                music_player_info.filepath.clear();
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            None => {
-                                                music_player_info.player_active = false;
-                                                music_player_info.filepath.clear();
-                                            }
-                                        }
+                        if path != cover_manager.last_path {
+                            let file_exists = Path::new(std::ffi::OsStr::new(&path)).exists();
+                            if file_exists {
+                                music_player_info.filepath = path.clone();
+                                match extract_cover_image(&path) {
+                                    Some(cover) => {
+                                        music_player_info.cover = cover.data.as_bytes().to_vec();
+                                        cover_manager.last_path = path.clone();
+                                        cover_manager.current_cover =
+                                            cover.data.as_bytes().to_vec();
                                     }
                                     None => {
-                                        music_player_info.player_active = false;
-                                        music_player_info.filepath.clear();
+                                        // NO COVER
                                     }
                                 }
+                            } else {
+                                music_player_info.cover = vec![211; 320 * 170 * 3];
                             }
-                            Err(_) => {
-                                music_player_info.player_active = false;
-                                music_player_info.filepath.clear();
-                            }
+                        } else {
+                            music_player_info.cover = cover_manager.current_cover.clone();
                         }
 
-                        let volume_data = crate::helpers::master_volume::get_master_volume();
-                        music_player_info.system_volume = volume_data.0;
-                        music_player_info.mute = volume_data.1;
-                        sender.try_send(music_player_info).unwrap_or_default();
+                        sender
+                            .try_send(music_player_info.clone())
+                            .unwrap_or_default();
                         thread::sleep(Duration::from_millis(200));
                     }
                 })),

@@ -1,5 +1,7 @@
-use winapi::{um::mmdeviceapi::IMMDeviceEnumerator, Interface};
+#[cfg(target_os = "windows")]
+use winapi::{Interface, um::mmdeviceapi::IMMDeviceEnumerator};
 
+#[cfg(target_os = "windows")]
 pub fn get_master_volume() -> (f32, i32) {
     let mut current_volume = 0.0_f32;
     let mut mute = 0;
@@ -42,4 +44,31 @@ pub fn get_master_volume() -> (f32, i32) {
         (*endpoint_volume).GetMute(&mut mute as *mut i32);
     }
     (current_volume, mute)
+}
+
+#[cfg(target_os = "linux")]
+pub fn get_master_volume() -> (f32, i32) {
+    // wpctl output example: "Volume: 0.45 [MUTED]"
+    use std::process::Command;
+    let output = Command::new("wpctl")
+        .args(["get-volume", "@DEFAULT_AUDIO_SINK@"])
+        .output();
+
+    let Ok(output) = output else {
+        return (0.0, 0);
+    };
+
+    if !output.status.success() {
+        return (0.0, 0);
+    }
+
+    let text = String::from_utf8_lossy(&output.stdout);
+    let volume = text
+        .split_whitespace()
+        .find_map(|part| part.parse::<f32>().ok())
+        .unwrap_or(0.0);
+
+    let mute = i32::from(text.contains("[MUTED]"));
+
+    (volume, mute)
 }

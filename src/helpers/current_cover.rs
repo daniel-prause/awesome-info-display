@@ -1,11 +1,12 @@
 use audiotags::Tag;
 use image::EncodableLayout;
-
+use url::Url;
+#[cfg(target_os = "windows")]
 use winsafe::{HWND, co, msg};
 pub struct Cover {
     pub data: Vec<u8>,
 }
-
+#[cfg(target_os = "windows")]
 pub fn extract_current_cover_path(window: &winsafe::HWND) -> String {
     let (_thread_id, process_id) = HWND::GetWindowThreadProcessId(&window);
 
@@ -41,6 +42,18 @@ pub fn extract_current_cover_path(window: &winsafe::HWND) -> String {
             }
         }
         Err(_) => return String::new(),
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub fn extract_current_cover_path(path: &String) -> String {
+    let url = Url::parse(path);
+    match url {
+        Ok(parsed) => match parsed.to_file_path() {
+            Ok(path) => path.to_string_lossy().to_string(),
+            Err(_) => String::new(),
+        },
+        Err(_) => String::new(),
     }
 }
 

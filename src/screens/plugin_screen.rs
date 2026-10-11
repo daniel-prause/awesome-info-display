@@ -1,6 +1,6 @@
+use crate::DEVICES;
 use crate::config_manager::ConfigManager;
 use crate::screens::{BasicScreen, Screen, Screenable};
-use crate::DEVICES;
 use ab_glyph::{FontArc, PxScale};
 use exchange_format::*;
 use image::{EncodableLayout, GenericImage, ImageBuffer, Rgb, RgbImage};
@@ -9,7 +9,7 @@ use libloading::Library;
 
 use std::ffi::CString;
 use std::path::PathBuf;
-use std::sync::{atomic::AtomicBool, Arc, RwLock};
+use std::sync::{Arc, RwLock, atomic::AtomicBool};
 
 struct Lib {
     library: Library,

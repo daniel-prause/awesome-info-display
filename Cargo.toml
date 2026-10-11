@@ -39,9 +39,13 @@ systemstat = "0.2.7"
 tokio = "1.52.3"
 unicode-segmentation = "1.13.3"
 webp = "0.3.1"
-winsafe = {git = "https://github.com/rodrigocfd/winsafe", features = ['user', 'ole', 'kernel']}
 [target.'cfg(windows)'.dependencies]
+winsafe = {git = "https://github.com/rodrigocfd/winsafe", features = ['user', 'ole', 'kernel']}
 winapi = {version = "0.3.9", features = ["winuser", "mmdeviceapi", "combaseapi", "objbase", "endpointvolume", "memoryapi"]}
-[build-dependencies]
+[target.'cfg(target_os = "linux")'.dependencies]
+url = "2"
+zbus = "5"
+evdev = "0.13"
+[target.'cfg(windows)'.build-dependencies]
 static_vcruntime = "3.0.0"
 winres = "0.1.12"
