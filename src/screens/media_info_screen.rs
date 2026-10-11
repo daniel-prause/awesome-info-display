@@ -500,6 +500,15 @@ impl MediaInfoScreen {
                             music_player_info.cover = cover_manager.current_cover.clone();
                         }
 
+                        #[cfg(target_os = "windows")]
+                        let window = winsafe::HWND::FindWindow(
+                            Some(winsafe::AtomStr::from_str("Winamp v1.x")),
+                            None,
+                        );
+
+                        if window.is_err() || window.unwrap().is_none() {
+                            music_player_info.player_active = false;
+                        }
                         sender
                             .try_send(music_player_info.clone())
                             .unwrap_or_default();
