@@ -1,5 +1,7 @@
 #[cfg(target_os = "windows")]
 extern crate winapi;
+#[cfg(target_os = "windows")]
+use crate::helpers;
 use crate::{
     ESP32, TEENSY,
     audio::build_info::build_music_player_info,
@@ -12,8 +14,6 @@ use crate::{
 };
 use ab_glyph::{FontArc, PxScale};
 use crossbeam_channel::{Receiver, Sender, bounded};
-#[cfg(target_os = "windows")]
-use helpers::current_cover::extract_current_cover_path;
 use image::{EncodableLayout, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{
     draw_filled_rect_mut, draw_hollow_rect_mut, draw_line_segment_mut, draw_text_mut,
@@ -446,38 +446,6 @@ impl MediaInfoScreen {
                 handle: Some(thread::spawn(move || {
                     let sender = tx.to_owned();
                     let active = active;
-                    let match_correct_artist_and_title_format;
-                    let match_artist_and_title;
-                    let match_artist_or_title;
-
-                    match regex::Regex::new(r"\s(.*)-") {
-                        Ok(regex) => {
-                            match_correct_artist_and_title_format = regex;
-                        }
-                        Err(err) => {
-                            eprintln!("REGEX ERROR: {:?}", err);
-                            return;
-                        }
-                    }
-                    match regex::Regex::new(r"(.*?) - (.*)") {
-                        Ok(regex) => {
-                            match_artist_and_title = regex;
-                        }
-                        Err(err) => {
-                            eprintln!("REGEX ERROR: {:?}", err);
-                            return;
-                        }
-                    }
-
-                    match regex::Regex::new(r"\s(.*?)\s") {
-                        Ok(regex) => {
-                            match_artist_or_title = regex;
-                        }
-                        Err(err) => {
-                            eprintln!("REGEX ERROR: {:?}", err);
-                            return;
-                        }
-                    }
 
                     #[cfg(target_os = "windows")]
                     winsafe::CoInitializeEx(co::COINIT::APARTMENTTHREADED).unwrap();
@@ -488,9 +456,29 @@ impl MediaInfoScreen {
                             thread::park();
                         }
 
-                        build_music_player_info(&mut music_player_info);
                         #[cfg(target_os = "windows")]
-                        let path = extract_current_cover_path(&window);
+                        build_music_player_info(&mut music_player_info);
+
+                        #[cfg(target_os = "linux")]
+                        build_music_player_info(&mut music_player_info);
+
+                        #[cfg(target_os = "windows")]
+                        let mut path = String::new();
+                        #[cfg(target_os = "windows")]
+                        let window = winsafe::HWND::FindWindow(
+                            Some(winsafe::AtomStr::from_str("Winamp v1.x")),
+                            None,
+                        );
+                        #[cfg(target_os = "windows")]
+                        match window {
+                            Ok(w) => match w {
+                                Some(handle) => {
+                                    path = extract_current_cover_path(&handle);
+                                }
+                                None => {}
+                            },
+                            Err(_) => {}
+                        }
 
                         #[cfg(target_os = "linux")]
                         let path = extract_current_cover_path(&music_player_info.filepath);

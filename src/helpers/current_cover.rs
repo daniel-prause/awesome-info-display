@@ -1,5 +1,6 @@
 use audiotags::Tag;
 use image::EncodableLayout;
+#[cfg(target_os = "linux")]
 use url::Url;
 #[cfg(target_os = "windows")]
 use winsafe::{HWND, co, msg};

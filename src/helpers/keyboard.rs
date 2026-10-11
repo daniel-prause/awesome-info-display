@@ -125,10 +125,7 @@ pub fn callback(event: Event) -> Option<Event> {
             set_last_key(180);
             Some(event)
         }
-        _ => {
-            println!("EVENT {:?}", event.event_type);
-            Some(event)
-        }
+        _ => Some(event),
     }
 }
 
